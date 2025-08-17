@@ -1,0 +1,51 @@
+Build a modern online community platform focused on “AI in Accounting.” This platform should be scalable to support more than 10,000 members and designed for interactive knowledge-sharing. The target audience includes accountants, finance professionals, auditors, AI practitioners, and students interested in the intersection of artificial intelligence and accounting.
+
+Core Features:
+
+News Aggregator
+
+A curated feed that collects and displays the latest AI-in-accounting news from trusted sources, academic journals, blogs, and LinkedIn/Twitter updates.
+
+Ability to filter news by topics (e.g., automation, fraud detection, regulatory updates, generative AI in auditing).
+
+Community members can like, comment, and share insights below each news post.
+
+Podcast Hub
+
+Centralized podcast section with an embedded player.
+
+Episodes featuring experts, accountants, and AI developers discussing current challenges and opportunities.
+
+Option for community members to suggest topics or ask questions in advance.
+
+Educational Resources
+
+Resource library with eBooks, case studies, webinars, whitepapers, and toolkits on AI in accounting.
+
+Searchable by category (e.g., Taxation, Financial Reporting, Audit Automation, Ethical AI).
+
+Certification or “Learning Paths” to encourage professional growth.
+
+Community Engagement Features:
+
+Member profiles with expertise tags (e.g., Accounting, Data Science, Auditing).
+
+Discussion forums for Q&A and deep dives into challenges like AI regulation, data security, and workflow automation.
+
+Periodic polls and surveys to gauge industry sentiment.
+
+Gamification: badges for contributions, active participation, or content sharing.
+
+Design & UX:
+
+Clean, professional, but engaging interface with accounting + AI-inspired branding.
+
+Mobile-friendly, minimalistic layout with easy navigation between News, Podcast, Resources, and Community Forum.
+
+Light and dark modes for accessibility.
+
+Long-term Scalability:
+
+Support 10,000+ members with smooth performance.
+
+Admin dashboard for content moderation and analytics (engagement, top contributors, trending discussions).
