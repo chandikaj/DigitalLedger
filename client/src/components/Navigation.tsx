@@ -8,7 +8,7 @@ import {
   Search, 
   Moon, 
   Sun, 
-  Shield,
+  Brain,
   Menu,
   X
 } from "lucide-react";
@@ -39,11 +39,11 @@ export function Navigation() {
           <Link href="/" data-testid="link-home">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
-                <Shield className="text-white h-5 w-5" />
+                <Brain className="text-white h-5 w-5" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Digital Defender</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Cybersecurity Community</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Accounting Hub</h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Professional Community</p>
               </div>
             </div>
           </Link>

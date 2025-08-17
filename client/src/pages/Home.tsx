@@ -57,7 +57,7 @@ export default function Home() {
             Welcome back, {user?.firstName || 'Member'}!
           </h1>
           <p className="text-gray-600 dark:text-gray-300" data-testid="welcome-subtitle">
-            Stay updated with the latest in cybersecurity threats and connect with your professional community
+            Stay updated with the latest in AI accounting and connect with your professional community
           </p>
         </div>
 

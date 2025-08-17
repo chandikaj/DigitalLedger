@@ -23,10 +23,10 @@ export default function News() {
 
   const categories = [
     { id: "all", label: "All" },
-    { id: "threat-intelligence", label: "Threat Intelligence" },
-    { id: "malware-defense", label: "Malware Defense" },
-    { id: "compliance", label: "Compliance" },
-    { id: "incident-response", label: "Incident Response" },
+    { id: "automation", label: "Automation" },
+    { id: "fraud-detection", label: "Fraud Detection" },
+    { id: "regulatory", label: "Regulatory" },
+    { id: "generative-ai", label: "Generative AI" },
   ];
 
   const filteredNews = news?.filter((article: any) =>
@@ -67,10 +67,10 @@ export default function News() {
         {/* Header */}
         <div className="mb-8" data-testid="news-header">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Latest Cybersecurity News
+            Latest AI in Accounting News
           </h1>
           <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl">
-            Stay updated with curated threat intelligence, security insights, and industry developments
+            Stay updated with curated insights from trusted sources, academic journals, and industry leaders
           </p>
         </div>
 

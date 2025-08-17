@@ -29,60 +29,60 @@ export default function Landing() {
   const newsArticles = [
     {
       id: "1",
-      title: "Advanced Threat Detection AI Stops 94% of Zero-Day Attacks in 2024",
-      excerpt: "New machine learning models are demonstrating unprecedented accuracy in identifying and neutralizing previously unknown cyber threats across enterprise networks.",
-      category: "Threat Intelligence",
+      title: "How Machine Learning is Revolutionizing Audit Procedures in 2024",
+      excerpt: "New AI-powered audit tools are showing 94% accuracy in detecting financial anomalies, transforming traditional audit methodologies across major accounting firms.",
+      category: "Automation",
       timeAgo: "2 hours ago",
       likes: 47,
       comments: 12,
       shares: 8,
-      imageUrl: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400",
+      imageUrl: "https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400",
     },
     {
       id: "2",
-      title: "New NIST Cybersecurity Framework 2.0 Guidelines Released",
-      excerpt: "The National Institute of Standards and Technology releases updated guidance on organizational cybersecurity risk management and incident response protocols.",
-      category: "Compliance",
+      title: "New FASB Guidelines for AI-Generated Financial Reports",
+      excerpt: "The Financial Accounting Standards Board releases new guidance on transparency requirements for AI-assisted financial reporting and disclosure obligations.",
+      category: "Regulatory",
       timeAgo: "5 hours ago",
       likes: 73,
       comments: 31,
       shares: 15,
-      imageUrl: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400",
+      imageUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400",
     },
     {
       id: "3",
-      title: "Ransomware Attacks Prevented: $2.3B in Losses Avoided by AI Security",
-      excerpt: "Latest cybersecurity report shows advanced behavioral analysis successfully identified and blocked ransomware attempts with 99.2% success rate.",
-      category: "Malware Defense",
+      title: "AI Fraud Detection Prevents $2.3B in Losses for Fortune 500 Companies",
+      excerpt: "Latest industry report shows advanced AI algorithms successfully identified and prevented fraudulent transactions with 99.2% accuracy rate.",
+      category: "Fraud Detection",
       timeAgo: "1 day ago",
       likes: 89,
       comments: 24,
       shares: 19,
-      imageUrl: "https://images.unsplash.com/photo-1510915228340-29c85a43dcfe?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400",
+      imageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400",
     },
   ];
 
   const forumCategories = [
     {
-      icon: <Shield className="h-6 w-6" />,
-      name: "Threat Intelligence",
-      description: "Share insights on emerging threats, attack patterns, and defensive strategies to protect digital assets.",
+      icon: <Brain className="h-6 w-6" />,
+      name: "AI Implementation",
+      description: "Share experiences and best practices for implementing AI solutions in accounting workflows.",
       discussions: "1,247 discussions",
       latest: "2 minutes ago",
       color: "bg-primary/10 text-primary dark:bg-ai-teal/10 dark:text-ai-teal",
     },
     {
-      icon: <Brain className="h-6 w-6" />,
-      name: "Security Operations",
-      description: "Discuss incident response, SOC operations, and security monitoring best practices.",
+      icon: <Shield className="h-6 w-6" />,
+      name: "Regulatory Compliance",
+      description: "Navigate evolving regulations and compliance requirements for AI in financial reporting.",
       discussions: "856 discussions",
       latest: "18 minutes ago",
       color: "bg-accent/10 text-accent",
     },
     {
       icon: <Award className="h-6 w-6" />,
-      name: "Certifications & Career",
-      description: "Career growth, certification paths, and skill development in cybersecurity and digital defense.",
+      name: "Learning & Development",
+      description: "Career growth, certification paths, and skill development in AI accounting technologies.",
       discussions: "624 discussions",
       latest: "35 minutes ago",
       color: "bg-secondary/10 text-secondary dark:bg-ai-teal/10 dark:text-ai-teal",
@@ -96,10 +96,10 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-6xl font-bold mb-6" data-testid="hero-title">
-              The Future of <span className="text-yellow-300">Digital</span> Defense
+              The Future of <span className="text-yellow-300">AI</span> in Accounting
             </h1>
             <p className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto mb-8" data-testid="hero-subtitle">
-              Join 10,000+ cybersecurity professionals, analysts, and digital defenders shaping the industry's security landscape
+              Join 10,000+ accounting professionals, auditors, and AI practitioners shaping the industry's digital transformation
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
@@ -139,20 +139,20 @@ export default function Landing() {
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-12">
             <div>
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4" data-testid="news-title">
-                Latest Cybersecurity News
+                Latest AI in Accounting News
               </h2>
               <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl">
-                Stay updated with curated threat intelligence, security insights, and industry developments
+                Stay updated with curated insights from trusted sources, academic journals, and industry leaders
               </p>
             </div>
             
             {/* News Filters */}
             <div className="flex flex-wrap gap-2 mt-6 lg:mt-0">
               <Badge variant="default" data-testid="filter-all">All</Badge>
-              <Badge variant="secondary" data-testid="filter-threat">Threat Intelligence</Badge>
-              <Badge variant="secondary" data-testid="filter-malware">Malware Defense</Badge>
-              <Badge variant="secondary" data-testid="filter-compliance">Compliance</Badge>
-              <Badge variant="secondary" data-testid="filter-incident">Incident Response</Badge>
+              <Badge variant="secondary" data-testid="filter-automation">Automation</Badge>
+              <Badge variant="secondary" data-testid="filter-fraud">Fraud Detection</Badge>
+              <Badge variant="secondary" data-testid="filter-regulatory">Regulatory</Badge>
+              <Badge variant="secondary" data-testid="filter-ai">Generative AI</Badge>
             </div>
           </div>
           
@@ -224,7 +224,7 @@ export default function Landing() {
               Community Forums
             </h2>
             <p className="text-gray-600 dark:text-gray-300 text-lg max-w-3xl mx-auto">
-              Engage with fellow professionals, share insights, and get answers to your cybersecurity challenges
+              Engage with fellow professionals, share insights, and get answers to your AI accounting challenges
             </p>
           </div>
           
@@ -268,10 +268,10 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4" data-testid="podcast-title">
-              Digital Defense Podcast Hub
+              AI Accounting Podcast Hub
             </h2>
             <p className="text-gray-600 dark:text-gray-300 text-lg max-w-3xl mx-auto">
-              Listen to expert interviews, threat analysis, and practical discussions about the future of cybersecurity
+              Listen to expert interviews, industry insights, and practical discussions about the future of AI in accounting
             </p>
           </div>
 
@@ -290,10 +290,10 @@ export default function Landing() {
                     <span className="text-gray-500 dark:text-gray-400 text-sm">Episode 142 • 45 min</span>
                   </div>
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4" data-testid="featured-title">
-                    Advanced Threat Hunting with Sarah Martinez, CISO at CyberGuard
+                    The Future of AI Auditing with Sarah Martinez, Partner at Deloitte
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300 mb-6" data-testid="featured-description">
-                    Sarah shares cutting-edge threat hunting techniques, discusses proactive defense strategies, and provides insights into the evolving cybersecurity landscape.
+                    Sarah discusses how machine learning is transforming audit procedures, shares real-world implementation challenges, and provides insights into the next decade of AI-powered auditing.
                   </p>
                   
                   {/* Audio Player */}
@@ -330,10 +330,10 @@ export default function Landing() {
       <section className="py-16 bg-gradient-to-r from-primary to-secondary text-white" data-testid="cta-section">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold mb-6" data-testid="cta-title">
-            Ready to Strengthen Your Digital Defense?
+            Ready to Transform Your Accounting Practice?
           </h2>
           <p className="text-xl text-blue-100 mb-8" data-testid="cta-description">
-            Join thousands of cybersecurity professionals already strengthening their digital defense strategies
+            Join thousands of professionals already using AI to revolutionize their accounting workflows
           </p>
           <Button 
             size="lg"

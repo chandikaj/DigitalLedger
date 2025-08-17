@@ -42,10 +42,10 @@ export default function Resources() {
 
   const categories = [
     { id: "all", label: "All Categories" },
-    { id: "incident-response", label: "Incident Response" },
-    { id: "threat-hunting", label: "Threat Hunting" },
-    { id: "security-architecture", label: "Security Architecture" },
-    { id: "compliance-frameworks", label: "Compliance Frameworks" },
+    { id: "taxation", label: "Taxation" },
+    { id: "financial-reporting", label: "Financial Reporting" },
+    { id: "audit-automation", label: "Audit Automation" },
+    { id: "ethical-ai", label: "Ethical AI" },
   ];
 
   const filteredResources = resources?.filter((resource: any) =>
@@ -99,7 +99,7 @@ export default function Resources() {
             Educational Resources
           </h1>
           <p className="text-gray-600 dark:text-gray-300 text-lg max-w-3xl mx-auto">
-            Access comprehensive learning materials, case studies, and certification paths to advance your cybersecurity expertise
+            Access comprehensive learning materials, case studies, and certification paths to advance your AI accounting expertise
           </p>
         </div>
 
