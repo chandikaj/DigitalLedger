@@ -57,17 +57,35 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  // Check for pending invitation
+  const userId = claims["sub"];
+  const existingUser = await storage.getUser(userId);
+  
+  // If user already exists, only update profile information but preserve role and status
+  if (existingUser) {
+    await storage.updateUser(userId, {
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+      // role and isActive are intentionally not included to preserve existing values
+    });
+    return;
+  }
+  
+  // For new users, determine role from invitation or environment variable
   const invitation = await storage.findInvitationByEmail(claims["email"]);
   let role = "member"; // default role
   
   if (invitation) {
     role = invitation.role;
     await storage.markInvitationAccepted(invitation.id);
+  } else if (process.env.NODE_ENV === "development" && claims["role"]) {
+    // Only allow OIDC role claims in development environment for testing
+    role = claims["role"];
   }
 
   await storage.upsertUser({
-    id: claims["sub"],
+    id: userId,
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
