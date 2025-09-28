@@ -8,6 +8,7 @@ import {
   podcastEpisodes,
   polls,
   userInteractions,
+  userInvitations,
   type User,
   type UpsertUser,
   type NewsArticle,
@@ -26,6 +27,8 @@ import {
   type InsertPoll,
   type UserInteraction,
   type InsertUserInteraction,
+  type UserInvitation,
+  type InsertUserInvitation,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, or, ilike } from "drizzle-orm";
@@ -34,6 +37,18 @@ export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  
+  // User management operations
+  listUsers(filters?: { q?: string; role?: string; active?: boolean }): Promise<User[]>;
+  setUserRole(userId: string, role: string): Promise<void>;
+  setUserActive(userId: string, isActive: boolean): Promise<void>;
+  
+  // User invitation operations
+  createInvitation(invitation: InsertUserInvitation): Promise<UserInvitation>;
+  revokeInvitation(id: string): Promise<void>;
+  listInvitations(): Promise<UserInvitation[]>;
+  findInvitationByEmail(email: string): Promise<UserInvitation | undefined>;
+  markInvitationAccepted(id: string): Promise<void>;
   
   // News operations
   getNewsArticles(category?: string, limit?: number): Promise<NewsArticle[]>;
@@ -101,6 +116,101 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async listUsers(filters?: { q?: string; role?: string; active?: boolean }): Promise<User[]> {
+    let query = db.select().from(users).orderBy(desc(users.createdAt));
+    
+    const conditions = [];
+    if (filters?.q) {
+      conditions.push(
+        or(
+          ilike(users.email, `%${filters.q}%`),
+          ilike(users.firstName, `%${filters.q}%`),
+          ilike(users.lastName, `%${filters.q}%`)
+        )
+      );
+    }
+    if (filters?.role) {
+      conditions.push(eq(users.role, filters.role));
+    }
+    if (filters?.active !== undefined) {
+      conditions.push(eq(users.isActive, filters.active));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query;
+  }
+
+  async setUserRole(userId: string, role: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async setUserActive(userId: string, isActive: boolean): Promise<void> {
+    await db
+      .update(users)
+      .set({ isActive, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async createInvitation(invitation: InsertUserInvitation): Promise<UserInvitation> {
+    const [created] = await db
+      .insert(userInvitations)
+      .values(invitation)
+      .onConflictDoUpdate({
+        target: userInvitations.email,
+        set: {
+          role: invitation.role,
+          invitedBy: invitation.invitedBy,
+          createdAt: new Date(),
+          revokedAt: null,
+        },
+      })
+      .returning();
+    return created;
+  }
+
+  async revokeInvitation(id: string): Promise<void> {
+    await db
+      .update(userInvitations)
+      .set({ revokedAt: new Date() })
+      .where(eq(userInvitations.id, id));
+  }
+
+  async listInvitations(): Promise<UserInvitation[]> {
+    return await db
+      .select()
+      .from(userInvitations)
+      .where(and(
+        sql`${userInvitations.acceptedAt} IS NULL`,
+        sql`${userInvitations.revokedAt} IS NULL`
+      ))
+      .orderBy(desc(userInvitations.createdAt));
+  }
+
+  async findInvitationByEmail(email: string): Promise<UserInvitation | undefined> {
+    const [invitation] = await db
+      .select()
+      .from(userInvitations)
+      .where(and(
+        eq(userInvitations.email, email),
+        sql`${userInvitations.acceptedAt} IS NULL`,
+        sql`${userInvitations.revokedAt} IS NULL`
+      ));
+    return invitation;
+  }
+
+  async markInvitationAccepted(id: string): Promise<void> {
+    await db
+      .update(userInvitations)
+      .set({ acceptedAt: new Date() })
+      .where(eq(userInvitations.id, id));
   }
 
   async getNewsArticles(category?: string, limit = 10): Promise<NewsArticle[]> {
