@@ -15,6 +15,7 @@ import {
   insertPodcastEpisodeSchema,
   insertPollSchema,
   insertUserInvitationSchema,
+  insertUserSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -136,6 +137,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error revoking invitation:", error);
       res.status(500).json({ message: "Failed to revoke invitation" });
+    }
+  });
+
+  // Direct user management routes (admin only)
+  app.post('/api/users/create', isAdmin, async (req: any, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      const user = await storage.createUser(userData);
+      res.json(user);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  app.put('/api/users/:id', isAdmin, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const adminUserId = req.user.claims.sub;
+      const updates = insertUserSchema.partial().parse(req.body);
+      
+      // Prevent self-demotion if last admin
+      if (updates.role && updates.role !== 'admin' && userId === adminUserId) {
+        const admins = await storage.listUsers({ role: 'admin', active: true });
+        if (admins.length === 1) {
+          return res.status(400).json({ message: "Cannot demote yourself as the last admin" });
+        }
+      }
+      
+      const user = await storage.updateUser(userId, updates);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  app.delete('/api/users/:id', isAdmin, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const adminUserId = req.user.claims.sub;
+      
+      // Prevent self-deletion if last admin
+      const user = await storage.getUser(userId);
+      if (user?.role === 'admin' && userId === adminUserId) {
+        const admins = await storage.listUsers({ role: 'admin', active: true });
+        if (admins.length === 1) {
+          return res.status(400).json({ message: "Cannot delete yourself as the last admin" });
+        }
+      }
+      
+      await storage.deleteUser(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
     }
   });
 

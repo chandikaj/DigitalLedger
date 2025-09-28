@@ -40,6 +40,9 @@ export interface IStorage {
   
   // User management operations
   listUsers(filters?: { q?: string; role?: string; active?: boolean }): Promise<User[]>;
+  createUser(user: UpsertUser): Promise<User>;
+  updateUser(userId: string, updates: Partial<UpsertUser>): Promise<User>;
+  deleteUser(userId: string): Promise<void>;
   setUserRole(userId: string, role: string): Promise<void>;
   setUserActive(userId: string, isActive: boolean): Promise<void>;
   
@@ -146,6 +149,34 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await query;
+  }
+
+  async createUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        ...userData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return user;
+  }
+
+  async updateUser(userId: string, updates: Partial<UpsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, userId));
   }
 
   async setUserRole(userId: string, role: string): Promise<void> {
