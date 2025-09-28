@@ -219,7 +219,7 @@ export default function Admin() {
             Content Control Panel
           </h1>
           <p className="text-gray-600 dark:text-gray-300" data-testid="text-admin-description">
-            Create and manage articles and podcast episodes for the AI Accounting Hub community.
+            Create and manage articles and podcast episodes for the Gigital Ledger community.
           </p>
         </div>
 

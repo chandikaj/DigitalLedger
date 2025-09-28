@@ -43,7 +43,7 @@ export function Navigation() {
                 <Brain className="text-white h-5 w-5" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">AI Accounting Hub</h1>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Gigital Ledger</h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Professional Community</p>
               </div>
             </div>

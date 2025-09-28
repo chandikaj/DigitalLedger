@@ -96,7 +96,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-6xl font-bold mb-6" data-testid="hero-title">
-              The Future of <span className="text-yellow-300">AI</span> in Accounting
+              Welcome to <span className="text-yellow-300">Gigital Ledger</span>
             </h1>
             <p className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto mb-8" data-testid="hero-subtitle">
               Join 10,000+ accounting professionals, auditors, and AI practitioners shaping the industry's digital transformation
@@ -268,7 +268,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4" data-testid="podcast-title">
-              AI Accounting Podcast Hub
+              Gigital Ledger Podcast Hub
             </h2>
             <p className="text-gray-600 dark:text-gray-300 text-lg max-w-3xl mx-auto">
               Listen to expert interviews, industry insights, and practical discussions about the future of AI in accounting
