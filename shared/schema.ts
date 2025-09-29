@@ -24,10 +24,11 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table for Replit Auth
+// User storage table with password authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  passwordHash: varchar("password_hash"), // bcrypt hash for authentication
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -235,6 +236,20 @@ export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  passwordHash: true, // Don't expose password hash in regular inserts
+});
+
+// Auth schemas for login/register
+export const loginSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+export const registerSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
 });
 
 export const insertNewsArticleSchema = createInsertSchema(newsArticles).omit({
@@ -301,6 +316,8 @@ export const insertUserInvitationSchema = createInsertSchema(userInvitations).om
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type LoginRequest = z.infer<typeof loginSchema>;
+export type RegisterRequest = z.infer<typeof registerSchema>;
 export type NewsArticle = typeof newsArticles.$inferSelect;
 export type InsertNewsArticle = z.infer<typeof insertNewsArticleSchema>;
 export type ForumCategory = typeof forumCategories.$inferSelect;
