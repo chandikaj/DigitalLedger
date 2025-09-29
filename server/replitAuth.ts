@@ -58,11 +58,19 @@ async function upsertUser(
   claims: any,
 ) {
   const userId = claims["sub"];
-  const existingUser = await storage.getUser(userId);
+  const email = claims["email"];
   
-  // If user already exists, only update profile information but preserve role and status
+  // Check if user exists by ID first
+  let existingUser = await storage.getUser(userId);
+  
+  // If no user found by ID, check by email (for cases where ID changed but email is same)
+  if (!existingUser) {
+    existingUser = await storage.getUserByEmail(email);
+  }
+  
+  // If user exists (by either ID or email), update their information
   if (existingUser) {
-    await storage.updateUser(userId, {
+    await storage.updateUser(existingUser.id, {
       email: claims["email"],
       firstName: claims["first_name"],
       lastName: claims["last_name"],
@@ -73,7 +81,7 @@ async function upsertUser(
   }
   
   // For new users, determine role from invitation or environment variable
-  const invitation = await storage.findInvitationByEmail(claims["email"]);
+  const invitation = await storage.findInvitationByEmail(email);
   let role = "member"; // default role
   
   if (invitation) {
@@ -86,7 +94,7 @@ async function upsertUser(
 
   await storage.upsertUser({
     id: userId,
-    email: claims["email"],
+    email: email,
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],

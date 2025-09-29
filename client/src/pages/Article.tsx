@@ -69,10 +69,7 @@ export default function Article() {
 
   const updateArticleMutation = useMutation({
     mutationFn: async (data: ArticleFormData) => {
-      return apiRequest(`/api/news/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      });
+      return apiRequest(`/api/news/${id}`, "PUT", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/news', id] });
