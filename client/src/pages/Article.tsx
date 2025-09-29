@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, ExternalLink, Heart, MessageCircle, Share2 } from "lucide-react";
+import { ArrowLeft, Calendar, ExternalLink, Heart, MessageCircle, Share2, Edit } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Article() {
   const { id } = useParams();
+  const { user } = useAuth();
 
   const { data: article, isLoading, error } = useQuery({
     queryKey: ['/api/news', id],
@@ -83,12 +85,25 @@ export default function Article() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          <Link href="/news">
-            <Button variant="ghost" className="mb-6" data-testid="button-back-to-news">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to News
-            </Button>
-          </Link>
+          <div className="flex items-center justify-between mb-6">
+            <Link href="/news">
+              <Button variant="ghost" data-testid="button-back-to-news">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to News
+              </Button>
+            </Link>
+            
+            {(user as any)?.role === 'admin' && (
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                data-testid="button-edit-article"
+              >
+                <Edit className="h-4 w-4" />
+                Edit Article
+              </Button>
+            )}
+          </div>
           
           <Card>
             <CardContent className="p-8">
