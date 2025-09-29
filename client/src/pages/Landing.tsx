@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 
 export default function Landing() {
+  const [, setLocation] = useLocation();
   const stats = [
     { value: "12,847", label: "Active Members" },
     { value: "2,341", label: "Expert Discussions" },
@@ -105,7 +107,7 @@ export default function Landing() {
               <Button 
                 size="lg"
                 className="bg-white text-primary hover:bg-gray-100"
-                onClick={() => window.location.href = "/api/login"}
+                onClick={() => setLocation("/login")}
                 data-testid="button-join-community"
               >
                 Join Community
@@ -338,7 +340,7 @@ export default function Landing() {
           <Button 
             size="lg"
             className="bg-white text-primary hover:bg-gray-100"
-            onClick={() => window.location.href = "/api/login"}
+            onClick={() => setLocation("/login")}
             data-testid="button-get-started"
           >
             Get Started Today
