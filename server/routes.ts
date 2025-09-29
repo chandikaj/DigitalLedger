@@ -239,6 +239,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/news/:id', isAdmin, async (req: any, res) => {
+    try {
+      const articleId = req.params.id;
+      const articleData = insertNewsArticleSchema.partial().parse(req.body);
+      const updatedArticle = await storage.updateNewsArticle(articleId, articleData);
+      if (!updatedArticle) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      res.json(updatedArticle);
+    } catch (error) {
+      console.error("Error updating news article:", error);
+      res.status(500).json({ message: "Failed to update news article" });
+    }
+  });
+
   app.post('/api/news/:id/like', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
