@@ -78,6 +78,8 @@ export interface IStorage {
   // Resource operations
   getResources(type?: string, category?: string, limit?: number): Promise<Resource[]>;
   createResource(resource: InsertResource): Promise<Resource>;
+  updateResource(resourceId: string, updates: Partial<InsertResource>): Promise<Resource | undefined>;
+  deleteResource(resourceId: string): Promise<boolean>;
   searchResources(query: string): Promise<Resource[]>;
   
   // Podcast operations
@@ -563,6 +565,29 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(desc(resources.createdAt))
       .limit(20);
+  }
+
+  async updateResource(resourceId: string, updates: Partial<InsertResource>): Promise<Resource | undefined> {
+    const [updated] = await db
+      .update(resources)
+      .set(updates)
+      .where(eq(resources.id, resourceId))
+      .returning();
+    return updated;
+  }
+
+  async deleteResource(resourceId: string): Promise<boolean> {
+    // Delete user interactions related to this resource
+    await db
+      .delete(userInteractions)
+      .where(sql`${userInteractions.targetType} = 'resource' AND ${userInteractions.targetId} = ${resourceId}`);
+
+    // Delete the resource
+    const result = await db
+      .delete(resources)
+      .where(eq(resources.id, resourceId));
+    
+    return true;
   }
 
   async getPodcastEpisodes(limit = 10): Promise<PodcastEpisode[]> {

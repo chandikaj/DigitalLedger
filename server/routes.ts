@@ -467,6 +467,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/resources/:id', isAdmin, async (req: any, res) => {
+    try {
+      const resourceId = req.params.id;
+      const updates = insertResourceSchema.partial().parse(req.body);
+      const updated = await storage.updateResource(resourceId, updates);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Resource not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating resource:", error);
+      res.status(500).json({ message: "Failed to update resource" });
+    }
+  });
+
+  app.delete('/api/resources/:id', isAdmin, async (req: any, res) => {
+    try {
+      const resourceId = req.params.id;
+      const deleted = await storage.deleteResource(resourceId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Resource not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting resource:", error);
+      res.status(500).json({ message: "Failed to delete resource" });
+    }
+  });
+
   // Podcast routes
   app.get('/api/podcasts', async (req, res) => {
     try {
