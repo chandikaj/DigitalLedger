@@ -1,5 +1,5 @@
 import { Layout } from "@/components/Layout";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,28 +14,70 @@ import {
   Brain,
   Shield,
   Award,
-  Search
+  Search,
+  Edit2,
+  Trash2
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Forums() {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedDiscussion, setSelectedDiscussion] = useState<any>(null);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    title: "",
+    content: "",
+    categoryId: "",
+  });
 
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ["/api/forum/categories"],
-    queryFn: () => fetch("/api/forum/categories").then(res => res.json()),
   });
 
   const { data: discussions, isLoading: discussionsLoading } = useQuery({
     queryKey: ["/api/forum/discussions", selectedCategory],
-    queryFn: () => {
+    queryFn: async () => {
       const url = selectedCategory 
         ? `/api/forum/discussions?categoryId=${selectedCategory}&limit=50`
         : "/api/forum/discussions?limit=50";
-      return fetch(url).then(res => res.json());
+      const response = await fetch(url);
+      return response.json();
     },
   });
 
@@ -43,6 +85,112 @@ export default function Forums() {
     discussion.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     discussion.content.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
+
+  // Create discussion mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      return await apiRequest("/api/forum/discussions", "POST", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/forum/discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/forum/categories"] });
+      setIsNewDialogOpen(false);
+      setFormData({ title: "", content: "", categoryId: "" });
+      toast({
+        title: "Success",
+        description: "Discussion created successfully!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create discussion",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update discussion mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, ...data }: any) => {
+      return await apiRequest(`/api/forum/discussions/${id}`, "PATCH", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/forum/discussions"] });
+      setIsEditDialogOpen(false);
+      setSelectedDiscussion(null);
+      toast({
+        title: "Success",
+        description: "Discussion updated successfully!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update discussion",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete discussion mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/forum/discussions/${id}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/forum/discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/forum/categories"] });
+      setIsDeleteDialogOpen(false);
+      setSelectedDiscussion(null);
+      toast({
+        title: "Success",
+        description: "Discussion deleted successfully!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete discussion",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleNewDiscussion = () => {
+    setFormData({ title: "", content: "", categoryId: "" });
+    setIsNewDialogOpen(true);
+  };
+
+  const handleEditDiscussion = (discussion: any) => {
+    setSelectedDiscussion(discussion);
+    setFormData({
+      title: discussion.title,
+      content: discussion.content,
+      categoryId: discussion.category?.id || "",
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteDiscussion = (discussion: any) => {
+    setSelectedDiscussion(discussion);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleSubmitNew = () => {
+    createMutation.mutate(formData);
+  };
+
+  const handleSubmitEdit = () => {
+    updateMutation.mutate({
+      id: selectedDiscussion.id,
+      ...formData,
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    deleteMutation.mutate(selectedDiscussion.id);
+  };
 
   const getCategoryIcon = (name: string) => {
     switch (name.toLowerCase()) {
@@ -84,6 +232,8 @@ export default function Forums() {
     }
   };
 
+  const isAdmin = (user as any)?.role === 'admin';
+
   if (categoriesLoading || discussionsLoading) {
     return (
       <Layout>
@@ -118,6 +268,7 @@ export default function Forums() {
           {isAuthenticated && (
             <Button 
               className="mt-4 md:mt-0"
+              onClick={handleNewDiscussion}
               data-testid="button-new-discussion"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -130,7 +281,7 @@ export default function Forums() {
         <section className="mb-12" data-testid="forum-categories">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Categories</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {categories?.map((category: any) => (
+            {(categories as any[])?.map((category: any) => (
               <Card 
                 key={category.id} 
                 className={`hover:shadow-md transition-shadow cursor-pointer ${
@@ -156,15 +307,6 @@ export default function Forums() {
                   <p className="text-gray-600 dark:text-gray-300 mb-4" data-testid={`category-description-${category.id}`}>
                     {category.description}
                   </p>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      <Clock className="h-4 w-4 inline mr-1" />
-                      Latest: 2 minutes ago
-                    </span>
-                    <span className="text-primary dark:text-ai-teal font-medium">
-                      View Discussions →
-                    </span>
-                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -176,7 +318,7 @@ export default function Forums() {
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               {selectedCategory ? 
-                categories?.find((cat: any) => cat.id === selectedCategory)?.name + " Discussions" : 
+                (categories as any[])?.find((cat: any) => cat.id === selectedCategory)?.name + " Discussions" : 
                 "Recent Discussions"
               }
             </h2>
@@ -210,7 +352,7 @@ export default function Forums() {
                   {searchQuery ? "No discussions found matching your search." : "No discussions yet. Be the first to start one!"}
                 </p>
                 {isAuthenticated && (
-                  <Button className="mt-4" data-testid="button-start-first-discussion">
+                  <Button className="mt-4" onClick={handleNewDiscussion} data-testid="button-start-first-discussion">
                     <Plus className="h-4 w-4 mr-2" />
                     Start a Discussion
                   </Button>
@@ -221,7 +363,7 @@ export default function Forums() {
                 {filteredDiscussions.map((discussion: any) => (
                   <div 
                     key={discussion.id} 
-                    className="p-6 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                    className="p-6 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                     data-testid={`discussion-item-${discussion.id}`}
                   >
                     <div className="flex items-start space-x-4">
@@ -233,50 +375,66 @@ export default function Forums() {
                       </Avatar>
                       
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-lg font-medium text-gray-900 dark:text-white line-clamp-1" data-testid={`discussion-title-${discussion.id}`}>
-                            {discussion.title}
-                          </h3>
-                          {discussion.category && (
-                            <Badge 
-                              variant="outline" 
-                              className="text-xs"
-                              data-testid={`discussion-category-${discussion.id}`}
-                            >
-                              {discussion.category.name}
-                            </Badge>
-                          )}
-                          {discussion.isPinned && (
-                            <Badge variant="secondary" className="text-xs">Pinned</Badge>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-3">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white line-clamp-1" data-testid={`discussion-title-${discussion.id}`}>
+                              {discussion.title}
+                            </h3>
+                            {discussion.isPinned && (
+                              <Badge variant="secondary" className="bg-primary/10 text-primary">
+                                Pinned
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {isAdmin && (
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditDiscussion(discussion)}
+                                data-testid={`button-edit-discussion-${discussion.id}`}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteDiscussion(discussion)}
+                                data-testid={`button-delete-discussion-${discussion.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
                           )}
                         </div>
                         
                         <p className="text-gray-600 dark:text-gray-300 mb-3 line-clamp-2" data-testid={`discussion-content-${discussion.id}`}>
-                          {discussion.content?.substring(0, 200)}...
+                          {discussion.content}
                         </p>
                         
-                        <div className="flex items-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
-                          <span className="font-medium text-gray-700 dark:text-gray-300" data-testid={`discussion-author-${discussion.id}`}>
+                        <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="flex items-center">
+                            <Users className="h-4 w-4 mr-1" />
                             {discussion.author?.firstName} {discussion.author?.lastName}
-                            {discussion.author?.title && (
-                              <span className="font-normal">, {discussion.author.title}</span>
-                            )}
                           </span>
-                          <span data-testid={`discussion-time-${discussion.id}`}>
-                            {timeAgo(discussion.createdAt)}
+                          <span className="flex items-center">
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            {discussion.replyCount || 0} replies
                           </span>
-                          <span className="flex items-center space-x-1">
-                            <MessageSquare className="h-4 w-4" />
-                            <span data-testid={`discussion-replies-${discussion.id}`}>
-                              {discussion.replyCount || 0} replies
-                            </span>
+                          <span className="flex items-center">
+                            <Heart className="h-4 w-4 mr-1" />
+                            {discussion.likes || 0} likes
                           </span>
-                          <span className="flex items-center space-x-1">
-                            <Heart className="h-4 w-4" />
-                            <span data-testid={`discussion-likes-${discussion.id}`}>
-                              {discussion.likes || 0} likes
-                            </span>
+                          <span className="flex items-center">
+                            <Clock className="h-4 w-4 mr-1" />
+                            {discussion.lastReplyAt ? timeAgo(discussion.lastReplyAt) : timeAgo(discussion.createdAt)}
                           </span>
+                          {discussion.category && (
+                            <Badge variant="outline" className="ml-auto">
+                              {discussion.category.name}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -286,20 +444,165 @@ export default function Forums() {
             )}
           </CardContent>
         </Card>
-
-        {/* Load More */}
-        {filteredDiscussions.length > 0 && filteredDiscussions.length % 20 === 0 && (
-          <div className="text-center mt-8">
-            <Button 
-              variant="outline" 
-              size="lg"
-              data-testid="button-load-more-discussions"
-            >
-              Load More Discussions
-            </Button>
-          </div>
-        )}
       </div>
+
+      {/* New Discussion Dialog */}
+      <Dialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Start a New Discussion</DialogTitle>
+            <DialogDescription>
+              Share your thoughts, ask questions, or start a conversation with the community.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Title</label>
+              <Input
+                placeholder="Enter discussion title..."
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                data-testid="input-new-discussion-title"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Category</label>
+              <Select 
+                value={formData.categoryId} 
+                onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+              >
+                <SelectTrigger data-testid="select-new-discussion-category">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(categories as any[])?.map((category: any) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Content</label>
+              <Textarea
+                placeholder="What would you like to discuss?"
+                rows={8}
+                value={formData.content}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                data-testid="textarea-new-discussion-content"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNewDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmitNew} 
+              disabled={createMutation.isPending || !formData.title || !formData.content || !formData.categoryId}
+              data-testid="button-submit-new-discussion"
+            >
+              {createMutation.isPending ? "Creating..." : "Create Discussion"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Discussion Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Discussion</DialogTitle>
+            <DialogDescription>
+              Make changes to your discussion.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Title</label>
+              <Input
+                placeholder="Enter discussion title..."
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                data-testid="input-edit-discussion-title"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Category</label>
+              <Select 
+                value={formData.categoryId} 
+                onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+              >
+                <SelectTrigger data-testid="select-edit-discussion-category">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(categories as any[])?.map((category: any) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Content</label>
+              <Textarea
+                placeholder="What would you like to discuss?"
+                rows={8}
+                value={formData.content}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                data-testid="textarea-edit-discussion-content"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmitEdit} 
+              disabled={updateMutation.isPending || !formData.title || !formData.content || !formData.categoryId}
+              data-testid="button-submit-edit-discussion"
+            >
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Discussion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{selectedDiscussion?.title}"? This will also delete all replies. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-discussion">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-500 hover:bg-red-600"
+              data-testid="button-confirm-delete-discussion"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }

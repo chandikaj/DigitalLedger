@@ -358,6 +358,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/forum/discussions/:id', isAdmin, async (req: any, res) => {
+    try {
+      const discussionId = req.params.id;
+      const updates = insertForumDiscussionSchema.partial().parse(req.body);
+      const updated = await storage.updateForumDiscussion(discussionId, updates);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Discussion not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating forum discussion:", error);
+      res.status(500).json({ message: "Failed to update forum discussion" });
+    }
+  });
+
+  app.delete('/api/forum/discussions/:id', isAdmin, async (req: any, res) => {
+    try {
+      const discussionId = req.params.id;
+      const deleted = await storage.deleteForumDiscussion(discussionId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Discussion not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting forum discussion:", error);
+      res.status(500).json({ message: "Failed to delete forum discussion" });
+    }
+  });
+
   app.post('/api/forum/discussions/:id/like', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;

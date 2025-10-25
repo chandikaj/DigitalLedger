@@ -69,6 +69,8 @@ export interface IStorage {
   getForumDiscussions(categoryId?: string, limit?: number): Promise<(ForumDiscussion & { author: User; category: ForumCategory })[]>;
   createForumDiscussion(discussion: InsertForumDiscussion): Promise<ForumDiscussion>;
   getForumDiscussion(id: string): Promise<(ForumDiscussion & { author: User; category: ForumCategory; replies: (ForumReply & { author: User })[] }) | undefined>;
+  updateForumDiscussion(discussionId: string, updates: Partial<InsertForumDiscussion>): Promise<ForumDiscussion | undefined>;
+  deleteForumDiscussion(discussionId: string): Promise<boolean>;
   createForumReply(reply: InsertForumReply): Promise<ForumReply>;
   likeForumDiscussion(discussionId: string, userId: string): Promise<void>;
   likeForumReply(replyId: string, userId: string): Promise<void>;
@@ -477,6 +479,50 @@ export class DatabaseStorage implements IStorage {
         .set({ likes: sql`${forumReplies.likes} + 1` })
         .where(eq(forumReplies.id, replyId));
     }
+  }
+
+  async updateForumDiscussion(discussionId: string, updates: Partial<InsertForumDiscussion>): Promise<ForumDiscussion | undefined> {
+    const [updated] = await db
+      .update(forumDiscussions)
+      .set(updates)
+      .where(eq(forumDiscussions.id, discussionId))
+      .returning();
+    return updated;
+  }
+
+  async deleteForumDiscussion(discussionId: string): Promise<boolean> {
+    // First get the discussion to find its category
+    const [discussion] = await db
+      .select()
+      .from(forumDiscussions)
+      .where(eq(forumDiscussions.id, discussionId));
+    
+    if (!discussion) return false;
+
+    // Delete all replies first
+    await db
+      .delete(forumReplies)
+      .where(eq(forumReplies.discussionId, discussionId));
+
+    // Delete user interactions
+    await db
+      .delete(userInteractions)
+      .where(sql`${userInteractions.targetType} = 'discussion' AND ${userInteractions.targetId} = ${discussionId}`);
+
+    // Delete the discussion
+    await db
+      .delete(forumDiscussions)
+      .where(eq(forumDiscussions.id, discussionId));
+
+    // Update category discussion count
+    if (discussion.categoryId) {
+      await db
+        .update(forumCategories)
+        .set({ discussionCount: sql`${forumCategories.discussionCount} - 1` })
+        .where(eq(forumCategories.id, discussion.categoryId));
+    }
+
+    return true;
   }
 
   async getResources(type?: string, category?: string, limit = 20): Promise<Resource[]> {
