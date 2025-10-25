@@ -71,6 +71,9 @@ export default function Resources() {
     duration: "",
     difficulty: "",
     isFree: true,
+    rating: 0,
+    ratingCount: 0,
+    downloadCount: 0,
   });
 
   const { data: resources, isLoading } = useQuery({
@@ -201,6 +204,9 @@ export default function Resources() {
       duration: "",
       difficulty: "",
       isFree: true,
+      rating: 0,
+      ratingCount: 0,
+      downloadCount: 0,
     });
     setIsNewDialogOpen(true);
   };
@@ -217,6 +223,9 @@ export default function Resources() {
       duration: resource.duration || "",
       difficulty: resource.difficulty || "",
       isFree: resource.isFree !== false,
+      rating: resource.rating || 0,
+      ratingCount: resource.ratingCount || 0,
+      downloadCount: resource.downloadCount || 0,
     });
     setIsEditDialogOpen(true);
   };
@@ -631,6 +640,50 @@ export default function Resources() {
               </div>
             </div>
 
+            {/* Statistics Section */}
+            <div className="border-t pt-4">
+              <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300">Statistics (Admin Only)</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Star Rating (1-5)</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="5"
+                    step="1"
+                    placeholder="5"
+                    value={formData.rating}
+                    onChange={(e) => setFormData({ ...formData, rating: parseInt(e.target.value) || 0 })}
+                    data-testid="input-new-resource-rating"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Rating Count</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={formData.ratingCount}
+                    onChange={(e) => setFormData({ ...formData, ratingCount: parseInt(e.target.value) || 0 })}
+                    data-testid="input-new-resource-rating-count"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Download Count</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={formData.downloadCount}
+                    onChange={(e) => setFormData({ ...formData, downloadCount: parseInt(e.target.value) || 0 })}
+                    data-testid="input-new-resource-download-count"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -781,6 +834,50 @@ export default function Resources() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            {/* Statistics Section */}
+            <div className="border-t pt-4">
+              <h3 className="text-sm font-semibold mb-4 text-gray-700 dark:text-gray-300">Statistics (Admin Only)</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Star Rating (1-5)</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="5"
+                    step="1"
+                    placeholder="5"
+                    value={formData.rating}
+                    onChange={(e) => setFormData({ ...formData, rating: parseInt(e.target.value) || 0 })}
+                    data-testid="input-edit-resource-rating"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Rating Count</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={formData.ratingCount}
+                    onChange={(e) => setFormData({ ...formData, ratingCount: parseInt(e.target.value) || 0 })}
+                    data-testid="input-edit-resource-rating-count"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Download Count</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={formData.downloadCount}
+                    onChange={(e) => setFormData({ ...formData, downloadCount: parseInt(e.target.value) || 0 })}
+                    data-testid="input-edit-resource-download-count"
+                  />
+                </div>
               </div>
             </div>
 
