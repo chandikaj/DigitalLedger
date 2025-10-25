@@ -25,6 +25,7 @@ function Router() {
     <Switch>
       {/* Public routes - accessible to everyone */}
       <Route path="/resources" component={Resources} />
+      <Route path="/podcasts" component={Podcasts} />
       
       {isLoading || !isAuthenticated ? (
         <>
@@ -37,7 +38,6 @@ function Router() {
           <Route path="/news" component={News} />
           <Route path="/news/:id" component={Article} />
           <Route path="/forums" component={Forums} />
-          <Route path="/podcasts" component={Podcasts} />
           <Route path="/community" component={Community} />
           <Route path="/admin" component={Admin} />
         </>
