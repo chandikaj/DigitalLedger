@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Brain, 
   Users, 
@@ -21,6 +22,11 @@ import {
 
 export default function Landing() {
   const [, setLocation] = useLocation();
+  
+  const { data: latestPodcasts } = useQuery({
+    queryKey: ["/api/podcasts"],
+    queryFn: () => fetch("/api/podcasts?limit=3").then(res => res.json()),
+  });
   const stats = [
     { value: "12,847", label: "Active Members" },
     { value: "2,341", label: "Expert Discussions" },
@@ -269,54 +275,76 @@ export default function Landing() {
             </p>
           </div>
 
-          {/* Featured Episode */}
-          <Card className="mb-12" data-testid="featured-podcast">
-            <CardContent className="p-8">
-              <div className="flex flex-col lg:flex-row items-center space-y-6 lg:space-y-0 lg:space-x-8">
-                <img 
-                  src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300" 
-                  alt="Featured podcast episode"
-                  className="w-full lg:w-80 h-64 object-cover rounded-lg"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Badge variant="default" data-testid="featured-badge">Featured Episode</Badge>
-                    <span className="text-gray-500 dark:text-gray-400 text-sm">Episode 142 • 45 min</span>
+          {/* Latest 3 Podcasts */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {latestPodcasts && latestPodcasts.length > 0 ? (
+              latestPodcasts.map((podcast: any, index: number) => (
+                <Card key={podcast.id} className="hover:shadow-md transition-shadow" data-testid={`podcast-card-${index}`}>
+                  <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+                    <img 
+                      src={podcast.imageUrl || "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400"} 
+                      alt={podcast.title}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4" data-testid="featured-title">
-                    The Future of AI Auditing with Sarah Martinez, Partner at Deloitte
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-6" data-testid="featured-description">
-                    Sarah discusses how machine learning is transforming audit procedures, shares real-world implementation challenges, and provides insights into the next decade of AI-powered auditing.
-                  </p>
-                  
-                  {/* Audio Player */}
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6">
-                    <div className="flex items-center space-x-4">
-                      <Button size="icon" className="w-12 h-12 rounded-full" data-testid="button-play-podcast">
-                        <PlayCircle className="h-6 w-6" />
-                      </Button>
-                      <div className="flex-1">
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
-                          <div className="bg-primary h-2 rounded-full" style={{ width: "35%" }}></div>
-                        </div>
-                        <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
-                          <span>15:42</span>
-                          <span>45:08</span>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Badge variant="secondary" data-testid={`episode-badge-${index}`}>
+                        Episode {podcast.episodeNumber}
+                      </Badge>
+                      <span className="text-gray-500 dark:text-gray-400 text-sm" data-testid={`duration-${index}`}>
+                        {podcast.duration}
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2" data-testid={`podcast-title-${index}`}>
+                      {podcast.title}
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3 text-sm" data-testid={`podcast-description-${index}`}>
+                      {podcast.description}
+                    </p>
+                    <div className="border-t pt-4 mt-4">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center space-x-2">
+                          <Mic className="h-4 w-4 text-primary dark:text-ai-teal" />
+                          <span className="text-gray-600 dark:text-gray-300">{podcast.hostName}</span>
                         </div>
                       </div>
+                      {podcast.guestName && (
+                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                          Guest: {podcast.guestName}
+                        </div>
+                      )}
+                      <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mt-3">
+                        <button className="flex items-center space-x-1 hover:text-primary dark:hover:text-ai-teal">
+                          <PlayCircle className="h-4 w-4" />
+                          <span>{podcast.playCount || 0} plays</span>
+                        </button>
+                        <button className="flex items-center space-x-1 hover:text-primary dark:hover:text-ai-teal">
+                          <Heart className="h-4 w-4" />
+                          <span>{podcast.likes || 0}</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
-                    <span>Published Dec 8, 2024</span>
-                    <span>12,847 plays</span>
-                    <span>234 likes</span>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <Podcast className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400">No podcast episodes available yet.</p>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
+          
+          <div className="text-center mt-12">
+            <Button 
+              className="bg-primary hover:bg-blue-700 text-white"
+              onClick={() => setLocation("/podcasts")}
+              data-testid="button-view-all-podcasts"
+            >
+              View All Episodes
+            </Button>
+          </div>
         </div>
       </section>
 
