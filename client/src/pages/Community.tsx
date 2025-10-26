@@ -239,53 +239,59 @@ export default function Community() {
               </div>
             </section>
 
-            {/* Community Poll */}
+            {/* Community Polls */}
             {polls && polls.length > 0 && (
-              <section data-testid="community-poll">
-                <Card className="bg-gradient-to-br from-primary to-secondary text-white">
-                  <CardContent className="p-8">
-                    <h2 className="text-2xl font-bold mb-6 text-center">Community Poll</h2>
-                    <div className="max-w-2xl mx-auto">
-                      <h3 className="text-xl font-semibold mb-6" data-testid="poll-question">
-                        {polls[0].question}
-                      </h3>
-                      <div className="space-y-4">
-                        {polls[0].options.map((option: any, index: number) => {
-                          const percentage = polls[0].totalVotes > 0 
-                            ? Math.round((option.votes / polls[0].totalVotes) * 100) 
-                            : 0;
-                          
-                          return (
-                            <Button
-                              key={index}
-                              variant="ghost"
-                              className="w-full justify-between p-4 bg-white/10 hover:bg-white/20 text-white border-white/20"
-                              onClick={() => votePoll(polls[0].id, index)}
-                              data-testid={`poll-option-${index}`}
-                            >
-                              <span>{option.text}</span>
-                              <div className="flex items-center space-x-3">
-                                <div className="w-32 bg-white/20 rounded-full h-2">
-                                  <div 
-                                    className="bg-yellow-300 h-2 rounded-full transition-all duration-300" 
-                                    style={{ width: `${percentage}%` }}
-                                  />
-                                </div>
-                                <span className="text-sm font-medium">{percentage}%</span>
-                              </div>
-                            </Button>
-                          );
-                        })}
-                      </div>
-                      <p className="text-center mt-6 text-blue-100">
-                        {polls[0].totalVotes} members participated • 
-                        {polls[0].expiresAt && new Date(polls[0].expiresAt) > new Date() && (
-                          <span> Poll closes {new Date(polls[0].expiresAt).toLocaleDateString()}</span>
-                        )}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+              <section data-testid="community-polls">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                  Community Polls
+                </h2>
+                <div className="space-y-6">
+                  {polls.map((poll: any, pollIndex: number) => (
+                    <Card key={poll.id} className="bg-gradient-to-br from-primary to-secondary text-white">
+                      <CardContent className="p-8">
+                        <div className="max-w-2xl mx-auto">
+                          <h3 className="text-xl font-semibold mb-6" data-testid="poll-question">
+                            {poll.question}
+                          </h3>
+                          <div className="space-y-4">
+                            {poll.options.map((option: any, index: number) => {
+                              const percentage = poll.totalVotes > 0 
+                                ? Math.round((option.votes / poll.totalVotes) * 100) 
+                                : 0;
+                              
+                              return (
+                                <Button
+                                  key={index}
+                                  variant="ghost"
+                                  className="w-full justify-between p-4 bg-white/10 hover:bg-white/20 text-white border-white/20"
+                                  onClick={() => votePoll(poll.id, index)}
+                                  data-testid={`poll-option-${index}`}
+                                >
+                                  <span>{option.text}</span>
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-32 bg-white/20 rounded-full h-2">
+                                      <div 
+                                        className="bg-yellow-300 h-2 rounded-full transition-all duration-300" 
+                                        style={{ width: `${percentage}%` }}
+                                      />
+                                    </div>
+                                    <span className="text-sm font-medium">{percentage}%</span>
+                                  </div>
+                                </Button>
+                              );
+                            })}
+                          </div>
+                          <p className="text-center mt-6 text-blue-100">
+                            {poll.totalVotes} members participated • 
+                            {poll.expiresAt && new Date(poll.expiresAt) > new Date() && (
+                              <span> Poll closes {new Date(poll.expiresAt).toLocaleDateString()}</span>
+                            )}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </section>
             )}
           </div>
