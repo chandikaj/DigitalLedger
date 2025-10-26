@@ -62,8 +62,9 @@ export async function seedDatabase(force: boolean = false) {
       const existingPodcasts = await db.select().from(podcastEpisodes).limit(5);
       const existingResources = await db.select().from(resources).limit(5);
       const existingCategories = await db.select().from(forumCategories).limit(3);
+      const existingDiscussions = await db.select().from(forumDiscussions).limit(5);
 
-      if (existingUsers.length > 5 || existingNews.length > 3 || existingPodcasts.length > 3) {
+      if (existingUsers.length > 5 || existingNews.length > 3 || existingPodcasts.length > 3 || existingDiscussions.length > 3) {
         console.log("Database already contains significant seed data. Skipping seeding to avoid duplicates.");
         return { 
           success: true, 

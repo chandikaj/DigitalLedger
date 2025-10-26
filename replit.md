@@ -14,15 +14,15 @@ Digital Ledger is a modern community platform focused on "AI in Accounting" desi
 The application now includes **automatic seeding on startup**:
 
 **How it works:**
-1. On every app start, checks if database is empty (<=2 users, 0 articles, or 0 podcasts)
-2. If empty, automatically seeds with complete sample data
+1. On every app start, checks if database is empty (<=2 users, 0 articles, 0 podcasts, or 0 forum discussions)
+2. If empty, automatically seeds with complete sample data including forum discussions and replies
 3. If already populated, skips seeding and logs current counts
 4. **This ensures production gets seeded automatically when published!**
 
 **Server log examples:**
 ```
 [express] Checking database status...
-[express] ✓ Database already populated (13 users, 11 articles, 10 podcasts)
+[express] ✓ Database already populated (13 users, 11 articles, 10 podcasts, 9 discussions)
 ```
 
 ### Current Database Status
@@ -62,11 +62,11 @@ The admin panel still includes a **"Rebuild Database"** button (orange border) f
 
 ### Production Deployment (Automatic)
 1. **Publish to Replit** → Schema transfers, data does not
-2. **App starts in production** → Detects empty database
-3. **Auto-seeding triggers** → Populates all sample data
+2. **App starts in production** → Detects empty database (checks forum discussions too!)
+3. **Auto-seeding triggers** → Populates all sample data including 9 forum discussions with 21 replies
 4. **Production ready!** → Same data as development
 
-**No manual steps required!** Both environments automatically maintain identical seed data.
+**No manual steps required!** Both environments automatically maintain identical seed data including community forums.
 
 ## User Preferences
 

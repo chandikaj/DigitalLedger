@@ -3,7 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed";
 import { db } from "./db";
-import { users, newsArticles, podcastEpisodes } from "@shared/schema";
+import { users, newsArticles, podcastEpisodes, forumDiscussions } from "@shared/schema";
 
 const app = express();
 app.use(express.json());
@@ -48,16 +48,17 @@ app.use((req, res, next) => {
     const userCount = await db.select().from(users).limit(10);
     const newsCount = await db.select().from(newsArticles).limit(5);
     const podcastCount = await db.select().from(podcastEpisodes).limit(5);
+    const forumCount = await db.select().from(forumDiscussions).limit(5);
 
     // If database appears empty or minimal, auto-seed
-    if (userCount.length <= 2 || newsCount.length === 0 || podcastCount.length === 0) {
+    if (userCount.length <= 2 || newsCount.length === 0 || podcastCount.length === 0 || forumCount.length === 0) {
       log("Database appears empty. Auto-seeding with sample data...");
       const result = await seedDatabase(false);
       if (result.success) {
         log("✓ Database auto-seeded successfully!");
       }
     } else {
-      log(`✓ Database already populated (${userCount.length} users, ${newsCount.length} articles, ${podcastCount.length} podcasts)`);
+      log(`✓ Database already populated (${userCount.length} users, ${newsCount.length} articles, ${podcastCount.length} podcasts, ${forumCount.length} discussions)`);
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
