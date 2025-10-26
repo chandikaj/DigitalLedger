@@ -116,6 +116,7 @@ export default function Landing() {
                 size="lg"
                 variant="outline"
                 className="border-2 border-white text-white hover:bg-white hover:text-primary"
+                onClick={() => setLocation("/resources")}
                 data-testid="button-explore-resources"
               >
                 Explore Resources
