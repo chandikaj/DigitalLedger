@@ -1,6 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { seedDatabase } from "./seed";
+import { db } from "./db";
+import { users, newsArticles, podcastEpisodes } from "@shared/schema";
 
 const app = express();
 app.use(express.json());
@@ -38,6 +41,29 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+
+  // Auto-seed database on startup if empty
+  try {
+    log("Checking database status...");
+    const userCount = await db.select().from(users).limit(10);
+    const newsCount = await db.select().from(newsArticles).limit(5);
+    const podcastCount = await db.select().from(podcastEpisodes).limit(5);
+
+    // If database appears empty or minimal, auto-seed
+    if (userCount.length <= 2 || newsCount.length === 0 || podcastCount.length === 0) {
+      log("Database appears empty. Auto-seeding with sample data...");
+      const result = await seedDatabase(false);
+      if (result.success) {
+        log("✓ Database auto-seeded successfully!");
+      }
+    } else {
+      log(`✓ Database already populated (${userCount.length} users, ${newsCount.length} articles, ${podcastCount.length} podcasts)`);
+    }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    log(`Warning: Auto-seed check failed: ${errorMsg}`);
+    // Continue server startup even if seeding fails
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

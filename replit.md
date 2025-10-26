@@ -4,35 +4,57 @@
 
 Digital Ledger is a modern community platform focused on "AI in Accounting" designed to support over 10,000 members through interactive knowledge-sharing. The platform serves as a comprehensive hub for accounting professionals to stay updated on AI developments, engage in discussions, access educational resources, and listen to expert podcasts. Built with scalability in mind, it features a news aggregator, podcast hub, educational resource library, and robust community engagement tools including forums, polls, and gamification elements.
 
-## Database Seeding & Production Setup
+## Database Seeding & Production Synchronization
 
 ### Admin Credentials
 - Email: admin@admin.com
 - Password: admin123
 
-### Rebuild Database Feature
-The admin panel includes a **"Rebuild Database"** button (orange border) that:
-1. **Clears all seed data** (preserving admin accounts)
-2. **Inserts fresh sample data** with correct schema
-3. **Handles foreign key constraints** properly (deletes child records first)
+### Automatic Database Seeding
+The application now includes **automatic seeding on startup**:
+
+**How it works:**
+1. On every app start, checks if database is empty (<=2 users, 0 articles, or 0 podcasts)
+2. If empty, automatically seeds with complete sample data
+3. If already populated, skips seeding and logs current counts
+4. **This ensures production gets seeded automatically when published!**
+
+**Server log examples:**
+```
+[express] Checking database status...
+[express] ✓ Database already populated (13 users, 11 articles, 10 podcasts)
+```
+
+### Current Database Status
+**Development Database:** ✅ Fully synchronized
+- 13 users (10 community members + 3 admins)
+- 11 news articles across 4 categories
+- 10 podcast episodes (Episodes 3-12)
+- 12 educational resources
+- 3 forum categories
+
+**Production Database:** Will auto-seed on first deployment
 
 ### Sample Data Included
-When seeded, the database contains:
-- **10 Community Contributors**: Professional profiles with names, titles, companies, expertise tags, and profile images
-- **11 News Articles**: Across 4 categories (automation, fraud-detection, regulatory, generative-ai)
-- **10 Podcast Episodes**: Episodes 3-12 with full metadata, sorted by published date
-- **12 Educational Resources**: Guides, videos, templates, and tools (all with integer ratings)
-- **3 Forum Categories**: Base categories (initially empty of discussions)
+- **10 Community Contributors**: Sarah Mitchell (Deloitte), James Rodriguez (KPMG), Emily Chen (PwC), and 7 more with complete profiles
+- **11 News Articles**: Automation, Fraud Detection, Regulatory, Generative AI categories
+- **10 Podcast Episodes**: Full metadata, audio URLs, sorted by date
+- **12 Educational Resources**: Guides, videos, templates, tools with ratings
+- **3 Forum Categories**: AI Implementation, Regulatory Compliance, Learning & Development
 
-### Production Deployment Workflow
-1. **Develop locally** → Development database has seed data
-2. **Publish to Replit** → Schema transfers automatically, but data does NOT
-3. **Visit published URL** → Login as admin (admin@admin.com / admin123)
-4. **Go to Admin Panel** → Navigate to /admin
-5. **Click "Rebuild Database"** → Populates production with identical seed data
-6. **Confirm** → Production database now matches development
+### Manual Rebuild Option
+The admin panel still includes a **"Rebuild Database"** button (orange border) for manual control:
+- Clears all seed data (preserves admin accounts)
+- Re-inserts fresh sample data
+- Useful for resetting data during development
 
-This ensures both development and production environments have consistent, identical sample data.
+### Production Deployment (Automatic)
+1. **Publish to Replit** → Schema transfers, data does not
+2. **App starts in production** → Detects empty database
+3. **Auto-seeding triggers** → Populates all sample data
+4. **Production ready!** → Same data as development
+
+**No manual steps required!** Both environments automatically maintain identical seed data.
 
 ## User Preferences
 
