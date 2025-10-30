@@ -111,13 +111,14 @@ Preferred communication style: Simple, everyday language.
 - **Resource Library**: Educational content management with type-based organization
 - **Podcast Hub**: Audio content management with embedded player support
   - **Dedicated Add Podcast Page** (/podcasts/add): Streamlined episode creation interface for editors and admins
-  - **Dedicated Edit Podcast Page** (/podcasts/:id/edit): Full episode editing capability for editors and admins
+  - **Dedicated Edit Podcast Page** (/podcasts/:id/edit): Full episode editing and deletion capability for editors and admins
   - Role-based "Add Podcast" button visible only to editors and admins on Podcasts page
   - Role-based "Edit" buttons visible only to editors and admins on all podcast cards (featured and regular)
+  - **Delete functionality** with confirmation dialog to prevent accidental deletions
   - Form validation enforces required field (title only)
   - Optional fields: description, episode number, duration, audio URL, host/guest information, cover image
-  - Auto-redirect to podcast hub after successful creation or update
-  - Smart cache invalidation ensures featured episode reflects updates immediately
+  - Auto-redirect to podcast hub after successful creation, update, or deletion
+  - Smart cache invalidation ensures featured episode and lists reflect changes immediately
 - **Polling System**: Community engagement through surveys and polls
 
 ### File Upload & Media

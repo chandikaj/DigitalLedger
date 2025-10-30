@@ -8,11 +8,22 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { apiRequest } from "@/lib/queryClient";
 import { z } from "zod";
-import { Upload, Mic, Image, ArrowLeft, Headphones, Loader2 } from "lucide-react";
+import { Upload, Mic, Image, ArrowLeft, Headphones, Loader2, Trash2 } from "lucide-react";
 import { Link, useLocation, useParams } from "wouter";
 import type { UploadResult } from "@uppy/core";
 
@@ -95,6 +106,30 @@ export default function EditPodcast() {
         variant: "destructive",
       });
       console.error("Error updating podcast:", error);
+    },
+  });
+
+  const deletePodcastMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest(`/api/podcasts/${id}`, "DELETE");
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Podcast episode deleted successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/podcasts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/podcasts", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/podcasts/featured"] });
+      setTimeout(() => setLocation("/podcasts"), 1500);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete podcast episode. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Error deleting podcast:", error);
     },
   });
 
@@ -386,25 +421,60 @@ export default function EditPodcast() {
                     )}
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Link href="/podcasts">
+                  <div className="flex justify-between items-center gap-3 pt-4">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          type="button"
+                          variant="destructive"
+                          className="flex items-center gap-2"
+                          disabled={deletePodcastMutation.isPending}
+                          data-testid="button-delete-podcast"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          {deletePodcastMutation.isPending ? "Deleting..." : "Delete Episode"}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Podcast Episode</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this podcast episode? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => deletePodcastMutation.mutate()}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            data-testid="button-confirm-delete"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+
+                    <div className="flex gap-3">
+                      <Link href="/podcasts">
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          data-testid="button-cancel-podcast"
+                        >
+                          Cancel
+                        </Button>
+                      </Link>
                       <Button 
-                        type="button"
-                        variant="outline"
-                        data-testid="button-cancel-podcast"
+                        type="submit" 
+                        disabled={updatePodcastMutation.isPending}
+                        className="flex items-center gap-2"
+                        data-testid="button-update-podcast"
                       >
-                        Cancel
+                        <Upload className="h-4 w-4" />
+                        {updatePodcastMutation.isPending ? "Updating..." : "Update Episode"}
                       </Button>
-                    </Link>
-                    <Button 
-                      type="submit" 
-                      disabled={updatePodcastMutation.isPending}
-                      className="flex items-center gap-2"
-                      data-testid="button-update-podcast"
-                    >
-                      <Upload className="h-4 w-4" />
-                      {updatePodcastMutation.isPending ? "Updating..." : "Update Episode"}
-                    </Button>
+                    </div>
                   </div>
                 </form>
               </Form>
