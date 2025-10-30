@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
+import Logout from "@/pages/Logout";
 import Home from "@/pages/Home";
 import News from "@/pages/News";
 import Article from "@/pages/Article";
@@ -33,10 +34,11 @@ function Router() {
       <Route path="/resources" component={Resources} />
       <Route path="/podcasts" component={Podcasts} />
       <Route path="/community" component={Community} />
+      <Route path="/login" component={Login} />
+      <Route path="/logout" component={Logout} />
       
       {isLoading || !isAuthenticated ? (
         <>
-          <Route path="/login" component={Login} />
           <Route path="/" component={Landing} />
         </>
       ) : (
