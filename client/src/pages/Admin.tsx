@@ -96,7 +96,7 @@ export default function Admin() {
     resolver: zodResolver(inviteFormSchema),
     defaultValues: {
       email: "",
-      role: "member",
+      role: "subscriber",
     },
   });
 
@@ -109,7 +109,7 @@ export default function Admin() {
       title: "",
       company: "",
       bio: "",
-      role: "member",
+      role: "subscriber",
       isActive: true,
       profileImageUrl: "",
       expertiseTags: [],
@@ -448,7 +448,7 @@ export default function Admin() {
       title: user.title || "",
       company: user.company || "",
       bio: user.bio || "",
-      role: user.role || "member",
+      role: user.role || "subscriber",
       isActive: user.isActive ?? true,
       profileImageUrl: user.profileImageUrl || "",
       expertiseTags: user.expertiseTags || [],
@@ -1092,15 +1092,16 @@ export default function Admin() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Role</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || 'member'}>
+                                <Select onValueChange={field.onChange} value={field.value || 'subscriber'}>
                                   <FormControl>
                                     <SelectTrigger data-testid="select-user-role">
                                       <SelectValue placeholder="Select a role" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="member">Member</SelectItem>
-                                    <SelectItem value="moderator">Moderator</SelectItem>
+                                    <SelectItem value="subscriber">Subscriber</SelectItem>
+                                    <SelectItem value="contributor">Contributor</SelectItem>
+                                    <SelectItem value="editor">Editor</SelectItem>
                                     <SelectItem value="admin">Admin</SelectItem>
                                   </SelectContent>
                                 </Select>
@@ -1219,8 +1220,9 @@ export default function Admin() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="member">Member</SelectItem>
-                                  <SelectItem value="moderator">Moderator</SelectItem>
+                                  <SelectItem value="subscriber">Subscriber</SelectItem>
+                                  <SelectItem value="contributor">Contributor</SelectItem>
+                                  <SelectItem value="editor">Editor</SelectItem>
                                   <SelectItem value="admin">Admin</SelectItem>
                                 </SelectContent>
                               </Select>
@@ -1281,7 +1283,7 @@ export default function Admin() {
                               {user.email}
                             </TableCell>
                             <TableCell data-testid={`text-user-role-${user.id}`}>
-                              <Badge variant={user.role === 'admin' ? 'default' : user.role === 'moderator' ? 'secondary' : 'outline'}>
+                              <Badge variant={user.role === 'admin' ? 'default' : user.role === 'editor' ? 'secondary' : 'outline'}>
                                 {user.role}
                               </Badge>
                             </TableCell>
@@ -1327,8 +1329,9 @@ export default function Admin() {
                                           <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="member">Member</SelectItem>
-                                          <SelectItem value="moderator">Moderator</SelectItem>
+                                          <SelectItem value="subscriber">Subscriber</SelectItem>
+                                          <SelectItem value="contributor">Contributor</SelectItem>
+                                          <SelectItem value="editor">Editor</SelectItem>
                                           <SelectItem value="admin">Admin</SelectItem>
                                         </SelectContent>
                                       </Select>
@@ -1477,15 +1480,16 @@ export default function Admin() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Role</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || 'member'}>
+                                <Select onValueChange={field.onChange} value={field.value || 'subscriber'}>
                                   <FormControl>
                                     <SelectTrigger data-testid="select-edit-user-role">
                                       <SelectValue placeholder="Select a role" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    <SelectItem value="member">Member</SelectItem>
-                                    <SelectItem value="moderator">Moderator</SelectItem>
+                                    <SelectItem value="subscriber">Subscriber</SelectItem>
+                                    <SelectItem value="contributor">Contributor</SelectItem>
+                                    <SelectItem value="editor">Editor</SelectItem>
                                     <SelectItem value="admin">Admin</SelectItem>
                                   </SelectContent>
                                 </Select>
@@ -1588,7 +1592,7 @@ export default function Admin() {
                               {invitation.email}
                             </TableCell>
                             <TableCell data-testid={`text-invitation-role-${invitation.id}`}>
-                              <Badge variant={invitation.role === 'admin' ? 'default' : invitation.role === 'moderator' ? 'secondary' : 'outline'}>
+                              <Badge variant={invitation.role === 'admin' ? 'default' : invitation.role === 'editor' ? 'secondary' : 'outline'}>
                                 {invitation.role}
                               </Badge>
                             </TableCell>
