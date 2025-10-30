@@ -5,12 +5,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Heart, MessageCircle, Share, Search } from "lucide-react";
+import { Heart, MessageCircle, Share, Search, PlusCircle } from "lucide-react";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function News() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useAuth();
+  const userRole = (user as any)?.role;
 
   const { data: news, isLoading } = useQuery({
     queryKey: ["/api/news", selectedCategory],
@@ -67,12 +70,27 @@ export default function News() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8" data-testid="news-header">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Latest AI in Accounting News
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl">
-            Stay updated with curated insights from trusted sources, academic journals, and industry leaders
-          </p>
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                Latest AI in Accounting News
+              </h1>
+              <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl">
+                Stay updated with curated insights from trusted sources, academic journals, and industry leaders
+              </p>
+            </div>
+            {(userRole === 'editor' || userRole === 'admin') && (
+              <Link href="/admin">
+                <Button 
+                  className="flex items-center gap-2"
+                  data-testid="button-add-news"
+                >
+                  <PlusCircle className="h-5 w-5" />
+                  Add News
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Filters and Search */}
