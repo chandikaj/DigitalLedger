@@ -51,6 +51,14 @@ app.use((req, res, next) => {
     log(`Warning: Menu settings initialization failed: ${errorMsg}`);
   }
 
+  // Initialize news categories
+  try {
+    await storage.initializeNewsCategories();
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    log(`Warning: News categories initialization failed: ${errorMsg}`);
+  }
+
   // Auto-seed database on startup if empty
   try {
     log("Checking database status...");

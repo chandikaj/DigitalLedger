@@ -1,5 +1,6 @@
 import {
   users,
+  newsCategories,
   newsArticles,
   forumCategories,
   forumDiscussions,
@@ -12,6 +13,8 @@ import {
   menuSettings,
   type User,
   type UpsertUser,
+  type NewsCategory,
+  type InsertNewsCategory,
   type NewsArticle,
   type InsertNewsArticle,
   type ForumCategory,
@@ -57,6 +60,14 @@ export interface IStorage {
   listInvitations(): Promise<UserInvitation[]>;
   findInvitationByEmail(email: string): Promise<UserInvitation | undefined>;
   markInvitationAccepted(id: string): Promise<void>;
+  
+  // News category operations
+  getNewsCategories(activeOnly?: boolean): Promise<NewsCategory[]>;
+  getNewsCategory(id: string): Promise<NewsCategory | undefined>;
+  createNewsCategory(category: InsertNewsCategory): Promise<NewsCategory>;
+  updateNewsCategory(categoryId: string, updates: Partial<InsertNewsCategory>): Promise<NewsCategory | undefined>;
+  deleteNewsCategory(categoryId: string): Promise<boolean>;
+  initializeNewsCategories(): Promise<void>;
   
   // News operations
   getNewsArticles(category?: string, limit?: number): Promise<NewsArticle[]>;
@@ -271,6 +282,106 @@ export class DatabaseStorage implements IStorage {
       .update(userInvitations)
       .set({ acceptedAt: new Date() })
       .where(eq(userInvitations.id, id));
+  }
+
+  // News category methods
+  async getNewsCategories(activeOnly = false): Promise<NewsCategory[]> {
+    if (activeOnly) {
+      return await db
+        .select()
+        .from(newsCategories)
+        .where(eq(newsCategories.isActive, true))
+        .orderBy(newsCategories.displayOrder, newsCategories.name);
+    }
+    
+    return await db
+      .select()
+      .from(newsCategories)
+      .orderBy(newsCategories.displayOrder, newsCategories.name);
+  }
+
+  async getNewsCategory(id: string): Promise<NewsCategory | undefined> {
+    const [category] = await db
+      .select()
+      .from(newsCategories)
+      .where(eq(newsCategories.id, id))
+      .limit(1);
+    return category;
+  }
+
+  async createNewsCategory(category: InsertNewsCategory): Promise<NewsCategory> {
+    const [newCategory] = await db
+      .insert(newsCategories)
+      .values(category)
+      .returning();
+    return newCategory;
+  }
+
+  async updateNewsCategory(categoryId: string, updates: Partial<InsertNewsCategory>): Promise<NewsCategory | undefined> {
+    const [updated] = await db
+      .update(newsCategories)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(newsCategories.id, categoryId))
+      .returning();
+    return updated;
+  }
+
+  async deleteNewsCategory(categoryId: string): Promise<boolean> {
+    const result = await db
+      .delete(newsCategories)
+      .where(eq(newsCategories.id, categoryId));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async initializeNewsCategories(): Promise<void> {
+    const existingCategories = await this.getNewsCategories();
+    
+    if (existingCategories.length === 0) {
+      const defaultCategories: InsertNewsCategory[] = [
+        {
+          name: "Automation",
+          slug: "automation",
+          description: "AI-powered automation in accounting processes",
+          icon: "Bot",
+          color: "#3B82F6",
+          displayOrder: 1,
+          isActive: true,
+        },
+        {
+          name: "Fraud Detection",
+          slug: "fraud-detection",
+          description: "AI systems for detecting financial fraud",
+          icon: "Shield",
+          color: "#EF4444",
+          displayOrder: 2,
+          isActive: true,
+        },
+        {
+          name: "Regulatory",
+          slug: "regulatory",
+          description: "AI regulations and compliance updates",
+          icon: "Scale",
+          color: "#8B5CF6",
+          displayOrder: 3,
+          isActive: true,
+        },
+        {
+          name: "Generative AI",
+          slug: "generative-ai",
+          description: "GPT and other generative AI applications",
+          icon: "Sparkles",
+          color: "#10B981",
+          displayOrder: 4,
+          isActive: true,
+        },
+      ];
+
+      for (const category of defaultCategories) {
+        await this.createNewsCategory(category);
+      }
+      
+      console.log("✓ Initialized news categories");
+    }
   }
 
   async getNewsArticles(category?: string, limit = 10): Promise<NewsArticle[]> {
