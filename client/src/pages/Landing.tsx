@@ -103,7 +103,7 @@ export default function Landing() {
             <p className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto mb-8" data-testid="hero-subtitle">
               Join 10,000+ accounting professionals, auditors, and AI practitioners shaping the industry's digital transformation
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button 
                 size="lg"
                 className="bg-white text-primary hover:bg-gray-100"
@@ -113,6 +113,9 @@ export default function Landing() {
                 Join Community
               </Button>
             </div>
+            <p className="text-blue-100 text-sm mt-4" data-testid="text-no-spam">
+              No spam, get powerful insights!
+            </p>
           </div>
         </div>
       </section>
