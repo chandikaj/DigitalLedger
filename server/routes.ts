@@ -355,9 +355,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // News routes
   app.get('/api/news', async (req, res) => {
     try {
-      const { category, limit } = req.query;
+      const { category, categories, limit } = req.query;
+      // Support both single category (legacy) and multiple categories (new)
+      let categoryIds: string[] | undefined;
+      if (categories) {
+        categoryIds = Array.isArray(categories) ? categories as string[] : [categories as string];
+      } else if (category) {
+        categoryIds = [category as string];
+      }
       const articles = await storage.getNewsArticles(
-        category as string,
+        categoryIds,
         limit ? parseInt(limit as string) : undefined
       );
       res.json(articles);
@@ -383,11 +390,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/news', isEditorOrAdmin, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      // Extract categoryIds from request body (support both old and new format)
+      const { categoryIds, category, ...articleFields } = req.body;
+      const categoryIdsArray = categoryIds || (category ? [category] : []);
+      
       const articleData = insertNewsArticleSchema.parse({
-        ...req.body,
+        ...articleFields,
         authorId: userId,
+        category: 'general', // Legacy field, will be overwritten by storage layer
       });
-      const article = await storage.createNewsArticle(articleData);
+      const article = await storage.createNewsArticle(articleData, categoryIdsArray);
       res.json(article);
     } catch (error) {
       console.error("Error creating news article:", error);
@@ -398,8 +410,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/news/:id', isAdmin, async (req: any, res) => {
     try {
       const articleId = req.params.id;
-      const articleData = insertNewsArticleSchema.partial().parse(req.body);
-      const updatedArticle = await storage.updateNewsArticle(articleId, articleData);
+      // Extract categoryIds from request body (support both old and new format)
+      const { categoryIds, category, ...articleFields } = req.body;
+      const categoryIdsArray = categoryIds || (category ? [category] : undefined);
+      
+      const articleData = insertNewsArticleSchema.partial().parse(articleFields);
+      const updatedArticle = await storage.updateNewsArticle(articleId, articleData, categoryIdsArray);
       if (!updatedArticle) {
         return res.status(404).json({ message: "Article not found" });
       }
@@ -474,9 +490,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/forum/discussions', async (req, res) => {
     try {
-      const { categoryId, limit } = req.query;
+      const { categoryId, newsCategories, limit } = req.query;
+      let newsCategoryIds: string[] | undefined;
+      if (newsCategories) {
+        newsCategoryIds = Array.isArray(newsCategories) ? newsCategories as string[] : [newsCategories as string];
+      }
       const discussions = await storage.getForumDiscussions(
         categoryId as string,
+        newsCategoryIds,
         limit ? parseInt(limit as string) : undefined
       );
       res.json(discussions);
@@ -502,11 +523,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/forum/discussions', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      const { newsCategoryIds, ...discussionFields } = req.body;
+      const newsCategoryIdsArray = newsCategoryIds || [];
       const discussionData = insertForumDiscussionSchema.parse({
-        ...req.body,
+        ...discussionFields,
         authorId: userId,
       });
-      const discussion = await storage.createForumDiscussion(discussionData);
+      const discussion = await storage.createForumDiscussion(discussionData, newsCategoryIdsArray);
       res.json(discussion);
     } catch (error) {
       console.error("Error creating forum discussion:", error);
@@ -517,8 +540,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/forum/discussions/:id', isAdmin, async (req: any, res) => {
     try {
       const discussionId = req.params.id;
-      const updates = insertForumDiscussionSchema.partial().parse(req.body);
-      const updated = await storage.updateForumDiscussion(discussionId, updates);
+      const { newsCategoryIds, ...discussionFields } = req.body;
+      const newsCategoryIdsArray = newsCategoryIds || undefined;
+      const updates = insertForumDiscussionSchema.partial().parse(discussionFields);
+      const updated = await storage.updateForumDiscussion(discussionId, updates, newsCategoryIdsArray);
       
       if (!updated) {
         return res.status(404).json({ message: "Discussion not found" });
@@ -659,8 +684,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Podcast routes
   app.get('/api/podcasts', async (req, res) => {
     try {
-      const { limit } = req.query;
+      const { categories, limit } = req.query;
+      let categoryIds: string[] | undefined;
+      if (categories) {
+        categoryIds = Array.isArray(categories) ? categories as string[] : [categories as string];
+      }
       const episodes = await storage.getPodcastEpisodes(
+        categoryIds,
         limit ? parseInt(limit as string) : undefined
       );
       res.json(episodes);
@@ -696,8 +726,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/podcasts', isEditorOrAdmin, async (req: any, res) => {
     try {
-      const episodeData = insertPodcastEpisodeSchema.parse(req.body);
-      const episode = await storage.createPodcastEpisode(episodeData);
+      const { categoryIds, ...episodeFields } = req.body;
+      const categoryIdsArray = categoryIds || [];
+      const episodeData = insertPodcastEpisodeSchema.parse(episodeFields);
+      const episode = await storage.createPodcastEpisode(episodeData, categoryIdsArray);
       res.json(episode);
     } catch (error) {
       console.error("Error creating podcast episode:", error);
@@ -708,8 +740,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/podcasts/:id', isEditorOrAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const episodeData = insertPodcastEpisodeSchema.partial().parse(req.body);
-      const episode = await storage.updatePodcastEpisode(id, episodeData);
+      const { categoryIds, ...episodeFields } = req.body;
+      const categoryIdsArray = categoryIds || undefined;
+      const episodeData = insertPodcastEpisodeSchema.partial().parse(episodeFields);
+      const episode = await storage.updatePodcastEpisode(id, episodeData, categoryIdsArray);
       if (!episode) {
         return res.status(404).json({ message: "Podcast episode not found" });
       }
