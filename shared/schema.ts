@@ -65,6 +65,20 @@ export const menuSettings = pgTable("menu_settings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// News categories
+export const newsCategories = pgTable("news_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").unique().notNull(), // Display name: "Automation", "Fraud Detection", etc.
+  slug: varchar("slug").unique().notNull(), // URL-friendly: "automation", "fraud-detection", etc.
+  description: text("description"),
+  icon: varchar("icon"), // Lucide icon name
+  color: varchar("color"), // Hex color for UI
+  displayOrder: integer("display_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // News articles
 export const newsArticles = pgTable("news_articles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -75,7 +89,7 @@ export const newsArticles = pgTable("news_articles", {
   thumbnailUrl: varchar("thumbnail_url"),
   sourceUrl: varchar("source_url"),
   sourceName: varchar("source_name"),
-  category: varchar("category").notNull(), // automation, fraud-detection, regulatory, generative-ai
+  category: varchar("category").notNull(), // References newsCategories.name
   authorId: varchar("author_id").references(() => users.id),
   publishedAt: timestamp("published_at").defaultNow(),
   likes: integer("likes").default(0),
@@ -264,6 +278,12 @@ export const registerSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
 });
 
+export const insertNewsCategorySchema = createInsertSchema(newsCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertNewsArticleSchema = createInsertSchema(newsArticles).omit({
   id: true,
   createdAt: true,
@@ -364,6 +384,8 @@ export type AdminCreateUser = z.infer<typeof adminCreateUserSchema>;
 export type AdminUpdateUser = z.infer<typeof adminUpdateUserSchema>;
 export type LoginRequest = z.infer<typeof loginSchema>;
 export type RegisterRequest = z.infer<typeof registerSchema>;
+export type NewsCategory = typeof newsCategories.$inferSelect;
+export type InsertNewsCategory = z.infer<typeof insertNewsCategorySchema>;
 export type NewsArticle = typeof newsArticles.$inferSelect;
 export type InsertNewsArticle = z.infer<typeof insertNewsArticleSchema>;
 export type ForumCategory = typeof forumCategories.$inferSelect;
