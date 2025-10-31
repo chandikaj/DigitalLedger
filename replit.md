@@ -102,23 +102,35 @@ Preferred communication style: Simple, everyday language.
 - **User Profiles**: Rich user profiles with expertise tags, points, and badges
 
 ### Content Management System
-- **News Aggregation**: Curated feed system with categorization and filtering
+- **Multi-Category System**: Full many-to-many category support across all content types
+  - **Architecture**: Junction tables (article_categories, podcast_categories, discussion_categories) enable multiple category assignments per item
+  - **Categories**: 5 default categories - automation (blue), fraud-detection (red), regulatory (amber), generative-ai (violet), general (gray fallback)
+  - **UI Pattern**: Color-coded badges with category.color, multi-select toggles in forms
+  - **Accessibility**: Full keyboard navigation (Tab, Enter, Space), aria-pressed states, focus rings, screen reader support
+  - **Filtering**: Multi-select category filtering on News and Podcasts pages with "Clear Filters" option
+  - **Backwards Compatibility**: Legacy single category field auto-populated with first category slug, defaults to "general"
+- **News Aggregation**: Curated feed system with multi-category support and filtering
   - **Dedicated Add News Page** (/news/add): Streamlined article creation interface for editors and admins
   - Role-based "Add News" button visible only to editors and admins on News page
-  - Form validation enforces required fields (title, content, category)
+  - Form validation enforces required fields (title, content, at least one category)
+  - Multi-select category badges with keyboard accessibility (Tab, Enter, Space)
   - Auto-redirect to news feed after successful article creation
+  - Multi-category filtering on News page with color-coded badges
 - **Forum System**: Hierarchical discussion structure with categories, discussions, and replies
+  - Forum discussions display associated news category badges with colors
 - **Resource Library**: Educational content management with type-based organization
-- **Podcast Hub**: Audio content management with embedded player support
+- **Podcast Hub**: Audio content management with multi-category support and embedded player
   - **Dedicated Add Podcast Page** (/podcasts/add): Streamlined episode creation interface for editors and admins
   - **Dedicated Edit Podcast Page** (/podcasts/:id/edit): Full episode editing and deletion capability for editors and admins
   - Role-based "Add Podcast" button visible only to editors and admins on Podcasts page
   - Role-based "Edit" buttons visible only to editors and admins on all podcast cards (featured and regular)
   - **Delete functionality** with confirmation dialog to prevent accidental deletions
-  - Form validation enforces required field (title only)
+  - Form validation enforces required field (title), at least one category
+  - Multi-select category badges with full keyboard accessibility
   - Optional fields: description, episode number, duration, audio URL, host/guest information, cover image
   - Auto-redirect to podcast hub after successful creation, update, or deletion
   - Smart cache invalidation ensures featured episode and lists reflect changes immediately
+  - Multi-category filtering with color-coded badges
 - **Polling System**: Community engagement through surveys and polls
 
 ### File Upload & Media
