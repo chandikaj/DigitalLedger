@@ -368,7 +368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let userRole: string | undefined;
       if (req.session?.userId) {
         const user = await storage.getUser(req.session.userId);
-        userRole = user?.role;
+        userRole = user?.role || undefined;
         console.log(`[GET /api/news] Authenticated user: ${user?.email}, role: ${userRole}`);
       } else {
         console.log(`[GET /api/news] Unauthenticated request (no session)`);
@@ -759,13 +759,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (categories) {
         categoryIds = Array.isArray(categories) ? categories as string[] : [categories as string];
       }
-      // Pass user role to filter by status
-      const userRole = req.user?.role;
+      // Pass user role to filter by status (admins/editors see all, regular users see only published)
+      // Check session for authenticated user since this is a public route
+      let userRole: string | undefined;
+      if (req.session?.userId) {
+        const user = await storage.getUser(req.session.userId);
+        userRole = user?.role || undefined;
+        console.log(`[GET /api/podcasts] Authenticated user: ${user?.email}, role: ${userRole}`);
+      } else {
+        console.log(`[GET /api/podcasts] Unauthenticated request (no session)`);
+      }
       const episodes = await storage.getPodcastEpisodes(
         categoryIds,
         limit ? parseInt(limit as string) : undefined,
         userRole
       );
+      console.log(`[GET /api/podcasts] Returning ${episodes.length} episodes, userRole: ${userRole}, statuses: ${episodes.map(e => e.status).join(', ')}`);
       res.json(episodes);
     } catch (error) {
       console.error("Error fetching podcast episodes:", error);

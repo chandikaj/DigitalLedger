@@ -988,28 +988,38 @@ export class DatabaseStorage implements IStorage {
     const canSeeAllStatuses = userRole === 'admin' || userRole === 'editor';
     
     if (categoryIds && categoryIds.length > 0) {
+      // Build the where clause - always include category filter, add status filter for non-admins
+      const whereClause = canSeeAllStatuses
+        ? inArray(podcastCategories.categoryId, categoryIds)
+        : and(
+            inArray(podcastCategories.categoryId, categoryIds),
+            eq(podcastEpisodes.status, 'published')
+          );
+      
       const results = await db
         .selectDistinct({ episode: podcastEpisodes })
         .from(podcastEpisodes)
         .innerJoin(podcastCategories, eq(podcastCategories.podcastId, podcastEpisodes.id))
-        .where(
-          canSeeAllStatuses
-            ? inArray(podcastCategories.categoryId, categoryIds)
-            : and(
-                inArray(podcastCategories.categoryId, categoryIds),
-                eq(podcastEpisodes.status, 'published')
-              )
-        )
+        .where(whereClause)
         .orderBy(desc(podcastEpisodes.publishedAt))
         .limit(limit);
       episodes = results.map(r => r.episode);
     } else {
-      episodes = await db
-        .select()
-        .from(podcastEpisodes)
-        .where(canSeeAllStatuses ? undefined : eq(podcastEpisodes.status, 'published'))
-        .orderBy(desc(podcastEpisodes.publishedAt))
-        .limit(limit);
+      // No category filter - admins see all, regular users see only published
+      if (canSeeAllStatuses) {
+        episodes = await db
+          .select()
+          .from(podcastEpisodes)
+          .orderBy(desc(podcastEpisodes.publishedAt))
+          .limit(limit);
+      } else {
+        episodes = await db
+          .select()
+          .from(podcastEpisodes)
+          .where(eq(podcastEpisodes.status, 'published'))
+          .orderBy(desc(podcastEpisodes.publishedAt))
+          .limit(limit);
+      }
     }
 
     const episodesWithCategories = await Promise.all(
