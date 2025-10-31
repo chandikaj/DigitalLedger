@@ -383,6 +383,15 @@ export class DatabaseStorage implements IStorage {
           displayOrder: 4,
           isActive: true,
         },
+        {
+          name: "General",
+          slug: "general",
+          description: "General AI topics and updates",
+          icon: "Newspaper",
+          color: "#6B7280",
+          displayOrder: 5,
+          isActive: true,
+        },
       ];
 
       for (const category of defaultCategories) {
@@ -982,9 +991,22 @@ export class DatabaseStorage implements IStorage {
 
   async createPodcastEpisode(episode: InsertPodcastEpisode, categoryIds: string[]): Promise<PodcastEpisode & { categories: NewsCategory[] }> {
     return await db.transaction(async (tx) => {
+      let legacyCategory = 'general';
+      if (categoryIds.length > 0) {
+        const firstCategory = await tx
+          .select()
+          .from(newsCategories)
+          .where(eq(newsCategories.id, categoryIds[0]))
+          .limit(1);
+        legacyCategory = firstCategory[0]?.slug || 'general';
+      }
+
       const [created] = await tx
         .insert(podcastEpisodes)
-        .values(episode)
+        .values({
+          ...episode,
+          category: legacyCategory,
+        })
         .returning();
 
       if (categoryIds.length > 0) {
@@ -1011,7 +1033,16 @@ export class DatabaseStorage implements IStorage {
 
   async updatePodcastEpisode(episodeId: string, updates: Partial<InsertPodcastEpisode>, categoryIds?: string[]): Promise<(PodcastEpisode & { categories: NewsCategory[] }) | undefined> {
     return await db.transaction(async (tx) => {
+      let updateData = { ...updates };
+      
       if (categoryIds && categoryIds.length > 0) {
+        const firstCategory = await tx
+          .select()
+          .from(newsCategories)
+          .where(eq(newsCategories.id, categoryIds[0]))
+          .limit(1);
+        updateData.category = firstCategory[0]?.slug || 'general';
+
         await tx
           .delete(podcastCategories)
           .where(eq(podcastCategories.podcastId, episodeId));
@@ -1026,7 +1057,7 @@ export class DatabaseStorage implements IStorage {
 
       const [updated] = await tx
         .update(podcastEpisodes)
-        .set(updates)
+        .set(updateData)
         .where(eq(podcastEpisodes.id, episodeId))
         .returning();
 
