@@ -1,6 +1,7 @@
 import { db } from "./db";
 import {
   newsArticles,
+  newsCategories,
   podcastEpisodes,
   forumCategories,
   forumDiscussions,
@@ -9,6 +10,7 @@ import {
   users,
 } from "@shared/schema";
 import { sql, notInArray } from "drizzle-orm";
+import { DatabaseStorage } from "./storage";
 
 export async function clearSeedData() {
   console.log("Clearing seed data from database...");
@@ -232,6 +234,17 @@ export async function seedDatabase(force: boolean = false) {
     await db.insert(users).values(contributorUsers);
     console.log("✓ Seeded community contributors");
 
+    // Initialize news categories and fetch them for category assignments
+    const storage = new DatabaseStorage();
+    await storage.initializeNewsCategories();
+    console.log("✓ Initialized news categories");
+
+    const categories = await db.select().from(newsCategories);
+    const automationCat = categories.find(c => c.slug === 'automation');
+    const fraudDetectionCat = categories.find(c => c.slug === 'fraud-detection');
+    const regulatoryCat = categories.find(c => c.slug === 'regulatory');
+    const generativeAiCat = categories.find(c => c.slug === 'generative-ai');
+
     const newsData = [
       {
         title: "How Machine Learning is Revolutionizing Audit Procedures in 2024",
@@ -356,8 +369,107 @@ export async function seedDatabase(force: boolean = false) {
       },
     ];
 
-    await db.insert(newsArticles).values(newsData);
-    console.log("✓ Seeded news articles");
+    // Create news articles with multiple categories using storage layer
+    await storage.createNewsArticle({
+      title: newsData[0].title,
+      content: newsData[0].content,
+      excerpt: newsData[0].excerpt,
+      category: newsData[0].category,
+      imageUrl: newsData[0].imageUrl,
+      sourceUrl: newsData[0].sourceUrl,
+    }, [automationCat!.id]);
+
+    await storage.createNewsArticle({
+      title: newsData[1].title,
+      content: newsData[1].content,
+      excerpt: newsData[1].excerpt,
+      category: newsData[1].category,
+      imageUrl: newsData[1].imageUrl,
+      sourceUrl: newsData[1].sourceUrl,
+    }, [regulatoryCat!.id]);
+
+    await storage.createNewsArticle({
+      title: newsData[2].title,
+      content: newsData[2].content,
+      excerpt: newsData[2].excerpt,
+      category: newsData[2].category,
+      imageUrl: newsData[2].imageUrl,
+      sourceUrl: newsData[2].sourceUrl,
+    }, [fraudDetectionCat!.id]);
+
+    await storage.createNewsArticle({
+      title: newsData[3].title,
+      content: newsData[3].content,
+      excerpt: newsData[3].excerpt,
+      category: newsData[3].category,
+      imageUrl: newsData[3].imageUrl,
+      sourceUrl: newsData[3].sourceUrl,
+    }, [generativeAiCat!.id, automationCat!.id]);
+
+    await storage.createNewsArticle({
+      title: newsData[4].title,
+      content: newsData[4].content,
+      excerpt: newsData[4].excerpt,
+      category: newsData[4].category,
+      imageUrl: newsData[4].imageUrl,
+      sourceUrl: newsData[4].sourceUrl,
+    }, [automationCat!.id]);
+
+    await storage.createNewsArticle({
+      title: newsData[5].title,
+      content: newsData[5].content,
+      excerpt: newsData[5].excerpt,
+      category: newsData[5].category,
+      imageUrl: newsData[5].imageUrl,
+      sourceUrl: newsData[5].sourceUrl,
+    }, [regulatoryCat!.id]);
+
+    await storage.createNewsArticle({
+      title: newsData[6].title,
+      content: newsData[6].content,
+      excerpt: newsData[6].excerpt,
+      category: newsData[6].category,
+      imageUrl: newsData[6].imageUrl,
+      sourceUrl: newsData[6].sourceUrl,
+    }, [fraudDetectionCat!.id]);
+
+    await storage.createNewsArticle({
+      title: newsData[7].title,
+      content: newsData[7].content,
+      excerpt: newsData[7].excerpt,
+      category: newsData[7].category,
+      imageUrl: newsData[7].imageUrl,
+      sourceUrl: newsData[7].sourceUrl,
+    }, [generativeAiCat!.id]);
+
+    await storage.createNewsArticle({
+      title: newsData[8].title,
+      content: newsData[8].content,
+      excerpt: newsData[8].excerpt,
+      category: newsData[8].category,
+      imageUrl: newsData[8].imageUrl,
+      sourceUrl: newsData[8].sourceUrl,
+    }, [automationCat!.id]);
+
+    await storage.createNewsArticle({
+      title: newsData[9].title,
+      content: newsData[9].content,
+      excerpt: newsData[9].excerpt,
+      category: newsData[9].category,
+      imageUrl: newsData[9].imageUrl,
+      sourceUrl: newsData[9].sourceUrl,
+    }, [regulatoryCat!.id]);
+
+    await storage.createNewsArticle({
+      title: newsData[10].title,
+      content: newsData[10].content,
+      excerpt: newsData[10].excerpt,
+      category: newsData[10].category,
+      imageUrl: newsData[10].imageUrl,
+      sourceUrl: newsData[10].sourceUrl,
+    }, [fraudDetectionCat!.id, automationCat!.id]);
+
+    console.log("✓ Seeded news articles with categories");
 
     const podcastData = [
       {
@@ -512,8 +624,138 @@ export async function seedDatabase(force: boolean = false) {
       },
     ];
 
-    await db.insert(podcastEpisodes).values(podcastData);
-    console.log("✓ Seeded podcast episodes");
+    // Create podcast episodes with multiple categories using storage layer
+    await storage.createPodcastEpisode({
+      episodeNumber: podcastData[0].episodeNumber,
+      title: podcastData[0].title,
+      description: podcastData[0].description,
+      duration: podcastData[0].duration,
+      audioUrl: podcastData[0].audioUrl,
+      imageUrl: podcastData[0].imageUrl,
+      hostName: podcastData[0].hostName,
+      guestName: podcastData[0].guestName,
+      guestTitle: podcastData[0].guestTitle,
+      publishedAt: podcastData[0].publishedAt,
+    }, [automationCat!.id, regulatoryCat!.id]);
+
+    await storage.createPodcastEpisode({
+      episodeNumber: podcastData[1].episodeNumber,
+      title: podcastData[1].title,
+      description: podcastData[1].description,
+      duration: podcastData[1].duration,
+      audioUrl: podcastData[1].audioUrl,
+      imageUrl: podcastData[1].imageUrl,
+      hostName: podcastData[1].hostName,
+      guestName: podcastData[1].guestName,
+      guestTitle: podcastData[1].guestTitle,
+      publishedAt: podcastData[1].publishedAt,
+    }, [fraudDetectionCat!.id, automationCat!.id]);
+
+    await storage.createPodcastEpisode({
+      episodeNumber: podcastData[2].episodeNumber,
+      title: podcastData[2].title,
+      description: podcastData[2].description,
+      duration: podcastData[2].duration,
+      audioUrl: podcastData[2].audioUrl,
+      imageUrl: podcastData[2].imageUrl,
+      hostName: podcastData[2].hostName,
+      guestName: podcastData[2].guestName,
+      guestTitle: podcastData[2].guestTitle,
+      publishedAt: podcastData[2].publishedAt,
+    }, [generativeAiCat!.id, automationCat!.id]);
+
+    await storage.createPodcastEpisode({
+      episodeNumber: podcastData[3].episodeNumber,
+      title: podcastData[3].title,
+      description: podcastData[3].description,
+      duration: podcastData[3].duration,
+      audioUrl: podcastData[3].audioUrl,
+      imageUrl: podcastData[3].imageUrl,
+      hostName: podcastData[3].hostName,
+      guestName: podcastData[3].guestName,
+      guestTitle: podcastData[3].guestTitle,
+      publishedAt: podcastData[3].publishedAt,
+    }, [fraudDetectionCat!.id]);
+
+    await storage.createPodcastEpisode({
+      episodeNumber: podcastData[4].episodeNumber,
+      title: podcastData[4].title,
+      description: podcastData[4].description,
+      duration: podcastData[4].duration,
+      audioUrl: podcastData[4].audioUrl,
+      imageUrl: podcastData[4].imageUrl,
+      hostName: podcastData[4].hostName,
+      guestName: podcastData[4].guestName,
+      guestTitle: podcastData[4].guestTitle,
+      publishedAt: podcastData[4].publishedAt,
+    }, [regulatoryCat!.id]);
+
+    await storage.createPodcastEpisode({
+      episodeNumber: podcastData[5].episodeNumber,
+      title: podcastData[5].title,
+      description: podcastData[5].description,
+      duration: podcastData[5].duration,
+      audioUrl: podcastData[5].audioUrl,
+      imageUrl: podcastData[5].imageUrl,
+      hostName: podcastData[5].hostName,
+      guestName: podcastData[5].guestName,
+      guestTitle: podcastData[5].guestTitle,
+      publishedAt: podcastData[5].publishedAt,
+    }, [generativeAiCat!.id, automationCat!.id]);
+
+    await storage.createPodcastEpisode({
+      episodeNumber: podcastData[6].episodeNumber,
+      title: podcastData[6].title,
+      description: podcastData[6].description,
+      duration: podcastData[6].duration,
+      audioUrl: podcastData[6].audioUrl,
+      imageUrl: podcastData[6].imageUrl,
+      hostName: podcastData[6].hostName,
+      guestName: podcastData[6].guestName,
+      guestTitle: podcastData[6].guestTitle,
+      publishedAt: podcastData[6].publishedAt,
+    }, [automationCat!.id]);
+
+    await storage.createPodcastEpisode({
+      episodeNumber: podcastData[7].episodeNumber,
+      title: podcastData[7].title,
+      description: podcastData[7].description,
+      duration: podcastData[7].duration,
+      audioUrl: podcastData[7].audioUrl,
+      imageUrl: podcastData[7].imageUrl,
+      hostName: podcastData[7].hostName,
+      guestName: podcastData[7].guestName,
+      guestTitle: podcastData[7].guestTitle,
+      publishedAt: podcastData[7].publishedAt,
+    }, [automationCat!.id, generativeAiCat!.id]);
+
+    await storage.createPodcastEpisode({
+      episodeNumber: podcastData[8].episodeNumber,
+      title: podcastData[8].title,
+      description: podcastData[8].description,
+      duration: podcastData[8].duration,
+      audioUrl: podcastData[8].audioUrl,
+      imageUrl: podcastData[8].imageUrl,
+      hostName: podcastData[8].hostName,
+      guestName: podcastData[8].guestName,
+      guestTitle: podcastData[8].guestTitle,
+      publishedAt: podcastData[8].publishedAt,
+    }, [automationCat!.id]);
+
+    await storage.createPodcastEpisode({
+      episodeNumber: podcastData[9].episodeNumber,
+      title: podcastData[9].title,
+      description: podcastData[9].description,
+      duration: podcastData[9].duration,
+      audioUrl: podcastData[9].audioUrl,
+      imageUrl: podcastData[9].imageUrl,
+      hostName: podcastData[9].hostName,
+      guestName: podcastData[9].guestName,
+      guestTitle: podcastData[9].guestTitle,
+      publishedAt: podcastData[9].publishedAt,
+    }, [automationCat!.id, generativeAiCat!.id]);
+
+    console.log("✓ Seeded podcast episodes with categories");
 
     const resourcesData = [
       {
@@ -790,8 +1032,72 @@ export async function seedDatabase(force: boolean = false) {
       },
     ];
 
-    const insertedDiscussions = await db.insert(forumDiscussions).values(discussionsData).returning();
-    console.log("✓ Seeded forum discussions");
+    // Create forum discussions with news categories using storage layer
+    const discussion1 = await storage.createForumDiscussion({
+      title: discussionsData[0].title,
+      content: discussionsData[0].content,
+      categoryId: discussionsData[0].categoryId,
+      authorId: discussionsData[0].authorId,
+    }, [generativeAiCat!.id, automationCat!.id]);
+
+    const discussion2 = await storage.createForumDiscussion({
+      title: discussionsData[1].title,
+      content: discussionsData[1].content,
+      categoryId: discussionsData[1].categoryId,
+      authorId: discussionsData[1].authorId,
+    }, [fraudDetectionCat!.id, automationCat!.id]);
+
+    const discussion3 = await storage.createForumDiscussion({
+      title: discussionsData[2].title,
+      content: discussionsData[2].content,
+      categoryId: discussionsData[2].categoryId,
+      authorId: discussionsData[2].authorId,
+    }, [automationCat!.id]);
+
+    const discussion4 = await storage.createForumDiscussion({
+      title: discussionsData[3].title,
+      content: discussionsData[3].content,
+      categoryId: discussionsData[3].categoryId,
+      authorId: discussionsData[3].authorId,
+    }, [regulatoryCat!.id]);
+
+    const discussion5 = await storage.createForumDiscussion({
+      title: discussionsData[4].title,
+      content: discussionsData[4].content,
+      categoryId: discussionsData[4].categoryId,
+      authorId: discussionsData[4].authorId,
+    }, [regulatoryCat!.id]);
+
+    const discussion6 = await storage.createForumDiscussion({
+      title: discussionsData[5].title,
+      content: discussionsData[5].content,
+      categoryId: discussionsData[5].categoryId,
+      authorId: discussionsData[5].authorId,
+    }, [regulatoryCat!.id]);
+
+    const discussion7 = await storage.createForumDiscussion({
+      title: discussionsData[6].title,
+      content: discussionsData[6].content,
+      categoryId: discussionsData[6].categoryId,
+      authorId: discussionsData[6].authorId,
+    }, [automationCat!.id]);
+
+    const discussion8 = await storage.createForumDiscussion({
+      title: discussionsData[7].title,
+      content: discussionsData[7].content,
+      categoryId: discussionsData[7].categoryId,
+      authorId: discussionsData[7].authorId,
+    }, [automationCat!.id]);
+
+    const discussion9 = await storage.createForumDiscussion({
+      title: discussionsData[8].title,
+      content: discussionsData[8].content,
+      categoryId: discussionsData[8].categoryId,
+      authorId: discussionsData[8].authorId,
+    }, [automationCat!.id]);
+
+    const insertedDiscussions = [discussion1, discussion2, discussion3, discussion4, discussion5, discussion6, discussion7, discussion8, discussion9];
+    console.log("✓ Seeded forum discussions with news categories");
 
     // Create forum replies
     const repliesData = [
