@@ -8,9 +8,6 @@ import { Input } from "@/components/ui/input";
 import { 
   Search, 
   PlayCircle, 
-  Pause,
-  Download, 
-  Share,
   Heart,
   Headphones,
   Clock,
@@ -19,9 +16,9 @@ import {
   PlusCircle,
   Pencil,
   CheckCircle,
-  XCircle
+  XCircle,
+  ExternalLink
 } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -40,10 +37,6 @@ interface NewsCategory {
 export default function Podcasts() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(100);
   const { user } = useAuth();
   const userRole = (user as any)?.role;
   const { toast } = useToast();
@@ -104,28 +97,12 @@ export default function Podcasts() {
     episode.guestName?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
-  const handlePlayPause = (episodeId: string) => {
-    if (currentlyPlaying === episodeId) {
-      setIsPlaying(!isPlaying);
-    } else {
-      setCurrentlyPlaying(episodeId);
-      setIsPlaying(true);
-      setCurrentTime(0);
-    }
-  };
-
   const formatDuration = (minutes: string) => {
     const num = parseInt(minutes);
     if (isNaN(num)) return minutes;
     const hours = Math.floor(num / 60);
     const mins = num % 60;
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (isLoading) {
@@ -235,43 +212,28 @@ export default function Podcasts() {
                     {featuredEpisode.description}
                   </p>
                   
-                  {/* Audio Player */}
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6">
-                    <div className="flex items-center space-x-4">
+                  {/* Watch on YouTube Button */}
+                  {featuredEpisode.audioUrl && (
+                    <div className="mb-6">
                       <Button 
-                        size="icon" 
-                        className="w-12 h-12 rounded-full"
-                        onClick={() => handlePlayPause(featuredEpisode.id)}
-                        data-testid="button-play-featured"
+                        asChild
+                        size="lg"
+                        className="w-full bg-red-600 hover:bg-red-700 text-white"
+                        data-testid="button-watch-youtube-featured"
                       >
-                        {currentlyPlaying === featuredEpisode.id && isPlaying ? (
-                          <Pause className="h-6 w-6" />
-                        ) : (
-                          <PlayCircle className="h-6 w-6" />
-                        )}
-                      </Button>
-                      <div className="flex-1">
-                        <Slider
-                          value={[currentTime]}
-                          max={duration}
-                          step={1}
-                          className="w-full mb-2"
-                          onValueChange={(value) => setCurrentTime(value[0])}
-                          data-testid="audio-progress"
-                        />
-                        <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
-                          <span>{formatTime(currentTime)}</span>
-                          <span>{formatTime(duration)}</span>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" data-testid="button-download-featured">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" data-testid="button-share-featured">
-                        <Share className="h-4 w-4" />
+                        <a 
+                          href={featuredEpisode.audioUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center space-x-2"
+                        >
+                          <PlayCircle className="h-5 w-5" />
+                          <span>Watch on YouTube</span>
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
                       </Button>
                     </div>
-                  </div>
+                  )}
                   
                   <div className="flex items-center space-x-6 text-sm text-gray-500 dark:text-gray-400 mb-4">
                     <span className="flex items-center space-x-1">
@@ -468,25 +430,37 @@ export default function Podcasts() {
                       <span>{new Date(episode.publishedAt).toLocaleDateString()}</span>
                     </div>
                     
-                    <Button 
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handlePlayPause(episode.id)}
-                      className="text-primary dark:text-ai-teal hover:bg-primary/10 dark:hover:bg-ai-teal/10"
-                      data-testid={`listen-${episode.id}`}
-                    >
-                      {currentlyPlaying === episode.id && isPlaying ? (
-                        <>
-                          <Pause className="h-4 w-4 mr-1" />
-                          Pause
-                        </>
-                      ) : (
-                        <>
-                          <PlayCircle className="h-4 w-4 mr-1" />
-                          Listen
-                        </>
-                      )}
-                    </Button>
+                    {episode.audioUrl ? (
+                      <Button 
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
+                        data-testid={`watch-youtube-${episode.id}`}
+                      >
+                        <a 
+                          href={episode.audioUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center space-x-1"
+                        >
+                          <PlayCircle className="h-4 w-4" />
+                          <span>Watch</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="ghost"
+                        size="sm"
+                        disabled
+                        className="text-gray-400"
+                        data-testid={`no-link-${episode.id}`}
+                      >
+                        <PlayCircle className="h-4 w-4 mr-1" />
+                        No Link
+                      </Button>
+                    )}
                   </div>
 
                   {isEditorOrAdmin && (
