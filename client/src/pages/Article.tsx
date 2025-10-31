@@ -12,13 +12,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Calendar, ExternalLink, Heart, MessageCircle, Share2, Edit, Trash2, Archive, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { insertNewsArticleSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { z } from "zod";
 
 type ArticleFormData = {
   title: string;
@@ -27,7 +27,7 @@ type ArticleFormData = {
   imageUrl?: string;
   sourceUrl?: string;
   sourceName?: string;
-  category: string;
+  categoryIds: string[];
 };
 
 export default function Article() {
@@ -37,16 +37,18 @@ export default function Article() {
   const [isEditing, setIsEditing] = useState(false);
   const [location, setLocation] = useLocation();
 
+  const articleFormSchema = z.object({
+    title: z.string().min(1, "Title is required"),
+    content: z.string().min(1, "Content is required"),
+    excerpt: z.string().optional(),
+    imageUrl: z.string().optional(),
+    sourceUrl: z.string().optional(),
+    sourceName: z.string().optional(),
+    categoryIds: z.array(z.string()).min(1, "At least one category is required"),
+  });
+
   const articleForm = useForm<ArticleFormData>({
-    resolver: zodResolver(insertNewsArticleSchema.pick({
-      title: true,
-      content: true,
-      excerpt: true,
-      imageUrl: true,
-      sourceUrl: true,
-      sourceName: true,
-      category: true,
-    })),
+    resolver: zodResolver(articleFormSchema),
     defaultValues: {
       title: "",
       content: "",
@@ -54,7 +56,7 @@ export default function Article() {
       imageUrl: "",
       sourceUrl: "",
       sourceName: "",
-      category: "",
+      categoryIds: [],
     },
   });
 
@@ -68,6 +70,10 @@ export default function Article() {
       return response.json();
     },
     enabled: !!id,
+  });
+
+  const { data: newsCategories = [] } = useQuery<any[]>({
+    queryKey: ['/api/news-categories'],
   });
 
   const updateArticleMutation = useMutation({
@@ -138,6 +144,7 @@ export default function Article() {
 
   const handleEditArticle = () => {
     if (article) {
+      const categoryIds = article.categories?.map((cat: any) => cat.id) || article.categoryIds || [];
       articleForm.reset({
         title: article.title || "",
         content: article.content || "",
@@ -145,7 +152,7 @@ export default function Article() {
         imageUrl: article.imageUrl || "",
         sourceUrl: article.sourceUrl || "",
         sourceName: article.sourceName || "",
-        category: article.category || "",
+        categoryIds: categoryIds,
       });
       setIsEditing(true);
     }
@@ -288,10 +295,23 @@ export default function Article() {
           <Card>
             <CardContent className="p-8">
               <div className="mb-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Badge variant="secondary" className="capitalize" data-testid="article-category">
-                    {article.category?.replace('-', ' ') || 'General'}
-                  </Badge>
+                <div className="flex items-center gap-3 mb-4 flex-wrap">
+                  {article.categories && article.categories.length > 0 ? (
+                    article.categories.map((category: any) => (
+                      <Badge 
+                        key={category.id}
+                        variant="default"
+                        style={{ backgroundColor: category.color, color: '#fff' }}
+                        data-testid={`article-category-${category.slug}`}
+                      >
+                        {category.name}
+                      </Badge>
+                    ))
+                  ) : (
+                    <Badge variant="secondary" className="capitalize" data-testid="article-category">
+                      {article.category?.replace('-', ' ') || 'General'}
+                    </Badge>
+                  )}
                   <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm">
                     <Calendar className="h-4 w-4 mr-1" />
                     <span data-testid="article-date">
@@ -448,31 +468,61 @@ export default function Article() {
                       )}
                     />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={articleForm.control}
-                        name="category"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Category</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-edit-category">
-                                  <SelectValue placeholder="Select a category" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="automation">Automation</SelectItem>
-                                <SelectItem value="fraud-detection">Fraud Detection</SelectItem>
-                                <SelectItem value="regulatory">Regulatory</SelectItem>
-                                <SelectItem value="generative-ai">Generative AI</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                    <FormField
+                      control={articleForm.control}
+                      name="categoryIds"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Categories</FormLabel>
+                          <FormControl>
+                            <div className="space-y-3">
+                              <div className="flex flex-wrap gap-2">
+                                {newsCategories.map((category: any) => {
+                                  const isSelected = field.value?.includes(category.id);
+                                  const handleToggle = () => {
+                                    const newValue = isSelected
+                                      ? field.value?.filter(id => id !== category.id) || []
+                                      : [...(field.value || []), category.id];
+                                    field.onChange(newValue);
+                                  };
+                                  return (
+                                    <Badge
+                                      key={category.id}
+                                      variant={isSelected ? "default" : "outline"}
+                                      className="cursor-pointer hover:opacity-80 transition-opacity focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                                      style={isSelected ? { backgroundColor: category.color, color: '#fff' } : {}}
+                                      onClick={handleToggle}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                          e.preventDefault();
+                                          handleToggle();
+                                        }
+                                      }}
+                                      role="button"
+                                      tabIndex={0}
+                                      aria-pressed={isSelected}
+                                      aria-label={`${isSelected ? 'Deselect' : 'Select'} ${category.name} category`}
+                                      data-testid={`badge-edit-category-${category.slug}`}
+                                    >
+                                      {category.name}
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
+                              {field.value && field.value.length > 0 && (
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                  {field.value.length} {field.value.length === 1 ? 'category' : 'categories'} selected
+                                </p>
+                              )}
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Select one or more categories that best describe this article.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <FormField
                       control={articleForm.control}
