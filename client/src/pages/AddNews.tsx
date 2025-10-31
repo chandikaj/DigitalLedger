@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -18,6 +18,13 @@ import { Upload, FileText, Image, ArrowLeft } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { UploadResult } from "@uppy/core";
 
+interface NewsCategory {
+  id: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
+}
+
 const articleFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   content: z.string().min(1, "Content is required"),
@@ -30,18 +37,17 @@ const articleFormSchema = z.object({
 
 type ArticleFormData = z.infer<typeof articleFormSchema>;
 
-const newsCategories = [
-  { value: "automation", label: "Automation" },
-  { value: "fraud-detection", label: "Fraud Detection" },
-  { value: "regulatory", label: "Regulatory" },
-  { value: "generative-ai", label: "Generative AI" },
-];
-
 export default function AddNews() {
   const [uploadingArticleImage, setUploadingArticleImage] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+
+  // Fetch active categories
+  const { data: newsCategories = [] } = useQuery<NewsCategory[]>({
+    queryKey: ["/api/news-categories", "active"],
+    queryFn: () => fetch("/api/news-categories?activeOnly=true").then(res => res.json()),
+  });
 
   const articleForm = useForm<ArticleFormData>({
     resolver: zodResolver(articleFormSchema),
@@ -219,8 +225,8 @@ export default function AddNews() {
                             </FormControl>
                             <SelectContent>
                               {newsCategories.map((category) => (
-                                <SelectItem key={category.value} value={category.value}>
-                                  {category.label}
+                                <SelectItem key={category.id} value={category.name}>
+                                  {category.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>

@@ -9,11 +9,27 @@ import { Heart, MessageCircle, Share, Search, PlusCircle } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
+interface NewsCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  isActive: boolean;
+}
+
 export default function News() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
   const userRole = (user as any)?.role;
+
+  // Fetch active categories
+  const { data: categoriesData = [] } = useQuery<NewsCategory[]>({
+    queryKey: ["/api/news-categories", "active"],
+    queryFn: () => fetch("/api/news-categories?activeOnly=true").then(res => res.json()),
+  });
 
   const { data: news, isLoading } = useQuery({
     queryKey: ["/api/news", selectedCategory],
@@ -25,12 +41,10 @@ export default function News() {
     },
   });
 
+  // Build categories with "All" option
   const categories = [
     { id: "all", label: "All" },
-    { id: "Automation", label: "Automation" },
-    { id: "Fraud Detection", label: "Fraud Detection" },
-    { id: "Regulatory", label: "Regulatory" },
-    { id: "Generative AI", label: "Generative AI" },
+    ...categoriesData.map(cat => ({ id: cat.name, label: cat.name })),
   ];
 
   const filteredNews = news?.filter((article: any) =>

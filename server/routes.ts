@@ -290,6 +290,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // News category routes
+  app.get('/api/news-categories', async (req, res) => {
+    try {
+      const activeOnly = req.query.activeOnly === 'true';
+      const categories = await storage.getNewsCategories(activeOnly);
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching news categories:", error);
+      res.status(500).json({ message: "Failed to fetch news categories" });
+    }
+  });
+
+  app.get('/api/news-categories/:id', async (req, res) => {
+    try {
+      const category = await storage.getNewsCategory(req.params.id);
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      console.error("Error fetching news category:", error);
+      res.status(500).json({ message: "Failed to fetch news category" });
+    }
+  });
+
+  app.post('/api/admin/news-categories', isAdmin, async (req: any, res) => {
+    try {
+      const categoryData = req.body;
+      const category = await storage.createNewsCategory(categoryData);
+      res.json(category);
+    } catch (error) {
+      console.error("Error creating news category:", error);
+      res.status(500).json({ message: "Failed to create news category" });
+    }
+  });
+
+  app.patch('/api/admin/news-categories/:id', isAdmin, async (req: any, res) => {
+    try {
+      const updated = await storage.updateNewsCategory(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating news category:", error);
+      res.status(500).json({ message: "Failed to update news category" });
+    }
+  });
+
+  app.delete('/api/admin/news-categories/:id', isAdmin, async (req: any, res) => {
+    try {
+      const deleted = await storage.deleteNewsCategory(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting news category:", error);
+      res.status(500).json({ message: "Failed to delete news category" });
+    }
+  });
+
   // News routes
   app.get('/api/news', async (req, res) => {
     try {
