@@ -43,6 +43,14 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Initialize menu settings
+  try {
+    await storage.initializeMenuSettings();
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    log(`Warning: Menu settings initialization failed: ${errorMsg}`);
+  }
+
   // Auto-seed database on startup if empty
   try {
     log("Checking database status...");

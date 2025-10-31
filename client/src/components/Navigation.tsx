@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useTheme } from "./ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,12 +17,25 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
+interface MenuSetting {
+  id: string;
+  menuKey: string;
+  menuLabel: string;
+  isVisible: boolean;
+  displayOrder: number;
+}
+
 export function Navigation() {
   const { theme, toggleTheme } = useTheme();
   const { user, isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const queryClient = useQueryClient();
+
+  // Fetch menu settings
+  const { data: menuSettings = [] } = useQuery<MenuSetting[]>({
+    queryKey: ["/api/menu-settings"],
+  });
 
   // Logout mutation
   const logoutMutation = useMutation({
@@ -40,17 +53,22 @@ export function Navigation() {
     logoutMutation.mutate();
   };
 
+  // Build navigation based on menu settings
   const baseNavigation = [
-    { name: "News", href: "/news" },
-    { name: "Podcasts", href: "/podcasts" },
-    { name: "Forums", href: "/forums" },
-    { name: "Resources", href: "/resources" },
-    { name: "Community", href: "/community" },
-  ];
+    { key: "news", name: "News", href: "/news" },
+    { key: "podcasts", name: "Podcasts", href: "/podcasts" },
+    { key: "forums", name: "Forums", href: "/forums" },
+    { key: "resources", name: "Resources", href: "/resources" },
+    { key: "community", name: "Community", href: "/community" },
+  ].filter(item => {
+    // Filter based on menu settings visibility
+    const setting = menuSettings.find(s => s.menuKey === item.key);
+    return setting ? setting.isVisible : true; // Show by default if setting not found
+  });
 
   // Only show Admin link if user is authenticated and is an admin
   const navigation = isAuthenticated && (user as any)?.role === "admin"
-    ? [...baseNavigation, { name: "Admin", href: "/admin" }]
+    ? [...baseNavigation, { key: "admin", name: "Admin", href: "/admin" }]
     : baseNavigation;
 
   const isActive = (href: string) => location === href;

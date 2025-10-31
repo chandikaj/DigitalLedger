@@ -23,6 +23,7 @@ import Podcasts from "@/pages/Podcasts";
 import Community from "@/pages/Community";
 import Admin from "@/pages/Admin";
 import UserManagement from "@/pages/UserManagement";
+import MenuSettings from "@/pages/MenuSettings";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -37,6 +38,7 @@ function Router() {
           <Route path="/podcasts/:id/edit" component={EditPodcast} />
           <Route path="/admin" component={Admin} />
           <Route path="/admin/users" component={UserManagement} />
+          <Route path="/admin/menu" component={MenuSettings} />
         </>
       )}
       

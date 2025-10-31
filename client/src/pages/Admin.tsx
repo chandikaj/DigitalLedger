@@ -18,7 +18,7 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 import { apiRequest } from "@/lib/queryClient";
 import { insertNewsArticleSchema, insertPodcastEpisodeSchema, insertUserInvitationSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
-import { Upload, FileText, Mic, Image, AudioWaveform, Users, UserPlus, Shield, ShieldCheck, Edit, Trash2, AlertCircle, Home } from "lucide-react";
+import { Upload, FileText, Mic, Image, AudioWaveform, Users, UserPlus, Shield, ShieldCheck, Edit, Trash2, AlertCircle, Home, Menu } from "lucide-react";
 import { Link } from "wouter";
 import type { UploadResult } from "@uppy/core";
 
@@ -547,6 +547,12 @@ export default function Admin() {
                 <Button variant="default" className="flex items-center gap-2" data-testid="button-user-management">
                   <Users className="h-4 w-4" />
                   User Management
+                </Button>
+              </Link>
+              <Link href="/admin/menu">
+                <Button variant="default" className="flex items-center gap-2" data-testid="button-menu-settings">
+                  <Menu className="h-4 w-4" />
+                  Menu Settings
                 </Button>
               </Link>
               <Button 

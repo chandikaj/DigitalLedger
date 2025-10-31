@@ -102,7 +102,6 @@ export default function Login() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">The Digital Ledger</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">AI in Accounting Community</p>
             </div>
           </div>
         </div>
