@@ -172,6 +172,30 @@ export const podcastEpisodes = pgTable("podcast_episodes", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Junction table: Article Categories (many-to-many)
+export const articleCategories = pgTable("article_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  articleId: varchar("article_id").references(() => newsArticles.id, { onDelete: 'cascade' }).notNull(),
+  categoryId: varchar("category_id").references(() => newsCategories.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Junction table: Podcast Categories (many-to-many)
+export const podcastCategories = pgTable("podcast_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  podcastId: varchar("podcast_id").references(() => podcastEpisodes.id, { onDelete: 'cascade' }).notNull(),
+  categoryId: varchar("category_id").references(() => newsCategories.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Junction table: Discussion News Categories (many-to-many)
+export const discussionNewsCategories = pgTable("discussion_news_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  discussionId: varchar("discussion_id").references(() => forumDiscussions.id, { onDelete: 'cascade' }).notNull(),
+  categoryId: varchar("category_id").references(() => newsCategories.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Community polls
 export const polls = pgTable("polls", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -211,10 +235,54 @@ export const userInvitationsRelations = relations(userInvitations, ({ one }) => 
   }),
 }));
 
-export const newsArticlesRelations = relations(newsArticles, ({ one }) => ({
+export const newsArticlesRelations = relations(newsArticles, ({ one, many }) => ({
   author: one(users, {
     fields: [newsArticles.authorId],
     references: [users.id],
+  }),
+  articleCategories: many(articleCategories),
+}));
+
+export const newsCategoriesRelations = relations(newsCategories, ({ many }) => ({
+  articles: many(articleCategories),
+  podcasts: many(podcastCategories),
+  discussions: many(discussionNewsCategories),
+}));
+
+export const articleCategoriesRelations = relations(articleCategories, ({ one }) => ({
+  article: one(newsArticles, {
+    fields: [articleCategories.articleId],
+    references: [newsArticles.id],
+  }),
+  category: one(newsCategories, {
+    fields: [articleCategories.categoryId],
+    references: [newsCategories.id],
+  }),
+}));
+
+export const podcastEpisodesRelations = relations(podcastEpisodes, ({ many }) => ({
+  podcastCategories: many(podcastCategories),
+}));
+
+export const podcastCategoriesRelations = relations(podcastCategories, ({ one }) => ({
+  podcast: one(podcastEpisodes, {
+    fields: [podcastCategories.podcastId],
+    references: [podcastEpisodes.id],
+  }),
+  category: one(newsCategories, {
+    fields: [podcastCategories.categoryId],
+    references: [newsCategories.id],
+  }),
+}));
+
+export const discussionNewsCategoriesRelations = relations(discussionNewsCategories, ({ one }) => ({
+  discussion: one(forumDiscussions, {
+    fields: [discussionNewsCategories.discussionId],
+    references: [forumDiscussions.id],
+  }),
+  category: one(newsCategories, {
+    fields: [discussionNewsCategories.categoryId],
+    references: [newsCategories.id],
   }),
 }));
 
@@ -232,6 +300,7 @@ export const forumDiscussionsRelations = relations(forumDiscussions, ({ one, man
     references: [users.id],
   }),
   replies: many(forumReplies),
+  discussionNewsCategories: many(discussionNewsCategories),
 }));
 
 export const forumRepliesRelations = relations(forumReplies, ({ one, many }) => ({
@@ -354,6 +423,21 @@ export const updateMenuSettingSchema = z.object({
   isVisible: z.boolean(),
 });
 
+export const insertArticleCategorySchema = createInsertSchema(articleCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPodcastCategorySchema = createInsertSchema(podcastCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDiscussionNewsCategorySchema = createInsertSchema(discussionNewsCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Admin user management schemas
 export const adminCreateUserSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -407,3 +491,9 @@ export type InsertUserInvitation = z.infer<typeof insertUserInvitationSchema>;
 export type MenuSetting = typeof menuSettings.$inferSelect;
 export type InsertMenuSetting = z.infer<typeof insertMenuSettingSchema>;
 export type UpdateMenuSetting = z.infer<typeof updateMenuSettingSchema>;
+export type ArticleCategory = typeof articleCategories.$inferSelect;
+export type InsertArticleCategory = z.infer<typeof insertArticleCategorySchema>;
+export type PodcastCategory = typeof podcastCategories.$inferSelect;
+export type InsertPodcastCategory = z.infer<typeof insertPodcastCategorySchema>;
+export type DiscussionNewsCategory = typeof discussionNewsCategories.$inferSelect;
+export type InsertDiscussionNewsCategory = z.infer<typeof insertDiscussionNewsCategorySchema>;
