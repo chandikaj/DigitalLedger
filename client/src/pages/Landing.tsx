@@ -1,6 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -120,98 +120,93 @@ export default function Landing() {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {newsArticles.map((article: any) => (
-              <Card key={article.id} className="hover:shadow-lg transition-shadow duration-300 relative" data-testid={`news-card-${article.id}`}>
-                <div className="aspect-video w-full overflow-hidden rounded-t-lg cursor-pointer">
-                  <img 
-                    src={article.imageUrl || "https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400"} 
-                    alt={article.title}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </div>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    {article.categories && article.categories.length > 0 ? (
-                      article.categories.map((cat: any) => (
+              <Link key={article.id} href={`/news/${article.id}`}>
+                <Card className="hover:shadow-lg transition-shadow duration-300 relative" data-testid={`news-card-${article.id}`}>
+                  <div className="aspect-video w-full overflow-hidden rounded-t-lg cursor-pointer">
+                    <img 
+                      src={article.imageUrl || "https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400"} 
+                      alt={article.title}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                  </div>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      {article.categories && article.categories.length > 0 ? (
+                        article.categories.map((cat: any) => (
+                          <Badge 
+                            key={cat.id}
+                            variant="secondary" 
+                            className="capitalize"
+                            style={{ backgroundColor: cat.color + '20', color: cat.color }}
+                            data-testid={`category-${article.id}-${cat.slug}`}
+                          >
+                            {cat.name}
+                          </Badge>
+                        ))
+                      ) : (
                         <Badge 
-                          key={cat.id}
                           variant="secondary" 
                           className="capitalize"
-                          style={{ backgroundColor: cat.color + '20', color: cat.color }}
-                          data-testid={`category-${article.id}-${cat.slug}`}
+                          data-testid={`category-${article.id}`}
                         >
-                          {cat.name}
+                          General
                         </Badge>
-                      ))
-                    ) : (
-                      <Badge 
-                        variant="secondary" 
-                        className="capitalize"
-                        data-testid={`category-${article.id}`}
-                      >
-                        General
-                      </Badge>
-                    )}
-                    <span className="text-gray-500 dark:text-gray-400 text-sm" data-testid={`time-${article.id}`}>
-                      {new Date(article.publishedAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2 hover:text-primary dark:hover:text-ai-teal transition-colors cursor-pointer" data-testid={`title-${article.id}`}>
-                    {article.title}
-                  </h3>
-                  
-                  <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3" data-testid={`excerpt-${article.id}`}>
-                    {article.excerpt || article.content?.substring(0, 150) + '...'}
-                  </p>
-                  
-                  {article.sourceName && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4" data-testid={`source-${article.id}`}>
-                      Source: {article.sourceName}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                      <button 
-                        className="flex items-center space-x-1 hover:text-red-500 transition-colors"
-                        data-testid={`like-${article.id}`}
-                      >
-                        <Heart className="h-4 w-4" />
-                        <span>{article.likes || 0}</span>
-                      </button>
-                      <button 
-                        className="flex items-center space-x-1 hover:text-blue-500 transition-colors" 
-                        data-testid={`comment-${article.id}`}
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        <span>0</span>
-                      </button>
-                      <button 
-                        className="flex items-center space-x-1 hover:text-green-500 transition-colors" 
-                        data-testid={`share-${article.id}`}
-                      >
-                        <Share className="h-4 w-4" />
-                        <span>Share</span>
-                      </button>
+                      )}
+                      <span className="text-gray-500 dark:text-gray-400 text-sm" data-testid={`time-${article.id}`}>
+                        {new Date(article.publishedAt).toLocaleDateString()}
+                      </span>
                     </div>
                     
-                    <span className="text-sm font-medium text-primary dark:text-ai-teal cursor-pointer">
-                      Read More →
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2 hover:text-primary dark:hover:text-ai-teal transition-colors cursor-pointer" data-testid={`title-${article.id}`}>
+                      {article.title}
+                    </h3>
+                    
+                    <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3" data-testid={`excerpt-${article.id}`}>
+                      {article.excerpt || article.content?.substring(0, 150) + '...'}
+                    </p>
+                    
+                    {article.sourceName && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4" data-testid={`source-${article.id}`}>
+                        Source: {article.sourceName}
+                      </p>
+                    )}
+                    
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                        <span className="flex items-center space-x-1">
+                          <Heart className="h-4 w-4" />
+                          <span>{article.likes || 0}</span>
+                        </span>
+                        <span className="flex items-center space-x-1">
+                          <MessageCircle className="h-4 w-4" />
+                          <span>0</span>
+                        </span>
+                        <span className="flex items-center space-x-1">
+                          <Share className="h-4 w-4" />
+                          <span>Share</span>
+                        </span>
+                      </div>
+                      
+                      <span className="text-sm font-medium text-primary dark:text-ai-teal cursor-pointer">
+                        Read More →
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
           
           <div className="text-center mt-12">
-            <Button 
-              className="bg-primary hover:bg-blue-700 text-white"
-              data-testid="button-load-more-news"
-            >
-              Load More Articles
-            </Button>
+            <Link href="/news">
+              <Button 
+                className="bg-primary hover:bg-blue-700 text-white"
+                data-testid="button-load-more-news"
+              >
+                Load More Articles
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
