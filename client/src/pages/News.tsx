@@ -113,7 +113,7 @@ export default function News() {
           <div className="flex justify-between items-start mb-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                Latest AI in Accounting News
+                Latest Corporate Finance and Accounting News
               </h1>
               <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl">
                 Stay updated with curated insights from trusted sources, academic journals, and industry leaders
