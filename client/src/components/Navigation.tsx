@@ -10,12 +10,12 @@ import {
   Search, 
   Moon, 
   Sun, 
-  Brain,
   Menu,
   X
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import logoImage from "@assets/C01BD520-7200-43C6-80C9-8E9713AB8826_1761967287395.png";
 
 interface MenuSetting {
   id: string;
@@ -80,12 +80,11 @@ export function Navigation() {
           {/* Logo */}
           <Link href="/" data-testid="link-home">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
-                <Brain className="text-white h-5 w-5" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">The Digital Ledger</h1>
-              </div>
+              <img 
+                src={logoImage} 
+                alt="The Digital Ledger" 
+                className="h-10 w-auto"
+              />
             </div>
           </Link>
 
