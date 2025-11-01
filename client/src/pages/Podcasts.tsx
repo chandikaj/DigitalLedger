@@ -73,7 +73,7 @@ export default function Podcasts() {
     queryFn: () => {
       const url = selectedCategories.length === 0
         ? "/api/podcasts?limit=50" 
-        : `/api/podcasts?categoryIds=${selectedCategories.join(',')}&limit=50`;
+        : `/api/podcasts?categories=${selectedCategories.join(',')}&limit=50`;
       return fetch(url).then(res => res.json());
     },
   });

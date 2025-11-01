@@ -60,7 +60,7 @@ export default function News() {
     queryFn: () => {
       const url = selectedCategories.length === 0
         ? "/api/news?limit=50" 
-        : `/api/news?categoryIds=${selectedCategories.join(',')}&limit=50`;
+        : `/api/news?categories=${selectedCategories.join(',')}&limit=50`;
       return fetch(url).then(res => res.json());
     },
   });
