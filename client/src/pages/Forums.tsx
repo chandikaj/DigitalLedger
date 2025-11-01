@@ -19,7 +19,8 @@ import {
   Edit2,
   Trash2,
   CheckCircle,
-  XCircle
+  XCircle,
+  Star
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -87,6 +88,27 @@ export default function Forums() {
       toast({
         title: "Error",
         description: "Failed to update discussion status.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleFeaturedMutation = useMutation({
+    mutationFn: async ({ discussionId, isFeatured }: { discussionId: string; isFeatured: boolean }) => {
+      return await apiRequest(`/api/forum/discussions/${discussionId}/featured`, 'PATCH', { isFeatured });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/forum/discussions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/forum/discussions/featured"] });
+      toast({
+        title: "Featured status updated",
+        description: `Discussion ${variables.isFeatured ? 'marked as featured' : 'unmarked as featured'} successfully.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update featured status.",
         variant: "destructive",
       });
     },
@@ -452,6 +474,22 @@ export default function Forums() {
                                     <CheckCircle className="h-4 w-4" />
                                   </>
                                 )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={discussion.isFeatured ? 'default' : 'outline'}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleFeaturedMutation.mutate({
+                                    discussionId: discussion.id,
+                                    isFeatured: !discussion.isFeatured
+                                  });
+                                }}
+                                disabled={toggleFeaturedMutation.isPending}
+                                data-testid={`toggle-featured-${discussion.id}`}
+                                className="flex items-center gap-1"
+                              >
+                                <Star className={`h-4 w-4 ${discussion.isFeatured ? 'fill-current' : ''}`} />
                               </Button>
                               <Button
                                 size="sm"
