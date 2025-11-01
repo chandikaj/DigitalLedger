@@ -86,6 +86,8 @@ export interface IStorage {
   deleteNewsArticle(articleId: string): Promise<boolean>;
   archiveNewsArticle(articleId: string): Promise<NewsArticle | undefined>;
   toggleNewsArticleStatus(articleId: string, status: 'published' | 'draft'): Promise<NewsArticle | undefined>;
+  toggleNewsArticleFeatured(articleId: string, isFeatured: boolean): Promise<NewsArticle | undefined>;
+  getFeaturedNewsArticle(): Promise<(NewsArticle & { categories: NewsCategory[] }) | undefined>;
   likeNewsArticle(articleId: string, userId: string): Promise<void>;
   
   // Forum operations
@@ -97,6 +99,8 @@ export interface IStorage {
   updateForumDiscussion(discussionId: string, updates: Partial<InsertForumDiscussion>, newsCategoryIds?: string[]): Promise<(ForumDiscussion & { newsCategories: NewsCategory[] }) | undefined>;
   deleteForumDiscussion(discussionId: string): Promise<boolean>;
   toggleForumDiscussionStatus(discussionId: string, status: 'published' | 'draft'): Promise<ForumDiscussion | undefined>;
+  toggleForumDiscussionFeatured(discussionId: string, isFeatured: boolean): Promise<ForumDiscussion | undefined>;
+  getFeaturedForumDiscussion(): Promise<(ForumDiscussion & { author: User; category: ForumCategory; newsCategories: NewsCategory[] }) | undefined>;
   createForumReply(reply: InsertForumReply): Promise<ForumReply>;
   likeForumDiscussion(discussionId: string, userId: string): Promise<void>;
   likeForumReply(replyId: string, userId: string): Promise<void>;
@@ -115,6 +119,7 @@ export interface IStorage {
   updatePodcastEpisode(episodeId: string, updates: Partial<InsertPodcastEpisode>, categoryIds?: string[]): Promise<(PodcastEpisode & { categories: NewsCategory[] }) | undefined>;
   deletePodcastEpisode(episodeId: string): Promise<boolean>;
   togglePodcastEpisodeStatus(episodeId: string, status: 'published' | 'draft'): Promise<PodcastEpisode | undefined>;
+  togglePodcastEpisodeFeatured(episodeId: string, isFeatured: boolean): Promise<PodcastEpisode | undefined>;
   getFeaturedPodcastEpisode(): Promise<(PodcastEpisode & { categories: NewsCategory[] }) | undefined>;
   
   // Poll operations
@@ -596,6 +601,44 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async toggleNewsArticleFeatured(articleId: string, isFeatured: boolean): Promise<NewsArticle | undefined> {
+    // If setting as featured, first unfeatured all other articles
+    if (isFeatured) {
+      await db
+        .update(newsArticles)
+        .set({ isFeatured: false })
+        .where(eq(newsArticles.isFeatured, true));
+    }
+
+    const [updated] = await db
+      .update(newsArticles)
+      .set({ isFeatured })
+      .where(eq(newsArticles.id, articleId))
+      .returning();
+    return updated;
+  }
+
+  async getFeaturedNewsArticle(): Promise<(NewsArticle & { categories: NewsCategory[] }) | undefined> {
+    const [article] = await db
+      .select()
+      .from(newsArticles)
+      .where(eq(newsArticles.isFeatured, true))
+      .limit(1);
+
+    if (!article) return undefined;
+
+    const categoryResults = await db
+      .select({ category: newsCategories })
+      .from(articleCategories)
+      .innerJoin(newsCategories, eq(articleCategories.categoryId, newsCategories.id))
+      .where(eq(articleCategories.articleId, article.id));
+
+    return {
+      ...article,
+      categories: categoryResults.map(r => r.category),
+    };
+  }
+
   async likeNewsArticle(articleId: string, userId: string): Promise<void> {
     const existing = await this.getUserInteraction(userId, 'news', articleId, 'like');
     
@@ -918,6 +961,58 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async toggleForumDiscussionFeatured(discussionId: string, isFeatured: boolean): Promise<ForumDiscussion | undefined> {
+    // If setting as featured, first unfeatured all other discussions
+    if (isFeatured) {
+      await db
+        .update(forumDiscussions)
+        .set({ isFeatured: false })
+        .where(eq(forumDiscussions.isFeatured, true));
+    }
+
+    const [updated] = await db
+      .update(forumDiscussions)
+      .set({ isFeatured })
+      .where(eq(forumDiscussions.id, discussionId))
+      .returning();
+    return updated;
+  }
+
+  async getFeaturedForumDiscussion(): Promise<(ForumDiscussion & { author: User; category: ForumCategory; newsCategories: NewsCategory[] }) | undefined> {
+    const [discussion] = await db
+      .select()
+      .from(forumDiscussions)
+      .where(eq(forumDiscussions.isFeatured, true))
+      .limit(1);
+
+    if (!discussion) return undefined;
+
+    const [author] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, discussion.authorId!))
+      .limit(1);
+
+    const [category] = await db
+      .select()
+      .from(forumCategories)
+      .where(eq(forumCategories.id, discussion.categoryId!))
+      .limit(1);
+
+    const newsCategoryResults = await db
+      .select({ category: newsCategories })
+      .from(discussionNewsCategories)
+      .innerJoin(newsCategories, eq(discussionNewsCategories.categoryId, newsCategories.id))
+      .where(eq(discussionNewsCategories.discussionId, discussion.id));
+
+    return {
+      ...discussion,
+      author: author || {} as User,
+      category: category || {} as ForumCategory,
+      newsCategories: newsCategoryResults.map(r => r.category),
+    };
+  }
+
   async getResources(type?: string, category?: string, limit = 20): Promise<Resource[]> {
     const conditions = [];
     if (type) conditions.push(eq(resources.type, type));
@@ -1148,11 +1243,28 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async togglePodcastEpisodeFeatured(episodeId: string, isFeatured: boolean): Promise<PodcastEpisode | undefined> {
+    // If setting as featured, first unfeatured all other episodes
+    if (isFeatured) {
+      await db
+        .update(podcastEpisodes)
+        .set({ isFeatured: false })
+        .where(eq(podcastEpisodes.isFeatured, true));
+    }
+
+    const [updated] = await db
+      .update(podcastEpisodes)
+      .set({ isFeatured })
+      .where(eq(podcastEpisodes.id, episodeId))
+      .returning();
+    return updated;
+  }
+
   async getFeaturedPodcastEpisode(): Promise<(PodcastEpisode & { categories: NewsCategory[] }) | undefined> {
     const [episode] = await db
       .select()
       .from(podcastEpisodes)
-      .orderBy(desc(podcastEpisodes.publishedAt))
+      .where(eq(podcastEpisodes.isFeatured, true))
       .limit(1);
 
     if (!episode) return undefined;
