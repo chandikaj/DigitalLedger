@@ -98,24 +98,13 @@ export default function Landing() {
       {/* News Section */}
       <section className="py-16 bg-white dark:bg-dark-bg" data-testid="news-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-12">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4" data-testid="news-title">
-                Latest AI in Accounting News
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl">
-                Stay updated with curated insights from trusted sources, academic journals, and industry leaders
-              </p>
-            </div>
-            
-            {/* News Filters */}
-            <div className="flex flex-wrap gap-2 mt-6 lg:mt-0">
-              <Badge variant="default" data-testid="filter-all">All</Badge>
-              <Badge variant="secondary" data-testid="filter-automation">Automation</Badge>
-              <Badge variant="secondary" data-testid="filter-fraud">Fraud Detection</Badge>
-              <Badge variant="secondary" data-testid="filter-regulatory">Regulatory</Badge>
-              <Badge variant="secondary" data-testid="filter-ai">Generative AI</Badge>
-            </div>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4" data-testid="news-title">
+              Latest AI in Accounting News
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto">
+              Stay updated with curated insights from trusted sources, academic journals, and industry leaders
+            </p>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
