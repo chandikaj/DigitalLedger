@@ -20,6 +20,7 @@ import { insertNewsArticleSchema, insertPodcastEpisodeSchema, insertUserInvitati
 import { z } from "zod";
 import { Upload, FileText, Mic, Image, AudioWaveform, Users, UserPlus, Shield, ShieldCheck, Edit, Trash2, AlertCircle, Home, Menu } from "lucide-react";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import type { UploadResult } from "@uppy/core";
 
 // Extended schemas for form validation
@@ -62,7 +63,11 @@ export default function Admin() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  const userRole = (user as any)?.role;
+  const isEditorOrAdmin = userRole === 'editor' || userRole === 'admin';
 
   const articleForm = useForm<ArticleFormData>({
     resolver: zodResolver(articleFormSchema),
@@ -561,6 +566,14 @@ export default function Admin() {
                   Menu
                 </Button>
               </Link>
+              {isEditorOrAdmin && (
+                <Link href="/admin/main-page">
+                  <Button variant="default" className="flex items-center gap-2" data-testid="button-main-page-control">
+                    <Home className="h-4 w-4" />
+                    Main Page
+                  </Button>
+                </Link>
+              )}
               <Button 
                 variant="outline" 
                 onClick={handleRebuildDatabase}

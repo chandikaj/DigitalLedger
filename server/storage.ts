@@ -86,6 +86,7 @@ export interface IStorage {
   deleteNewsArticle(articleId: string): Promise<boolean>;
   archiveNewsArticle(articleId: string): Promise<NewsArticle | undefined>;
   toggleNewsArticleStatus(articleId: string, status: 'published' | 'draft'): Promise<NewsArticle | undefined>;
+  toggleNewsArticleFeatured(articleId: string, isFeatured: boolean): Promise<NewsArticle | undefined>;
   likeNewsArticle(articleId: string, userId: string): Promise<void>;
   
   // Forum operations
@@ -97,6 +98,7 @@ export interface IStorage {
   updateForumDiscussion(discussionId: string, updates: Partial<InsertForumDiscussion>, newsCategoryIds?: string[]): Promise<(ForumDiscussion & { newsCategories: NewsCategory[] }) | undefined>;
   deleteForumDiscussion(discussionId: string): Promise<boolean>;
   toggleForumDiscussionStatus(discussionId: string, status: 'published' | 'draft'): Promise<ForumDiscussion | undefined>;
+  toggleForumDiscussionFeatured(discussionId: string, isFeatured: boolean): Promise<ForumDiscussion | undefined>;
   createForumReply(reply: InsertForumReply): Promise<ForumReply>;
   likeForumDiscussion(discussionId: string, userId: string): Promise<void>;
   likeForumReply(replyId: string, userId: string): Promise<void>;
@@ -115,6 +117,7 @@ export interface IStorage {
   updatePodcastEpisode(episodeId: string, updates: Partial<InsertPodcastEpisode>, categoryIds?: string[]): Promise<(PodcastEpisode & { categories: NewsCategory[] }) | undefined>;
   deletePodcastEpisode(episodeId: string): Promise<boolean>;
   togglePodcastEpisodeStatus(episodeId: string, status: 'published' | 'draft'): Promise<PodcastEpisode | undefined>;
+  togglePodcastEpisodeFeatured(episodeId: string, isFeatured: boolean): Promise<PodcastEpisode | undefined>;
   getFeaturedPodcastEpisode(): Promise<(PodcastEpisode & { categories: NewsCategory[] }) | undefined>;
   
   // Poll operations
@@ -596,6 +599,15 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async toggleNewsArticleFeatured(articleId: string, isFeatured: boolean): Promise<NewsArticle | undefined> {
+    const [updated] = await db
+      .update(newsArticles)
+      .set({ isFeatured })
+      .where(eq(newsArticles.id, articleId))
+      .returning();
+    return updated;
+  }
+
   async likeNewsArticle(articleId: string, userId: string): Promise<void> {
     const existing = await this.getUserInteraction(userId, 'news', articleId, 'like');
     
@@ -918,6 +930,15 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async toggleForumDiscussionFeatured(discussionId: string, isFeatured: boolean): Promise<ForumDiscussion | undefined> {
+    const [updated] = await db
+      .update(forumDiscussions)
+      .set({ isFeatured })
+      .where(eq(forumDiscussions.id, discussionId))
+      .returning();
+    return updated;
+  }
+
   async getResources(type?: string, category?: string, limit = 20): Promise<Resource[]> {
     const conditions = [];
     if (type) conditions.push(eq(resources.type, type));
@@ -1143,6 +1164,15 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(podcastEpisodes)
       .set({ status })
+      .where(eq(podcastEpisodes.id, episodeId))
+      .returning();
+    return updated;
+  }
+
+  async togglePodcastEpisodeFeatured(episodeId: string, isFeatured: boolean): Promise<PodcastEpisode | undefined> {
+    const [updated] = await db
+      .update(podcastEpisodes)
+      .set({ isFeatured })
       .where(eq(podcastEpisodes.id, episodeId))
       .returning();
     return updated;

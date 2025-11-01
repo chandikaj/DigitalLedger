@@ -515,6 +515,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/news/:id/featured', isEditorOrAdmin, async (req: any, res) => {
+    try {
+      const articleId = req.params.id;
+      const { isFeatured } = req.body;
+      if (typeof isFeatured !== 'boolean') {
+        return res.status(400).json({ message: "Invalid isFeatured value. Must be boolean" });
+      }
+      const updatedArticle = await storage.toggleNewsArticleFeatured(articleId, isFeatured);
+      if (!updatedArticle) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      res.json(updatedArticle);
+    } catch (error) {
+      console.error("Error toggling news article featured status:", error);
+      res.status(500).json({ message: "Failed to toggle news article featured status" });
+    }
+  });
+
   // Forum routes
   app.get('/api/forum/categories', async (req, res) => {
     try {
@@ -639,6 +657,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error toggling forum discussion status:", error);
       res.status(500).json({ message: "Failed to toggle forum discussion status" });
+    }
+  });
+
+  app.patch('/api/forum/discussions/:id/featured', isEditorOrAdmin, async (req: any, res) => {
+    try {
+      const discussionId = req.params.id;
+      const { isFeatured } = req.body;
+      if (typeof isFeatured !== 'boolean') {
+        return res.status(400).json({ message: "Invalid isFeatured value. Must be boolean" });
+      }
+      const updatedDiscussion = await storage.toggleForumDiscussionFeatured(discussionId, isFeatured);
+      if (!updatedDiscussion) {
+        return res.status(404).json({ message: "Discussion not found" });
+      }
+      res.json(updatedDiscussion);
+    } catch (error) {
+      console.error("Error toggling forum discussion featured status:", error);
+      res.status(500).json({ message: "Failed to toggle forum discussion featured status" });
     }
   });
 
@@ -862,6 +898,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error toggling podcast episode status:", error);
       res.status(500).json({ message: "Failed to toggle podcast episode status" });
+    }
+  });
+
+  app.patch('/api/podcasts/:id/featured', isEditorOrAdmin, async (req: any, res) => {
+    try {
+      const episodeId = req.params.id;
+      const { isFeatured } = req.body;
+      if (typeof isFeatured !== 'boolean') {
+        return res.status(400).json({ message: "Invalid isFeatured value. Must be boolean" });
+      }
+      const updatedEpisode = await storage.togglePodcastEpisodeFeatured(episodeId, isFeatured);
+      if (!updatedEpisode) {
+        return res.status(404).json({ message: "Podcast episode not found" });
+      }
+      res.json(updatedEpisode);
+    } catch (error) {
+      console.error("Error toggling podcast episode featured status:", error);
+      res.status(500).json({ message: "Failed to toggle podcast episode featured status" });
     }
   });
 

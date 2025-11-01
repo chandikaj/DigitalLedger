@@ -23,15 +23,21 @@ import {
 export default function Landing() {
   const [, setLocation] = useLocation();
   
-  const { data: latestPodcasts } = useQuery({
+  const { data: allPodcasts } = useQuery({
     queryKey: ["/api/podcasts"],
-    queryFn: () => fetch("/api/podcasts?limit=3").then(res => res.json()),
+    queryFn: () => fetch("/api/podcasts?limit=50").then(res => res.json()),
   });
 
-  const { data: newsArticles = [] } = useQuery({
+  const { data: allNews = [] } = useQuery({
     queryKey: ["/api/news"],
-    queryFn: () => fetch("/api/news?limit=3").then(res => res.json()),
+    queryFn: () => fetch("/api/news?limit=50").then(res => res.json()),
   });
+
+  const featuredNews = allNews.filter((article: any) => article.isFeatured);
+  const newsArticles = featuredNews.length > 0 ? featuredNews.slice(0, 3) : allNews.slice(0, 3);
+
+  const featuredPodcasts = allPodcasts?.filter((podcast: any) => podcast.isFeatured) || [];
+  const latestPodcasts = featuredPodcasts.length > 0 ? featuredPodcasts.slice(0, 3) : (allPodcasts?.slice(0, 3) || []);
 
   const forumCategories = [
     {

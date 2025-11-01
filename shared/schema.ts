@@ -94,6 +94,7 @@ export const newsArticles = pgTable("news_articles", {
   publishedAt: timestamp("published_at").defaultNow(),
   likes: integer("likes").default(0),
   isArchived: boolean("is_archived").default(false),
+  isFeatured: boolean("is_featured").default(false), // Featured on main page
   status: varchar("status").default("published").notNull(), // 'published' or 'draft'
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -118,6 +119,7 @@ export const forumDiscussions = pgTable("forum_discussions", {
   authorId: varchar("author_id").references(() => users.id),
   isPinned: boolean("is_pinned").default(false),
   isLocked: boolean("is_locked").default(false),
+  isFeatured: boolean("is_featured").default(false), // Featured on main page
   replyCount: integer("reply_count").default(0),
   likes: integer("likes").default(0),
   lastReplyAt: timestamp("last_reply_at"),
@@ -170,6 +172,7 @@ export const podcastEpisodes = pgTable("podcast_episodes", {
   guestTitle: varchar("guest_title"),
   playCount: integer("play_count").default(0),
   likes: integer("likes").default(0),
+  isFeatured: boolean("is_featured").default(false), // Featured on main page
   publishedAt: timestamp("published_at").defaultNow(),
   status: varchar("status").default("published").notNull(), // 'published' or 'draft'
   createdAt: timestamp("created_at").defaultNow(),
