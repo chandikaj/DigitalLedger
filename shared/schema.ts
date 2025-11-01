@@ -94,6 +94,7 @@ export const newsArticles = pgTable("news_articles", {
   publishedAt: timestamp("published_at").defaultNow(),
   likes: integer("likes").default(0),
   isArchived: boolean("is_archived").default(false),
+  isFeatured: boolean("is_featured").default(false),
   status: varchar("status").default("published").notNull(), // 'published' or 'draft'
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -121,6 +122,7 @@ export const forumDiscussions = pgTable("forum_discussions", {
   replyCount: integer("reply_count").default(0),
   likes: integer("likes").default(0),
   lastReplyAt: timestamp("last_reply_at"),
+  isFeatured: boolean("is_featured").default(false),
   status: varchar("status").default("published").notNull(), // 'published' or 'draft'
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -171,6 +173,7 @@ export const podcastEpisodes = pgTable("podcast_episodes", {
   playCount: integer("play_count").default(0),
   likes: integer("likes").default(0),
   publishedAt: timestamp("published_at").defaultNow(),
+  isFeatured: boolean("is_featured").default(false),
   status: varchar("status").default("published").notNull(), // 'published' or 'draft'
   createdAt: timestamp("created_at").defaultNow(),
 });
