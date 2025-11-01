@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Heart, MessageCircle, Share, Search, PlusCircle, CheckCircle, XCircle, Pencil } from "lucide-react";
+import { Heart, MessageCircle, Share, Search, PlusCircle, CheckCircle, XCircle, Pencil, Star } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +44,27 @@ export default function News() {
       toast({
         title: "Error",
         description: "Failed to update article status.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleFeaturedMutation = useMutation({
+    mutationFn: async ({ articleId, isFeatured }: { articleId: string; isFeatured: boolean }) => {
+      return await apiRequest(`/api/news/${articleId}/featured`, 'PATCH', { isFeatured });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/news"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/news/featured"] });
+      toast({
+        title: "Featured status updated",
+        description: `Article ${variables.isFeatured ? 'marked as featured' : 'unmarked as featured'} successfully.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update featured status.",
         variant: "destructive",
       });
     },
@@ -327,6 +348,23 @@ export default function News() {
                             Publish
                           </>
                         )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={article.isFeatured ? 'default' : 'outline'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFeaturedMutation.mutate({
+                            articleId: article.id,
+                            isFeatured: !article.isFeatured
+                          });
+                        }}
+                        disabled={toggleFeaturedMutation.isPending}
+                        data-testid={`toggle-featured-${article.id}`}
+                        className="flex items-center gap-1"
+                      >
+                        <Star className={`h-4 w-4 ${article.isFeatured ? 'fill-current' : ''}`} />
+                        {article.isFeatured ? 'Featured' : 'Feature'}
                       </Button>
                     </div>
                   )}
