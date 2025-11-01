@@ -166,7 +166,7 @@ export default function Podcasts() {
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
                 The Digital Ledger Podcast Hub
               </h1>
-              <p className="text-gray-600 dark:text-gray-300 text-lg max-w-3xl mx-auto">
+              <p className="text-gray-600 dark:text-gray-300 text-lg max-w-5xl mx-auto">
                 Listen to expert interviews, industry insights, and practical discussions about the future of Corporate Finance and Accounting
               </p>
             </div>
