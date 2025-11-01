@@ -489,22 +489,9 @@ export class DatabaseStorage implements IStorage {
 
   async createNewsArticle(article: InsertNewsArticle, categoryIds: string[]): Promise<NewsArticle & { categories: NewsCategory[] }> {
     return await db.transaction(async (tx) => {
-      let legacyCategory = 'general';
-      if (categoryIds.length > 0) {
-        const firstCategory = await tx
-          .select()
-          .from(newsCategories)
-          .where(eq(newsCategories.id, categoryIds[0]))
-          .limit(1);
-        legacyCategory = firstCategory[0]?.slug || 'general';
-      }
-
       const [created] = await tx
         .insert(newsArticles)
-        .values({
-          ...article,
-          category: legacyCategory,
-        })
+        .values(article)
         .returning();
 
       if (categoryIds.length > 0) {
@@ -531,31 +518,26 @@ export class DatabaseStorage implements IStorage {
 
   async updateNewsArticle(articleId: string, updates: Partial<InsertNewsArticle>, categoryIds?: string[]): Promise<(NewsArticle & { categories: NewsCategory[] }) | undefined> {
     return await db.transaction(async (tx) => {
-      let updateData = { ...updates };
-      
-      if (categoryIds && categoryIds.length > 0) {
-        const firstCategory = await tx
-          .select()
-          .from(newsCategories)
-          .where(eq(newsCategories.id, categoryIds[0]))
-          .limit(1);
-        updateData.category = firstCategory[0]?.slug || 'general';
-
+      if (categoryIds !== undefined) {
+        // Delete existing category associations
         await tx
           .delete(articleCategories)
           .where(eq(articleCategories.articleId, articleId));
 
-        await tx.insert(articleCategories).values(
-          categoryIds.map(categoryId => ({
-            articleId,
-            categoryId,
-          }))
-        );
+        // Insert new category associations if any
+        if (categoryIds.length > 0) {
+          await tx.insert(articleCategories).values(
+            categoryIds.map(categoryId => ({
+              articleId,
+              categoryId,
+            }))
+          );
+        }
       }
 
       const [updated] = await tx
         .update(newsArticles)
-        .set(updateData)
+        .set(updates)
         .where(eq(newsArticles.id, articleId))
         .returning();
 
@@ -1112,17 +1094,21 @@ export class DatabaseStorage implements IStorage {
 
   async updatePodcastEpisode(episodeId: string, updates: Partial<InsertPodcastEpisode>, categoryIds?: string[]): Promise<(PodcastEpisode & { categories: NewsCategory[] }) | undefined> {
     return await db.transaction(async (tx) => {
-      if (categoryIds && categoryIds.length > 0) {
+      if (categoryIds !== undefined) {
+        // Delete existing category associations
         await tx
           .delete(podcastCategories)
           .where(eq(podcastCategories.podcastId, episodeId));
 
-        await tx.insert(podcastCategories).values(
-          categoryIds.map(categoryId => ({
-            podcastId: episodeId,
-            categoryId,
-          }))
-        );
+        // Insert new category associations if any
+        if (categoryIds.length > 0) {
+          await tx.insert(podcastCategories).values(
+            categoryIds.map(categoryId => ({
+              podcastId: episodeId,
+              categoryId,
+            }))
+          );
+        }
       }
 
       const [updated] = await tx

@@ -374,7 +374,6 @@ export async function seedDatabase(force: boolean = false) {
       title: newsData[0].title,
       content: newsData[0].content,
       excerpt: newsData[0].excerpt,
-      category: newsData[0].category,
       imageUrl: newsData[0].imageUrl,
       sourceUrl: newsData[0].sourceUrl,
     }, [automationCat!.id]);
@@ -383,7 +382,6 @@ export async function seedDatabase(force: boolean = false) {
       title: newsData[1].title,
       content: newsData[1].content,
       excerpt: newsData[1].excerpt,
-      category: newsData[1].category,
       imageUrl: newsData[1].imageUrl,
       sourceUrl: newsData[1].sourceUrl,
     }, [regulatoryCat!.id]);
@@ -392,7 +390,6 @@ export async function seedDatabase(force: boolean = false) {
       title: newsData[2].title,
       content: newsData[2].content,
       excerpt: newsData[2].excerpt,
-      category: newsData[2].category,
       imageUrl: newsData[2].imageUrl,
       sourceUrl: newsData[2].sourceUrl,
     }, [fraudDetectionCat!.id]);
@@ -401,7 +398,6 @@ export async function seedDatabase(force: boolean = false) {
       title: newsData[3].title,
       content: newsData[3].content,
       excerpt: newsData[3].excerpt,
-      category: newsData[3].category,
       imageUrl: newsData[3].imageUrl,
       sourceUrl: newsData[3].sourceUrl,
     }, [generativeAiCat!.id, automationCat!.id]);
@@ -410,7 +406,6 @@ export async function seedDatabase(force: boolean = false) {
       title: newsData[4].title,
       content: newsData[4].content,
       excerpt: newsData[4].excerpt,
-      category: newsData[4].category,
       imageUrl: newsData[4].imageUrl,
       sourceUrl: newsData[4].sourceUrl,
     }, [automationCat!.id]);
@@ -419,7 +414,6 @@ export async function seedDatabase(force: boolean = false) {
       title: newsData[5].title,
       content: newsData[5].content,
       excerpt: newsData[5].excerpt,
-      category: newsData[5].category,
       imageUrl: newsData[5].imageUrl,
       sourceUrl: newsData[5].sourceUrl,
     }, [regulatoryCat!.id]);
@@ -428,7 +422,6 @@ export async function seedDatabase(force: boolean = false) {
       title: newsData[6].title,
       content: newsData[6].content,
       excerpt: newsData[6].excerpt,
-      category: newsData[6].category,
       imageUrl: newsData[6].imageUrl,
       sourceUrl: newsData[6].sourceUrl,
     }, [fraudDetectionCat!.id]);
@@ -437,7 +430,6 @@ export async function seedDatabase(force: boolean = false) {
       title: newsData[7].title,
       content: newsData[7].content,
       excerpt: newsData[7].excerpt,
-      category: newsData[7].category,
       imageUrl: newsData[7].imageUrl,
       sourceUrl: newsData[7].sourceUrl,
     }, [generativeAiCat!.id]);
@@ -446,7 +438,6 @@ export async function seedDatabase(force: boolean = false) {
       title: newsData[8].title,
       content: newsData[8].content,
       excerpt: newsData[8].excerpt,
-      category: newsData[8].category,
       imageUrl: newsData[8].imageUrl,
       sourceUrl: newsData[8].sourceUrl,
     }, [automationCat!.id]);
@@ -455,7 +446,6 @@ export async function seedDatabase(force: boolean = false) {
       title: newsData[9].title,
       content: newsData[9].content,
       excerpt: newsData[9].excerpt,
-      category: newsData[9].category,
       imageUrl: newsData[9].imageUrl,
       sourceUrl: newsData[9].sourceUrl,
     }, [regulatoryCat!.id]);
@@ -464,7 +454,6 @@ export async function seedDatabase(force: boolean = false) {
       title: newsData[10].title,
       content: newsData[10].content,
       excerpt: newsData[10].excerpt,
-      category: newsData[10].category,
       imageUrl: newsData[10].imageUrl,
       sourceUrl: newsData[10].sourceUrl,
     }, [fraudDetectionCat!.id, automationCat!.id]);

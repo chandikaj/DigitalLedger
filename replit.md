@@ -108,6 +108,11 @@ Preferred communication style: Simple, everyday language.
   - **UI Pattern**: Color-coded badges with category.color, multi-select toggles in forms
   - **Accessibility**: Full keyboard navigation (Tab, Enter, Space), aria-pressed states, focus rings, screen reader support
   - **Filtering**: Multi-select category filtering on News and Podcasts pages with "Clear Filters" option
+    - **OR Logic**: Selecting multiple categories shows items matching ANY selected category (union, not intersection)
+    - **Stable Filter Buttons**: All category buttons remain visible regardless of selected filters (fetches unfiltered data separately)
+    - **URL State Sync**: Filter selections persist in URL query params (?categories=id1,id2) for shareable filter links
+    - **Backend**: Routes properly parse comma-separated category IDs from URL query parameters
+    - **Clear Filters**: Removes all query params and resets visual state using `{ replace: true }` to avoid navigation loops
   - **Backwards Compatibility**: Legacy single category field auto-populated with first category slug, defaults to "general"
 - **News Aggregation**: Curated feed system with multi-category support and filtering
   - **Dedicated Add News Page** (/news/add): Streamlined article creation interface for editors and admins

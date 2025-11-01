@@ -1,12 +1,12 @@
 import { Layout } from "@/components/Layout";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Heart, MessageCircle, Share, Search, PlusCircle, CheckCircle, XCircle, Pencil } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -22,12 +22,32 @@ interface NewsCategory {
 }
 
 export default function News() {
+  const [location, setLocation] = useLocation();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
   const userRole = (user as any)?.role;
   const { toast } = useToast();
   const isEditorOrAdmin = userRole === 'editor' || userRole === 'admin';
+
+  // Sync state with URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(location.split('?')[1] || '');
+    const categoriesParam = params.get('categories');
+    if (categoriesParam) {
+      setSelectedCategories(categoriesParam.split(','));
+    }
+  }, []);
+
+  // Update URL when filters change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedCategories.length > 0) {
+      params.set('categories', selectedCategories.join(','));
+    }
+    const newPath = params.toString() ? `/news?${params.toString()}` : '/news';
+    setLocation(newPath, { replace: true });
+  }, [selectedCategories, setLocation]);
 
   const toggleStatusMutation = useMutation({
     mutationFn: async ({ articleId, newStatus }: { articleId: string; newStatus: string }) => {
@@ -49,12 +69,13 @@ export default function News() {
     },
   });
 
-  // Fetch active categories
-  const { data: categoriesData = [] } = useQuery<NewsCategory[]>({
-    queryKey: ["/api/news-categories", "active"],
-    queryFn: () => fetch("/api/news-categories?activeOnly=true").then(res => res.json()),
+  // Fetch all news to get complete category list (unfiltered)
+  const { data: allNews } = useQuery({
+    queryKey: ["/api/news", "all"],
+    queryFn: () => fetch("/api/news?limit=50").then(res => res.json()),
   });
 
+  // Fetch filtered news based on selected categories
   const { data: news, isLoading } = useQuery({
     queryKey: ["/api/news", selectedCategories],
     queryFn: () => {
@@ -64,6 +85,16 @@ export default function News() {
       return fetch(url).then(res => res.json());
     },
   });
+
+  // Extract unique categories from all news (keeps filter buttons stable)
+  const categoriesData = allNews?.reduce((acc: NewsCategory[], article: any) => {
+    article.categories?.forEach((cat: NewsCategory) => {
+      if (!acc.find(c => c.id === cat.id)) {
+        acc.push(cat);
+      }
+    });
+    return acc;
+  }, []) || [];
 
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories(prev => 
@@ -137,7 +168,7 @@ export default function News() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 space-y-4 lg:space-y-0">
           {/* Category Filters */}
           <div className="flex flex-wrap gap-2" data-testid="category-filters">
-            {categoriesData.map((category) => (
+            {categoriesData.map((category: NewsCategory) => (
               <Button
                 key={category.id}
                 variant={selectedCategories.includes(category.id) ? "default" : "outline"}

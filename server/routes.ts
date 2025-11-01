@@ -359,7 +359,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Support both single category (legacy) and multiple categories (new)
       let categoryIds: string[] | undefined;
       if (categories) {
-        categoryIds = Array.isArray(categories) ? categories as string[] : [categories as string];
+        // Split comma-separated string or handle array
+        if (Array.isArray(categories)) {
+          categoryIds = categories as string[];
+        } else {
+          categoryIds = (categories as string).split(',').map(id => id.trim()).filter(Boolean);
+        }
       } else if (category) {
         categoryIds = [category as string];
       }
@@ -793,7 +798,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { categories, limit } = req.query;
       let categoryIds: string[] | undefined;
       if (categories) {
-        categoryIds = Array.isArray(categories) ? categories as string[] : [categories as string];
+        // Split comma-separated string or handle array
+        if (Array.isArray(categories)) {
+          categoryIds = categories as string[];
+        } else {
+          categoryIds = (categories as string).split(',').map(id => id.trim()).filter(Boolean);
+        }
       }
       // Pass user role to filter by status (admins/editors see all, regular users see only published)
       // Check session for authenticated user since this is a public route

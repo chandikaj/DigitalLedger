@@ -89,7 +89,6 @@ export const newsArticles = pgTable("news_articles", {
   thumbnailUrl: varchar("thumbnail_url"),
   sourceUrl: varchar("source_url"),
   sourceName: varchar("source_name"),
-  category: varchar("category").notNull(), // References newsCategories.name
   authorId: varchar("author_id").references(() => users.id),
   publishedAt: timestamp("published_at").defaultNow(),
   likes: integer("likes").default(0),

@@ -1,6 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import {
   XCircle,
   ExternalLink
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -35,12 +35,32 @@ interface NewsCategory {
 }
 
 export default function Podcasts() {
+  const [location, setLocation] = useLocation();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
   const userRole = (user as any)?.role;
   const { toast } = useToast();
   const isEditorOrAdmin = userRole === 'editor' || userRole === 'admin';
+
+  // Sync state with URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(location.split('?')[1] || '');
+    const categoriesParam = params.get('categories');
+    if (categoriesParam) {
+      setSelectedCategories(categoriesParam.split(','));
+    }
+  }, []);
+
+  // Update URL when filters change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedCategories.length > 0) {
+      params.set('categories', selectedCategories.join(','));
+    }
+    const newPath = params.toString() ? `/podcasts?${params.toString()}` : '/podcasts';
+    setLocation(newPath, { replace: true });
+  }, [selectedCategories, setLocation]);
 
   const toggleStatusMutation = useMutation({
     mutationFn: async ({ episodeId, newStatus }: { episodeId: string; newStatus: string }) => {
@@ -63,11 +83,13 @@ export default function Podcasts() {
     },
   });
 
-  const { data: categoriesData = [] } = useQuery<NewsCategory[]>({
-    queryKey: ["/api/news-categories", "active"],
-    queryFn: () => fetch("/api/news-categories?activeOnly=true").then(res => res.json()),
+  // Fetch all episodes to get complete category list (unfiltered)
+  const { data: allEpisodes } = useQuery({
+    queryKey: ["/api/podcasts", "all"],
+    queryFn: () => fetch("/api/podcasts?limit=50").then(res => res.json()),
   });
 
+  // Fetch filtered episodes based on selected categories
   const { data: episodes, isLoading } = useQuery({
     queryKey: ["/api/podcasts", selectedCategories],
     queryFn: () => {
@@ -82,6 +104,16 @@ export default function Podcasts() {
     queryKey: ["/api/podcasts/featured"],
     queryFn: () => fetch("/api/podcasts/featured").then(res => res.json()),
   });
+
+  // Extract unique categories from all episodes (keeps filter buttons stable)
+  const categoriesData = allEpisodes?.reduce((acc: NewsCategory[], episode: any) => {
+    episode.categories?.forEach((cat: NewsCategory) => {
+      if (!acc.find(c => c.id === cat.id)) {
+        acc.push(cat);
+      }
+    });
+    return acc;
+  }, []) || [];
 
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories(prev => 
@@ -289,7 +321,7 @@ export default function Podcasts() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 space-y-4 lg:space-y-0">
           {/* Category Filters */}
           <div className="flex flex-wrap gap-2" data-testid="category-filters">
-            {categoriesData.map((category) => (
+            {categoriesData.map((category: NewsCategory) => (
               <Button
                 key={category.id}
                 variant={selectedCategories.includes(category.id) ? "default" : "outline"}
