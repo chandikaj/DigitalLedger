@@ -17,7 +17,8 @@ import {
   Pencil,
   CheckCircle,
   XCircle,
-  ExternalLink
+  ExternalLink,
+  Star
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -58,6 +59,27 @@ export default function Podcasts() {
       toast({
         title: "Error",
         description: "Failed to update episode status.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleFeaturedMutation = useMutation({
+    mutationFn: async ({ episodeId, isFeatured }: { episodeId: string; isFeatured: boolean }) => {
+      return await apiRequest(`/api/podcasts/${episodeId}/featured`, 'PATCH', { isFeatured });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/podcasts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/podcasts/featured"] });
+      toast({
+        title: "Featured status updated",
+        description: `Episode ${variables.isFeatured ? 'marked as featured' : 'unmarked as featured'} successfully.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update featured status.",
         variant: "destructive",
       });
     },
@@ -277,6 +299,22 @@ export default function Podcasts() {
                           </>
                         )}
                       </Button>
+                      <Button
+                        size="sm"
+                        variant={featuredEpisode.isFeatured ? 'default' : 'outline'}
+                        onClick={() => {
+                          toggleFeaturedMutation.mutate({
+                            episodeId: featuredEpisode.id,
+                            isFeatured: !featuredEpisode.isFeatured
+                          });
+                        }}
+                        disabled={toggleFeaturedMutation.isPending}
+                        data-testid="toggle-featured-featured"
+                        className="flex items-center gap-1"
+                      >
+                        <Star className={`h-4 w-4 ${featuredEpisode.isFeatured ? 'fill-current' : ''}`} />
+                        {featuredEpisode.isFeatured ? 'Featured' : 'Feature'}
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -490,6 +528,23 @@ export default function Podcasts() {
                             Publish
                           </>
                         )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={episode.isFeatured ? 'default' : 'outline'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFeaturedMutation.mutate({
+                            episodeId: episode.id,
+                            isFeatured: !episode.isFeatured
+                          });
+                        }}
+                        disabled={toggleFeaturedMutation.isPending}
+                        data-testid={`toggle-featured-${episode.id}`}
+                        className="flex items-center gap-1"
+                      >
+                        <Star className={`h-4 w-4 ${episode.isFeatured ? 'fill-current' : ''}`} />
+                        {episode.isFeatured ? 'Featured' : 'Feature'}
                       </Button>
                     </div>
                   )}
