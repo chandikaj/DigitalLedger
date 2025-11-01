@@ -61,11 +61,8 @@ function Router() {
       {/* Article detail route must come AFTER /news/add to avoid matching "add" as an id */}
       <Route path="/news/:id" component={Article} />
       
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <Route path="/" component={Home} />
-      )}
+      {/* Home/Landing route - same for everyone */}
+      <Route path="/" component={Landing} />
       
       <Route component={NotFound} />
     </Switch>
