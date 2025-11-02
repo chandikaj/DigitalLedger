@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { loginSchema, registerSchema, LoginRequest, RegisterRequest } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Brain, ArrowLeft } from "lucide-react";
+import logoImage from "@assets/9519F333-D03D-4EEC-9DBB-415A3407BBBF_1761967718151.jpeg";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -96,13 +97,12 @@ export default function Login() {
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
-          <div className="flex items-center justify-center space-x-2">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-              <Brain className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">The Digital Ledger</h1>
-            </div>
+          <div className="flex items-center justify-center">
+            <img 
+              src={logoImage} 
+              alt="The Digital Ledger" 
+              className="h-14 w-auto"
+            />
           </div>
         </div>
 
