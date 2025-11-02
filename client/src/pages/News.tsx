@@ -133,6 +133,42 @@ export default function News() {
     likeMutation.mutate(articleId);
   };
 
+  const handleShare = async (article: any) => {
+    const url = `${window.location.origin}/news/${article.id}`;
+    const shareData = {
+      title: article.title,
+      text: article.excerpt || article.title,
+      url: url,
+    };
+
+    try {
+      // Try native Web Share API first (works on mobile and some desktop browsers)
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast({
+          title: "Shared",
+          description: "Article shared successfully!",
+        });
+      } else {
+        // Fallback: copy link to clipboard
+        await navigator.clipboard.writeText(url);
+        toast({
+          title: "Link Copied",
+          description: "Article link copied to clipboard!",
+        });
+      }
+    } catch (error: any) {
+      // User cancelled share or clipboard failed
+      if (error.name !== 'AbortError') {
+        toast({
+          title: "Error",
+          description: "Failed to share article.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -328,7 +364,10 @@ export default function News() {
                       </button>
                       <button 
                         className="flex items-center space-x-1 hover:text-green-500 transition-colors" 
-                        onClick={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleShare(article);
+                        }}
                         data-testid={`share-${article.id}`}
                       >
                         <Share className="h-4 w-4" />
