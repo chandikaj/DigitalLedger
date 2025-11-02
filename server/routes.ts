@@ -473,8 +473,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ success: true, anonymous: true });
       }
       
-      // Authenticated users: toggle like in database
-      await storage.likeNewsArticle(articleId, userId);
+      // Authenticated users: increment like count in database (no toggle, always increment)
+      await storage.incrementNewsArticleLikes(articleId, userId);
       res.json({ success: true, anonymous: false });
     } catch (error) {
       console.error("Error liking news article:", error);
@@ -948,8 +948,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ success: true, anonymous: true });
       }
       
-      // Authenticated users: toggle like in database
-      await storage.likePodcastEpisode(episodeId, userId);
+      // Authenticated users: increment like count in database (no toggle, always increment)
+      await storage.incrementPodcastEpisodeLikes(episodeId, userId);
       res.json({ success: true, anonymous: false });
     } catch (error) {
       console.error("Error liking podcast episode:", error);

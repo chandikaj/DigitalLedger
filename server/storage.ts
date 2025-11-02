@@ -88,6 +88,7 @@ export interface IStorage {
   toggleNewsArticleStatus(articleId: string, status: 'published' | 'draft'): Promise<NewsArticle | undefined>;
   toggleNewsArticleFeatured(articleId: string, isFeatured: boolean): Promise<NewsArticle | undefined>;
   likeNewsArticle(articleId: string, userId: string): Promise<void>;
+  incrementNewsArticleLikes(articleId: string, userId: string): Promise<void>;
   
   // Forum operations
   getForumCategories(): Promise<ForumCategory[]>;
@@ -119,6 +120,7 @@ export interface IStorage {
   togglePodcastEpisodeStatus(episodeId: string, status: 'published' | 'draft'): Promise<PodcastEpisode | undefined>;
   togglePodcastEpisodeFeatured(episodeId: string, isFeatured: boolean): Promise<PodcastEpisode | undefined>;
   likePodcastEpisode(episodeId: string, userId: string): Promise<void>;
+  incrementPodcastEpisodeLikes(episodeId: string, userId: string): Promise<void>;
   getFeaturedPodcastEpisode(): Promise<(PodcastEpisode & { categories: NewsCategory[] }) | undefined>;
   
   // Poll operations
@@ -612,6 +614,22 @@ export class DatabaseStorage implements IStorage {
         .set({ likes: sql`${newsArticles.likes} + 1` })
         .where(eq(newsArticles.id, articleId));
     }
+  }
+
+  async incrementNewsArticleLikes(articleId: string, userId: string): Promise<void> {
+    // Always increment, no toggle - users can give multiple likes
+    await db
+      .update(newsArticles)
+      .set({ likes: sql`${newsArticles.likes} + 1` })
+      .where(eq(newsArticles.id, articleId));
+    
+    // Track each like as a separate interaction for authenticated users
+    await this.createUserInteraction({
+      userId,
+      targetType: 'news',
+      targetId: articleId,
+      interactionType: 'like',
+    });
   }
 
   async getForumCategories(): Promise<ForumCategory[]> {
@@ -1186,6 +1204,22 @@ export class DatabaseStorage implements IStorage {
         .set({ likes: sql`${podcastEpisodes.likes} + 1` })
         .where(eq(podcastEpisodes.id, episodeId));
     }
+  }
+
+  async incrementPodcastEpisodeLikes(episodeId: string, userId: string): Promise<void> {
+    // Always increment, no toggle - users can give multiple likes
+    await db
+      .update(podcastEpisodes)
+      .set({ likes: sql`${podcastEpisodes.likes} + 1` })
+      .where(eq(podcastEpisodes.id, episodeId));
+    
+    // Track each like as a separate interaction for authenticated users
+    await this.createUserInteraction({
+      userId,
+      targetType: 'podcast',
+      targetId: episodeId,
+      interactionType: 'like',
+    });
   }
 
   async getFeaturedPodcastEpisode(): Promise<(PodcastEpisode & { categories: NewsCategory[] }) | undefined> {
