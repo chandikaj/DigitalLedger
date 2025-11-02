@@ -43,28 +43,36 @@ export default function Landing() {
   const featuredPodcasts = allPodcasts?.filter((podcast: any) => podcast.isFeatured) || [];
   const latestPodcasts = featuredPodcasts.length > 0 ? featuredPodcasts.slice(0, 3) : (allPodcasts?.slice(0, 3) || []);
 
-  // Check if content is liked (from localStorage for anonymous users)
-  const isArticleLiked = (articleId: string): boolean => {
-    const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]');
-    return likedArticles.includes(articleId);
+  const { data: user } = useQuery({ queryKey: ["/api/auth/user"] });
+
+  // Get like counts from localStorage (only for anonymous users)
+  const getLocalArticleLikeCount = (articleId: string): number => {
+    const likeCounts = JSON.parse(localStorage.getItem('articleLikeCounts') || '{}');
+    return likeCounts[articleId] || 0;
   };
 
-  const isPodcastLiked = (podcastId: string): boolean => {
-    const likedPodcasts = JSON.parse(localStorage.getItem('likedPodcasts') || '[]');
-    return likedPodcasts.includes(podcastId);
+  const getLocalPodcastLikeCount = (podcastId: string): number => {
+    const likeCounts = JSON.parse(localStorage.getItem('podcastLikeCounts') || '{}');
+    return likeCounts[podcastId] || 0;
   };
 
-  // Calculate optimistic like counts (shows +1 if user liked via localStorage)
+  // Calculate optimistic like counts
   const getOptimisticArticleLikeCount = (article: any) => {
     const dbCount = article.likes || 0;
-    const isLiked = isArticleLiked(article.id);
-    return isLiked ? dbCount + 1 : dbCount;
+    // Only add localStorage count for anonymous users (no double counting)
+    if (user) {
+      return dbCount; // Authenticated: database has the real count
+    }
+    return dbCount + getLocalArticleLikeCount(article.id); // Anonymous: add localStorage count
   };
 
   const getOptimisticPodcastLikeCount = (podcast: any) => {
     const dbCount = podcast.likes || 0;
-    const isLiked = isPodcastLiked(podcast.id);
-    return isLiked ? dbCount + 1 : dbCount;
+    // Only add localStorage count for anonymous users (no double counting)
+    if (user) {
+      return dbCount; // Authenticated: database has the real count
+    }
+    return dbCount + getLocalPodcastLikeCount(podcast.id); // Anonymous: add localStorage count
   };
 
   // Like mutation for articles
@@ -72,16 +80,12 @@ export default function Landing() {
     mutationFn: async (articleId: string) => {
       return await apiRequest(`/api/news/${articleId}/like`, 'POST');
     },
-    onSuccess: (_, articleId) => {
-      const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]');
-      const isLiked = likedArticles.includes(articleId);
-      
-      if (isLiked) {
-        const updated = likedArticles.filter((id: string) => id !== articleId);
-        localStorage.setItem('likedArticles', JSON.stringify(updated));
-      } else {
-        likedArticles.push(articleId);
-        localStorage.setItem('likedArticles', JSON.stringify(likedArticles));
+    onSuccess: (response, articleId) => {
+      // Only update localStorage for anonymous users
+      if (response.anonymous) {
+        const likeCounts = JSON.parse(localStorage.getItem('articleLikeCounts') || '{}');
+        likeCounts[articleId] = (likeCounts[articleId] || 0) + 1;
+        localStorage.setItem('articleLikeCounts', JSON.stringify(likeCounts));
       }
       
       queryClient.invalidateQueries({ queryKey: ["/api/news"] });
@@ -100,16 +104,12 @@ export default function Landing() {
     mutationFn: async (podcastId: string) => {
       return await apiRequest(`/api/podcasts/${podcastId}/like`, 'POST');
     },
-    onSuccess: (_, podcastId) => {
-      const likedPodcasts = JSON.parse(localStorage.getItem('likedPodcasts') || '[]');
-      const isLiked = likedPodcasts.includes(podcastId);
-      
-      if (isLiked) {
-        const updated = likedPodcasts.filter((id: string) => id !== podcastId);
-        localStorage.setItem('likedPodcasts', JSON.stringify(updated));
-      } else {
-        likedPodcasts.push(podcastId);
-        localStorage.setItem('likedPodcasts', JSON.stringify(likedPodcasts));
+    onSuccess: (response, podcastId) => {
+      // Only update localStorage for anonymous users
+      if (response.anonymous) {
+        const likeCounts = JSON.parse(localStorage.getItem('podcastLikeCounts') || '{}');
+        likeCounts[podcastId] = (likeCounts[podcastId] || 0) + 1;
+        localStorage.setItem('podcastLikeCounts', JSON.stringify(likeCounts));
       }
       
       queryClient.invalidateQueries({ queryKey: ["/api/podcasts"] });
@@ -260,18 +260,11 @@ export default function Landing() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                         <button
-                          className={`flex items-center space-x-1 transition-colors ${
-                            isArticleLiked(article.id) 
-                              ? 'text-red-500' 
-                              : 'hover:text-red-500'
-                          }`}
+                          className="flex items-center space-x-1 transition-colors hover:text-red-500"
                           onClick={(e) => handleArticleLike(e, article.id)}
                           data-testid={`like-${article.id}`}
                         >
-                          <Heart 
-                            className="h-4 w-4" 
-                            fill={isArticleLiked(article.id) ? 'currentColor' : 'none'}
-                          />
+                          <Heart className="h-4 w-4" />
                           <span>{getOptimisticArticleLikeCount(article)}</span>
                         </button>
                         <span className="flex items-center space-x-1">
@@ -387,18 +380,11 @@ export default function Landing() {
                           <span>{podcast.playCount || 0} plays</span>
                         </button>
                         <button 
-                          className={`flex items-center space-x-1 transition-colors ${
-                            isPodcastLiked(podcast.id) 
-                              ? 'text-red-500' 
-                              : 'hover:text-red-500'
-                          }`}
+                          className="flex items-center space-x-1 transition-colors hover:text-red-500"
                           onClick={(e) => handlePodcastLike(e, podcast.id)}
                           data-testid={`like-podcast-${index}`}
                         >
-                          <Heart 
-                            className="h-4 w-4" 
-                            fill={isPodcastLiked(podcast.id) ? 'currentColor' : 'none'}
-                          />
+                          <Heart className="h-4 w-4" />
                           <span>{getOptimisticPodcastLikeCount(podcast)}</span>
                         </button>
                       </div>

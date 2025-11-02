@@ -109,37 +109,32 @@ export default function News() {
     article.excerpt?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
-  // Check if an article is liked (from localStorage for anonymous users)
-  const isArticleLiked = (articleId: string): boolean => {
-    const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]');
-    return likedArticles.includes(articleId);
+  // Get like count from localStorage (only for anonymous users)
+  const getLocalLikeCount = (articleId: string): number => {
+    const likeCounts = JSON.parse(localStorage.getItem('articleLikeCounts') || '{}');
+    return likeCounts[articleId] || 0;
   };
 
-  // Calculate optimistic like count (shows +1 if user liked via localStorage)
+  // Calculate optimistic like count
   const getOptimisticLikeCount = (article: any) => {
     const dbCount = article.likes || 0;
-    const isLiked = isArticleLiked(article.id);
-    // Show +1 if liked in localStorage (for immediate visual feedback)
-    return isLiked ? dbCount + 1 : dbCount;
+    // Only add localStorage count for anonymous users (no double counting)
+    if (user) {
+      return dbCount; // Authenticated: database has the real count
+    }
+    return dbCount + getLocalLikeCount(article.id); // Anonymous: add localStorage count
   };
 
   const likeMutation = useMutation({
     mutationFn: async (articleId: string) => {
       return await apiRequest(`/api/news/${articleId}/like`, 'POST');
     },
-    onSuccess: (_, articleId) => {
-      // Update localStorage for UI state (for both anonymous and authenticated users)
-      const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]');
-      const isLiked = likedArticles.includes(articleId);
-      
-      if (isLiked) {
-        // Remove from liked list
-        const updated = likedArticles.filter((id: string) => id !== articleId);
-        localStorage.setItem('likedArticles', JSON.stringify(updated));
-      } else {
-        // Add to liked list
-        likedArticles.push(articleId);
-        localStorage.setItem('likedArticles', JSON.stringify(likedArticles));
+    onSuccess: (response, articleId) => {
+      // Only update localStorage for anonymous users
+      if (response.anonymous) {
+        const likeCounts = JSON.parse(localStorage.getItem('articleLikeCounts') || '{}');
+        likeCounts[articleId] = (likeCounts[articleId] || 0) + 1;
+        localStorage.setItem('articleLikeCounts', JSON.stringify(likeCounts));
       }
       
       queryClient.invalidateQueries({ queryKey: ["/api/news"] });
@@ -352,21 +347,14 @@ export default function News() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                       <button 
-                        className={`flex items-center space-x-1 transition-colors ${
-                          isArticleLiked(article.id) 
-                            ? 'text-red-500' 
-                            : 'hover:text-red-500'
-                        }`}
+                        className="flex items-center space-x-1 transition-colors hover:text-red-500"
                         onClick={(e) => {
                           e.preventDefault();
                           handleLike(article.id);
                         }}
                         data-testid={`like-${article.id}`}
                       >
-                        <Heart 
-                          className="h-4 w-4" 
-                          fill={isArticleLiked(article.id) ? 'currentColor' : 'none'}
-                        />
+                        <Heart className="h-4 w-4" />
                         <span>{getOptimisticLikeCount(article)}</span>
                       </button>
                       <button 

@@ -137,36 +137,32 @@ export default function Podcasts() {
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
-  // Check if a podcast is liked (from localStorage for anonymous users)
-  const isPodcastLiked = (podcastId: string): boolean => {
-    const likedPodcasts = JSON.parse(localStorage.getItem('likedPodcasts') || '[]');
-    return likedPodcasts.includes(podcastId);
+  // Get like count from localStorage (only for anonymous users)
+  const getLocalLikeCount = (podcastId: string): number => {
+    const likeCounts = JSON.parse(localStorage.getItem('podcastLikeCounts') || '{}');
+    return likeCounts[podcastId] || 0;
   };
 
-  // Calculate optimistic like count (shows +1 if user liked via localStorage)
+  // Calculate optimistic like count
   const getOptimisticLikeCount = (podcast: any) => {
     const dbCount = podcast.likes || 0;
-    const isLiked = isPodcastLiked(podcast.id);
-    return isLiked ? dbCount + 1 : dbCount;
+    // Only add localStorage count for anonymous users (no double counting)
+    if (user) {
+      return dbCount; // Authenticated: database has the real count
+    }
+    return dbCount + getLocalLikeCount(podcast.id); // Anonymous: add localStorage count
   };
 
   const likePodcastMutation = useMutation({
     mutationFn: async (podcastId: string) => {
       return await apiRequest(`/api/podcasts/${podcastId}/like`, 'POST');
     },
-    onSuccess: async (_, podcastId) => {
-      // Update localStorage for UI state (for both anonymous and authenticated users)
-      const likedPodcasts = JSON.parse(localStorage.getItem('likedPodcasts') || '[]');
-      const isLiked = likedPodcasts.includes(podcastId);
-      
-      if (isLiked) {
-        // Remove from liked list
-        const updated = likedPodcasts.filter((id: string) => id !== podcastId);
-        localStorage.setItem('likedPodcasts', JSON.stringify(updated));
-      } else {
-        // Add to liked list
-        likedPodcasts.push(podcastId);
-        localStorage.setItem('likedPodcasts', JSON.stringify(likedPodcasts));
+    onSuccess: async (response, podcastId) => {
+      // Only update localStorage for anonymous users
+      if (response.anonymous) {
+        const likeCounts = JSON.parse(localStorage.getItem('podcastLikeCounts') || '{}');
+        likeCounts[podcastId] = (likeCounts[podcastId] || 0) + 1;
+        localStorage.setItem('podcastLikeCounts', JSON.stringify(likeCounts));
       }
       
       // Force refetch of both queries
@@ -326,18 +322,11 @@ export default function Podcasts() {
                       <span>{featuredEpisode.playCount?.toLocaleString() || 0} plays</span>
                     </span>
                     <button
-                      className={`flex items-center space-x-1 transition-colors ${
-                        isPodcastLiked(featuredEpisode.id) 
-                          ? 'text-red-500' 
-                          : 'hover:text-red-500'
-                      }`}
+                      className="flex items-center space-x-1 transition-colors hover:text-red-500"
                       onClick={(e) => handlePodcastLike(e, featuredEpisode.id)}
                       data-testid="like-featured-podcast"
                     >
-                      <Heart 
-                        className="h-4 w-4" 
-                        fill={isPodcastLiked(featuredEpisode.id) ? 'currentColor' : 'none'}
-                      />
+                      <Heart className="h-4 w-4" />
                       <span>{getOptimisticLikeCount(featuredEpisode)} likes</span>
                     </button>
                   </div>
@@ -520,18 +509,11 @@ export default function Podcasts() {
                         <span>{episode.playCount?.toLocaleString() || 0}</span>
                       </span>
                       <button
-                        className={`flex items-center space-x-1 transition-colors ${
-                          isPodcastLiked(episode.id) 
-                            ? 'text-red-500' 
-                            : 'hover:text-red-500'
-                        }`}
+                        className="flex items-center space-x-1 transition-colors hover:text-red-500"
                         onClick={(e) => handlePodcastLike(e, episode.id)}
                         data-testid={`like-${episode.id}`}
                       >
-                        <Heart 
-                          className="h-4 w-4" 
-                          fill={isPodcastLiked(episode.id) ? 'currentColor' : 'none'}
-                        />
+                        <Heart className="h-4 w-4" />
                         <span>{getOptimisticLikeCount(episode)}</span>
                       </button>
                       <span>{new Date(episode.publishedAt).toLocaleDateString()}</span>
