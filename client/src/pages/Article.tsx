@@ -856,7 +856,7 @@ export default function Article() {
               ) : (
                 <div className="mb-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-center">
                   <p className="text-gray-600 dark:text-gray-300 mb-3">
-                    You must be signed in to post a comment
+                    Sign in to leave a message
                   </p>
                   <Button
                     onClick={() => setLocation("/login")}
