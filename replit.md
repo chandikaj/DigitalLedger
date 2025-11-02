@@ -68,6 +68,85 @@ The admin panel still includes a **"Rebuild Database"** button (orange border) f
 
 **No manual steps required!** Both environments automatically maintain identical seed data including community forums.
 
+## Anonymous Like Functionality
+
+### Overview
+The platform supports anonymous user engagement through a secure, localStorage-based like system that allows non-authenticated users to interact with content while maintaining data integrity.
+
+### Security Architecture
+
+**Authenticated Users:**
+- Likes persist to database with full interaction tracking
+- User interactions stored in `user_interactions` table
+- Like counts reflect database state
+- Likes survive browser refresh and device changes
+
+**Anonymous Users:**
+- Likes stored in **localStorage only** (not persisted to database)
+- UI state managed client-side via browser storage
+- Like counts from database remain unchanged
+- Heart icon states persist across page refreshes (via localStorage)
+- **Security**: No database manipulation possible by anonymous users
+
+### Technical Implementation
+
+**Backend Security:**
+```typescript
+app.post('/api/news/:id/like', async (req: any, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    // Anonymous: success response, NO database change
+    return res.json({ success: true, anonymous: true });
+  }
+  // Authenticated: toggle like in database
+  await storage.likeNewsArticle(articleId, userId);
+});
+```
+
+**Frontend localStorage Schema:**
+```javascript
+{
+  "likedArticles": ["article-uuid-1", "article-uuid-2", ...],
+  "likedPodcasts": ["podcast-uuid-1", "podcast-uuid-2", ...]
+}
+```
+
+### User Experience
+
+**Anonymous Users:**
+1. Click like → Heart fills, localStorage updated, no login required
+2. Refresh page → Heart remains filled (state from localStorage)
+3. Like count displays database value (authenticated users' likes only)
+4. Clear browser data → Liked state resets
+
+**Authenticated Users:**
+1. Click like → Heart fills, localStorage + database updated
+2. Refresh page → Heart remains filled (state from database)
+3. Like count increments/decrements in database
+4. Cross-device sync → Likes persist across all devices
+
+### Share Functionality
+
+**Implementation:**
+- Clipboard API integration for one-click sharing
+- Works on News articles and Podcast episodes
+- Generates full URL with article/podcast ID
+- Toast notification confirms successful copy
+- Available on both list views and detail pages
+
+**Share Button Locations:**
+- News page: Each article card
+- Article detail page: Top of article
+- Podcasts page: Each episode card (future)
+
+### Benefits
+
+1. **Engagement**: Anonymous users can interact without signup friction
+2. **Security**: Database protected from client-side manipulation
+3. **Scalability**: No database writes for anonymous likes reduces load
+4. **Privacy**: No tracking of anonymous user identities
+5. **Analytics**: Like counts reflect genuine authenticated engagement
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

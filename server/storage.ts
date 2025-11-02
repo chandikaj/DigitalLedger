@@ -118,6 +118,7 @@ export interface IStorage {
   deletePodcastEpisode(episodeId: string): Promise<boolean>;
   togglePodcastEpisodeStatus(episodeId: string, status: 'published' | 'draft'): Promise<PodcastEpisode | undefined>;
   togglePodcastEpisodeFeatured(episodeId: string, isFeatured: boolean): Promise<PodcastEpisode | undefined>;
+  likePodcastEpisode(episodeId: string, userId: string): Promise<void>;
   getFeaturedPodcastEpisode(): Promise<(PodcastEpisode & { categories: NewsCategory[] }) | undefined>;
   
   // Poll operations
@@ -1162,6 +1163,29 @@ export class DatabaseStorage implements IStorage {
       .where(eq(podcastEpisodes.id, episodeId))
       .returning();
     return updated;
+  }
+
+  async likePodcastEpisode(episodeId: string, userId: string): Promise<void> {
+    const existing = await this.getUserInteraction(userId, 'podcast', episodeId, 'like');
+    
+    if (existing) {
+      await this.deleteUserInteraction(userId, 'podcast', episodeId, 'like');
+      await db
+        .update(podcastEpisodes)
+        .set({ likes: sql`${podcastEpisodes.likes} - 1` })
+        .where(eq(podcastEpisodes.id, episodeId));
+    } else {
+      await this.createUserInteraction({
+        userId,
+        targetType: 'podcast',
+        targetId: episodeId,
+        interactionType: 'like',
+      });
+      await db
+        .update(podcastEpisodes)
+        .set({ likes: sql`${podcastEpisodes.likes} + 1` })
+        .where(eq(podcastEpisodes.id, episodeId));
+    }
   }
 
   async getFeaturedPodcastEpisode(): Promise<(PodcastEpisode & { categories: NewsCategory[] }) | undefined> {

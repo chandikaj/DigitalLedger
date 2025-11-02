@@ -462,12 +462,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/news/:id/like', isAuthenticated, async (req: any, res) => {
+  app.post('/api/news/:id/like', async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
       const articleId = req.params.id;
+      
+      // Only authenticated users can persist likes to database
+      if (!userId) {
+        // Anonymous users: likes stored in localStorage only, no database change
+        return res.json({ success: true, anonymous: true });
+      }
+      
+      // Authenticated users: toggle like in database
       await storage.likeNewsArticle(articleId, userId);
-      res.json({ success: true });
+      res.json({ success: true, anonymous: false });
     } catch (error) {
       console.error("Error liking news article:", error);
       res.status(500).json({ message: "Failed to like news article" });
@@ -926,6 +934,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error toggling podcast episode featured status:", error);
       res.status(500).json({ message: "Failed to toggle podcast episode featured status" });
+    }
+  });
+
+  app.post('/api/podcasts/:id/like', async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const episodeId = req.params.id;
+      
+      // Only authenticated users can persist likes to database
+      if (!userId) {
+        // Anonymous users: likes stored in localStorage only, no database change
+        return res.json({ success: true, anonymous: true });
+      }
+      
+      // Authenticated users: toggle like in database
+      await storage.likePodcastEpisode(episodeId, userId);
+      res.json({ success: true, anonymous: false });
+    } catch (error) {
+      console.error("Error liking podcast episode:", error);
+      res.status(500).json({ message: "Failed to like podcast episode" });
     }
   });
 

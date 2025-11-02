@@ -109,21 +109,37 @@ export default function News() {
     article.excerpt?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
+  // Check if an article is liked (from localStorage for anonymous users)
+  const isArticleLiked = (articleId: string): boolean => {
+    const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]');
+    return likedArticles.includes(articleId);
+  };
+
   const likeMutation = useMutation({
     mutationFn: async (articleId: string) => {
       return await apiRequest(`/api/news/${articleId}/like`, 'POST');
     },
-    onSuccess: () => {
+    onSuccess: (_, articleId) => {
+      // Update localStorage for UI state (for both anonymous and authenticated users)
+      const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]');
+      const isLiked = likedArticles.includes(articleId);
+      
+      if (isLiked) {
+        // Remove from liked list
+        const updated = likedArticles.filter((id: string) => id !== articleId);
+        localStorage.setItem('likedArticles', JSON.stringify(updated));
+      } else {
+        // Add to liked list
+        likedArticles.push(articleId);
+        localStorage.setItem('likedArticles', JSON.stringify(likedArticles));
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/news"] });
-      toast({
-        title: "Success",
-        description: "Article like updated successfully.",
-      });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to like article. Please login first.",
+        description: error.message || "Failed to update like.",
         variant: "destructive",
       });
     },
@@ -328,14 +344,21 @@ export default function News() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                       <button 
-                        className="flex items-center space-x-1 hover:text-red-500 transition-colors"
+                        className={`flex items-center space-x-1 transition-colors ${
+                          isArticleLiked(article.id) 
+                            ? 'text-red-500' 
+                            : 'hover:text-red-500'
+                        }`}
                         onClick={(e) => {
                           e.preventDefault();
                           handleLike(article.id);
                         }}
                         data-testid={`like-${article.id}`}
                       >
-                        <Heart className="h-4 w-4" />
+                        <Heart 
+                          className="h-4 w-4" 
+                          fill={isArticleLiked(article.id) ? 'currentColor' : 'none'}
+                        />
                         <span>{article.likes || 0}</span>
                       </button>
                       <button 

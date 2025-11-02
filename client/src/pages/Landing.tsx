@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Brain, 
   Users, 
@@ -23,6 +25,7 @@ import {
 
 export default function Landing() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   
   const { data: allPodcasts } = useQuery({
     queryKey: ["/api/podcasts"],
@@ -39,6 +42,85 @@ export default function Landing() {
 
   const featuredPodcasts = allPodcasts?.filter((podcast: any) => podcast.isFeatured) || [];
   const latestPodcasts = featuredPodcasts.length > 0 ? featuredPodcasts.slice(0, 3) : (allPodcasts?.slice(0, 3) || []);
+
+  // Check if content is liked (from localStorage for anonymous users)
+  const isArticleLiked = (articleId: string): boolean => {
+    const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]');
+    return likedArticles.includes(articleId);
+  };
+
+  const isPodcastLiked = (podcastId: string): boolean => {
+    const likedPodcasts = JSON.parse(localStorage.getItem('likedPodcasts') || '[]');
+    return likedPodcasts.includes(podcastId);
+  };
+
+  // Like mutation for articles
+  const likeArticleMutation = useMutation({
+    mutationFn: async (articleId: string) => {
+      return await apiRequest(`/api/news/${articleId}/like`, 'POST');
+    },
+    onSuccess: (_, articleId) => {
+      const likedArticles = JSON.parse(localStorage.getItem('likedArticles') || '[]');
+      const isLiked = likedArticles.includes(articleId);
+      
+      if (isLiked) {
+        const updated = likedArticles.filter((id: string) => id !== articleId);
+        localStorage.setItem('likedArticles', JSON.stringify(updated));
+      } else {
+        likedArticles.push(articleId);
+        localStorage.setItem('likedArticles', JSON.stringify(likedArticles));
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/news"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update like.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Like mutation for podcasts
+  const likePodcastMutation = useMutation({
+    mutationFn: async (podcastId: string) => {
+      return await apiRequest(`/api/podcasts/${podcastId}/like`, 'POST');
+    },
+    onSuccess: (_, podcastId) => {
+      const likedPodcasts = JSON.parse(localStorage.getItem('likedPodcasts') || '[]');
+      const isLiked = likedPodcasts.includes(podcastId);
+      
+      if (isLiked) {
+        const updated = likedPodcasts.filter((id: string) => id !== podcastId);
+        localStorage.setItem('likedPodcasts', JSON.stringify(updated));
+      } else {
+        likedPodcasts.push(podcastId);
+        localStorage.setItem('likedPodcasts', JSON.stringify(likedPodcasts));
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/podcasts"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update like.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleArticleLike = (e: React.MouseEvent, articleId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    likeArticleMutation.mutate(articleId);
+  };
+
+  const handlePodcastLike = (e: React.MouseEvent, podcastId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    likePodcastMutation.mutate(podcastId);
+  };
 
   const forumCategories = [
     {
@@ -164,10 +246,21 @@ export default function Landing() {
                     
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                        <span className="flex items-center space-x-1">
-                          <Heart className="h-4 w-4" />
+                        <button
+                          className={`flex items-center space-x-1 transition-colors ${
+                            isArticleLiked(article.id) 
+                              ? 'text-red-500' 
+                              : 'hover:text-red-500'
+                          }`}
+                          onClick={(e) => handleArticleLike(e, article.id)}
+                          data-testid={`like-${article.id}`}
+                        >
+                          <Heart 
+                            className="h-4 w-4" 
+                            fill={isArticleLiked(article.id) ? 'currentColor' : 'none'}
+                          />
                           <span>{article.likes || 0}</span>
-                        </span>
+                        </button>
                         <span className="flex items-center space-x-1">
                           <MessageCircle className="h-4 w-4" />
                           <span>0</span>
@@ -280,8 +373,19 @@ export default function Landing() {
                           <PlayCircle className="h-4 w-4" />
                           <span>{podcast.playCount || 0} plays</span>
                         </button>
-                        <button className="flex items-center space-x-1 hover:text-primary dark:hover:text-ai-teal">
-                          <Heart className="h-4 w-4" />
+                        <button 
+                          className={`flex items-center space-x-1 transition-colors ${
+                            isPodcastLiked(podcast.id) 
+                              ? 'text-red-500' 
+                              : 'hover:text-red-500'
+                          }`}
+                          onClick={(e) => handlePodcastLike(e, podcast.id)}
+                          data-testid={`like-podcast-${index}`}
+                        >
+                          <Heart 
+                            className="h-4 w-4" 
+                            fill={isPodcastLiked(podcast.id) ? 'currentColor' : 'none'}
+                          />
                           <span>{podcast.likes || 0}</span>
                         </button>
                       </div>

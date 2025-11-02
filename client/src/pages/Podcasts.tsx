@@ -137,6 +137,51 @@ export default function Podcasts() {
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
+  // Check if a podcast is liked (from localStorage for anonymous users)
+  const isPodcastLiked = (podcastId: string): boolean => {
+    const likedPodcasts = JSON.parse(localStorage.getItem('likedPodcasts') || '[]');
+    return likedPodcasts.includes(podcastId);
+  };
+
+  const likePodcastMutation = useMutation({
+    mutationFn: async (podcastId: string) => {
+      return await apiRequest(`/api/podcasts/${podcastId}/like`, 'POST');
+    },
+    onSuccess: async (_, podcastId) => {
+      // Update localStorage for UI state (for both anonymous and authenticated users)
+      const likedPodcasts = JSON.parse(localStorage.getItem('likedPodcasts') || '[]');
+      const isLiked = likedPodcasts.includes(podcastId);
+      
+      if (isLiked) {
+        // Remove from liked list
+        const updated = likedPodcasts.filter((id: string) => id !== podcastId);
+        localStorage.setItem('likedPodcasts', JSON.stringify(updated));
+      } else {
+        // Add to liked list
+        likedPodcasts.push(podcastId);
+        localStorage.setItem('likedPodcasts', JSON.stringify(likedPodcasts));
+      }
+      
+      // Force refetch of both queries
+      await queryClient.invalidateQueries({ queryKey: ["/api/podcasts"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/podcasts/featured"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/podcasts", "all"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update like.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePodcastLike = (e: React.MouseEvent, podcastId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    likePodcastMutation.mutate(podcastId);
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -273,10 +318,21 @@ export default function Podcasts() {
                       <Headphones className="h-4 w-4" />
                       <span>{featuredEpisode.playCount?.toLocaleString() || 0} plays</span>
                     </span>
-                    <span className="flex items-center space-x-1">
-                      <Heart className="h-4 w-4" />
+                    <button
+                      className={`flex items-center space-x-1 transition-colors ${
+                        isPodcastLiked(featuredEpisode.id) 
+                          ? 'text-red-500' 
+                          : 'hover:text-red-500'
+                      }`}
+                      onClick={(e) => handlePodcastLike(e, featuredEpisode.id)}
+                      data-testid="like-featured-podcast"
+                    >
+                      <Heart 
+                        className="h-4 w-4" 
+                        fill={isPodcastLiked(featuredEpisode.id) ? 'currentColor' : 'none'}
+                      />
                       <span>{featuredEpisode.likes || 0} likes</span>
-                    </span>
+                    </button>
                   </div>
 
                   {isEditorOrAdmin && (
@@ -456,6 +512,21 @@ export default function Podcasts() {
                         <Headphones className="h-4 w-4" />
                         <span>{episode.playCount?.toLocaleString() || 0}</span>
                       </span>
+                      <button
+                        className={`flex items-center space-x-1 transition-colors ${
+                          isPodcastLiked(episode.id) 
+                            ? 'text-red-500' 
+                            : 'hover:text-red-500'
+                        }`}
+                        onClick={(e) => handlePodcastLike(e, episode.id)}
+                        data-testid={`like-${episode.id}`}
+                      >
+                        <Heart 
+                          className="h-4 w-4" 
+                          fill={isPodcastLiked(episode.id) ? 'currentColor' : 'none'}
+                        />
+                        <span>{episode.likes || 0}</span>
+                      </button>
                       <span>{new Date(episode.publishedAt).toLocaleDateString()}</span>
                     </div>
                     
