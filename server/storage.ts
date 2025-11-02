@@ -2,6 +2,7 @@ import {
   users,
   newsCategories,
   newsArticles,
+  newsComments,
   articleCategories,
   podcastCategories,
   discussionNewsCategories,
@@ -20,6 +21,8 @@ import {
   type InsertNewsCategory,
   type NewsArticle,
   type InsertNewsArticle,
+  type NewsComment,
+  type InsertNewsComment,
   type ArticleCategory,
   type InsertArticleCategory,
   type PodcastCategory,
@@ -89,6 +92,12 @@ export interface IStorage {
   toggleNewsArticleFeatured(articleId: string, isFeatured: boolean): Promise<NewsArticle | undefined>;
   likeNewsArticle(articleId: string, userId: string): Promise<void>;
   incrementNewsArticleLikes(articleId: string, userId: string): Promise<void>;
+  
+  // News comments operations
+  getNewsComments(articleId: string): Promise<(NewsComment & { author: Omit<User, 'passwordHash'> })[]>;
+  createNewsComment(comment: InsertNewsComment): Promise<NewsComment & { author: Omit<User, 'passwordHash'> }>;
+  deleteNewsComment(commentId: string, userId: string): Promise<boolean>;
+  getArticleCommentCount(articleId: string): Promise<number>;
   
   // Forum operations
   getForumCategories(): Promise<ForumCategory[]>;
@@ -461,9 +470,12 @@ export class DatabaseStorage implements IStorage {
           .innerJoin(newsCategories, eq(articleCategories.categoryId, newsCategories.id))
           .where(eq(articleCategories.articleId, article.id));
 
+        const commentCount = await this.getArticleCommentCount(article.id);
+
         return {
           ...article,
           categories: categoryResults.map(r => r.category),
+          commentCount,
         };
       })
     );
@@ -485,9 +497,12 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(newsCategories, eq(articleCategories.categoryId, newsCategories.id))
       .where(eq(articleCategories.articleId, article.id));
 
+    const commentCount = await this.getArticleCommentCount(article.id);
+
     return {
       ...article,
       categories: categoryResults.map(r => r.category),
+      commentCount,
     };
   }
 
@@ -631,6 +646,59 @@ export class DatabaseStorage implements IStorage {
       targetId: articleId,
       interactionType: 'like',
     });
+  }
+
+  async getNewsComments(articleId: string): Promise<(NewsComment & { author: Omit<User, 'passwordHash'> })[]> {
+    const comments = await db
+      .select()
+      .from(newsComments)
+      .leftJoin(users, eq(newsComments.authorId, users.id))
+      .where(eq(newsComments.articleId, articleId))
+      .orderBy(desc(newsComments.createdAt));
+
+    return comments.map(row => {
+      const { passwordHash, ...safeAuthor } = row.users as User;
+      return {
+        ...row.news_comments,
+        author: safeAuthor
+      };
+    });
+  }
+
+  async createNewsComment(comment: InsertNewsComment): Promise<NewsComment & { author: Omit<User, 'passwordHash'> }> {
+    const [created] = await db
+      .insert(newsComments)
+      .values(comment)
+      .returning();
+
+    const [author] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, comment.authorId));
+
+    const { passwordHash, ...safeAuthor } = author;
+    return { ...created, author: safeAuthor };
+  }
+
+  async deleteNewsComment(commentId: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(newsComments)
+      .where(and(
+        eq(newsComments.id, commentId),
+        eq(newsComments.authorId, userId)
+      ))
+      .returning();
+
+    return result.length > 0;
+  }
+
+  async getArticleCommentCount(articleId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(newsComments)
+      .where(eq(newsComments.articleId, articleId));
+
+    return result[0]?.count || 0;
   }
 
   async getForumCategories(): Promise<ForumCategory[]> {

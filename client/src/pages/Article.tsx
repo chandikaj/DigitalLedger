@@ -36,6 +36,7 @@ export default function Article() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [location, setLocation] = useLocation();
+  const [commentContent, setCommentContent] = useState("");
 
   const articleFormSchema = z.object({
     title: z.string().min(1, "Title is required"),
@@ -75,6 +76,80 @@ export default function Article() {
   const { data: newsCategories = [] } = useQuery<any[]>({
     queryKey: ['/api/news-categories'],
   });
+
+  // Fetch comments
+  const { data: comments = [] } = useQuery<any[]>({
+    queryKey: ['/api/news', id, 'comments'],
+    enabled: !!id,
+  });
+
+  // Create comment mutation
+  const createCommentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return apiRequest(`/api/news/${id}/comments`, "POST", { content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/news', id, 'comments'] });
+      setCommentContent("");
+      toast({
+        title: "Comment posted",
+        description: "Your comment has been added successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to post comment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete comment mutation
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (commentId: string) => {
+      return apiRequest(`/api/news/comments/${commentId}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/news', id, 'comments'] });
+      toast({
+        title: "Comment deleted",
+        description: "Your comment has been removed.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete comment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmitComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "You must be signed in to post a comment.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (commentContent.trim().length === 0) {
+      toast({
+        title: "Comment required",
+        description: "Please enter a comment before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createCommentMutation.mutate(commentContent);
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    deleteCommentMutation.mutate(commentId);
+  };
 
   const updateArticleMutation = useMutation({
     mutationFn: async (data: ArticleFormData) => {
@@ -452,7 +527,7 @@ export default function Article() {
                   </button>
                   <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
                     <MessageCircle className="h-5 w-5" />
-                    <span>0 comments</span>
+                    <span data-testid="comment-count">{comments.length} {comments.length === 1 ? 'comment' : 'comments'}</span>
                   </div>
                 </div>
                 
@@ -751,6 +826,107 @@ export default function Article() {
               </DialogContent>
             </Dialog>
           )}
+
+          {/* Comments Section */}
+          <Card className="mt-8">
+            <CardContent className="p-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                Comments ({comments.length})
+              </h2>
+
+              {/* Comment Form */}
+              {user ? (
+                <form onSubmit={handleSubmitComment} className="mb-8">
+                  <Textarea
+                    value={commentContent}
+                    onChange={(e) => setCommentContent(e.target.value)}
+                    placeholder="Share your thoughts on this article..."
+                    className="mb-3 resize-none"
+                    rows={4}
+                    data-testid="input-comment"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={createCommentMutation.isPending || commentContent.trim().length === 0}
+                    data-testid="button-submit-comment"
+                  >
+                    {createCommentMutation.isPending ? "Posting..." : "Post Comment"}
+                  </Button>
+                </form>
+              ) : (
+                <div className="mb-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-center">
+                  <p className="text-gray-600 dark:text-gray-300 mb-3">
+                    You must be signed in to post a comment
+                  </p>
+                  <Button
+                    onClick={() => setLocation("/login")}
+                    data-testid="button-login-to-comment"
+                  >
+                    Sign In
+                  </Button>
+                </div>
+              )}
+
+              {/* Comments List */}
+              <div className="space-y-6">
+                {comments.length === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+                    No comments yet. Be the first to share your thoughts!
+                  </p>
+                ) : (
+                  comments.map((comment: any) => (
+                    <div
+                      key={comment.id}
+                      className="border-b last:border-0 pb-6 last:pb-0"
+                      data-testid={`comment-${comment.id}`}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
+                            {comment.author?.firstName?.[0] || comment.author?.email?.[0] || '?'}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <p className="font-semibold text-gray-900 dark:text-white">
+                                {comment.author?.firstName && comment.author?.lastName
+                                  ? `${comment.author.firstName} ${comment.author.lastName}`
+                                  : comment.author?.email || 'Unknown User'}
+                              </p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {new Date(comment.createdAt).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            </div>
+                            {user?.id === comment.authorId && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                                data-testid={`button-delete-comment-${comment.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                          <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            {comment.content}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

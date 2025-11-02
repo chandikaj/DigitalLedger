@@ -98,6 +98,15 @@ export const newsArticles = pgTable("news_articles", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// News comments
+export const newsComments = pgTable("news_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  articleId: varchar("article_id").references(() => newsArticles.id).notNull(),
+  authorId: varchar("author_id").references(() => users.id).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Forum categories
 export const forumCategories = pgTable("forum_categories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -364,6 +373,11 @@ export const insertNewsArticleSchema = createInsertSchema(newsArticles).omit({
   likes: true,
 });
 
+export const insertNewsCommentSchema = createInsertSchema(newsComments).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertForumCategorySchema = createInsertSchema(forumCategories).omit({
   id: true,
   createdAt: true,
@@ -477,6 +491,8 @@ export type NewsCategory = typeof newsCategories.$inferSelect;
 export type InsertNewsCategory = z.infer<typeof insertNewsCategorySchema>;
 export type NewsArticle = typeof newsArticles.$inferSelect;
 export type InsertNewsArticle = z.infer<typeof insertNewsArticleSchema>;
+export type NewsComment = typeof newsComments.$inferSelect;
+export type InsertNewsComment = z.infer<typeof insertNewsCommentSchema>;
 export type ForumCategory = typeof forumCategories.$inferSelect;
 export type InsertForumCategory = z.infer<typeof insertForumCategorySchema>;
 export type ForumDiscussion = typeof forumDiscussions.$inferSelect;

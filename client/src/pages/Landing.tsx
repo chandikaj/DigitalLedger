@@ -269,7 +269,7 @@ export default function Landing() {
                         </button>
                         <span className="flex items-center space-x-1">
                           <MessageCircle className="h-4 w-4" />
-                          <span>0</span>
+                          <span>{article.commentCount || 0}</span>
                         </span>
                         <span className="flex items-center space-x-1">
                           <Share className="h-4 w-4" />

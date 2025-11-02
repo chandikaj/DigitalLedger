@@ -482,6 +482,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get comments for an article (public)
+  app.get('/api/news/:id/comments', async (req, res) => {
+    try {
+      const articleId = req.params.id;
+      const comments = await storage.getNewsComments(articleId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      res.status(500).json({ message: "Failed to fetch comments" });
+    }
+  });
+
+  // Create a comment (requires authentication)
+  app.post('/api/news/:id/comments', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const articleId = req.params.id;
+      const { content } = req.body;
+
+      if (!content || content.trim().length === 0) {
+        return res.status(400).json({ message: "Comment content is required" });
+      }
+
+      const comment = await storage.createNewsComment({
+        articleId,
+        authorId: userId,
+        content: content.trim(),
+      });
+
+      res.json(comment);
+    } catch (error) {
+      console.error("Error creating comment:", error);
+      res.status(500).json({ message: "Failed to create comment" });
+    }
+  });
+
+  // Delete a comment (owner only)
+  app.delete('/api/news/comments/:commentId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      const commentId = req.params.commentId;
+
+      const deleted = await storage.deleteNewsComment(commentId, userId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Comment not found or you don't have permission to delete it" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      res.status(500).json({ message: "Failed to delete comment" });
+    }
+  });
+
   app.delete('/api/news/:id', isAdmin, async (req: any, res) => {
     try {
       const articleId = req.params.id;
