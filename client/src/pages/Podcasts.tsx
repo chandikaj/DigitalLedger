@@ -531,7 +531,7 @@ export default function Podcasts() {
                           href={episode.audioUrl} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="flex items-center space-x-1"
+                          className="flex items-center space-x-1 text-[#ffffff] bg-[#ef4444] justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-9 rounded-md px-3 hover:bg-red-50 dark:hover:bg-red-950/20"
                         >
                           <PlayCircle className="h-4 w-4" />
                           <span>Listen Now</span>
