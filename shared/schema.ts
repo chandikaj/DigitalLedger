@@ -180,6 +180,7 @@ export const podcastEpisodes = pgTable("podcast_episodes", {
   guestTitle: varchar("guest_title"),
   playCount: integer("play_count").default(0),
   likes: integer("likes").default(0),
+  isArchived: boolean("is_archived").default(false),
   isFeatured: boolean("is_featured").default(false), // Featured on main page
   publishedAt: timestamp("published_at").defaultNow(),
   status: varchar("status").default("published").notNull(), // 'published' or 'draft'
