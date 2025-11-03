@@ -468,10 +468,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/news/:id/like', async (req: any, res) => {
     try {
-      const userId = req.user?.id;
       const articleId = req.params.id;
       
-      console.log(`[POST /api/news/${articleId}/like] userId: ${userId || 'anonymous'}`);
+      // Populate req.user from session if not already set (supports both auth systems)
+      if (!req.user && req.session?.userId) {
+        req.user = await storage.getUser(req.session.userId);
+      }
+      
+      const userId = req.user?.id;
+      
+      console.log(`[POST /api/news/${articleId}/like] User: ${req.user?.email || 'anonymous'}, userId: ${userId || 'none'}`);
       
       // Only authenticated users can persist likes to database
       if (!userId) {
@@ -486,7 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedArticle = await storage.getNewsArticle(articleId);
       const newLikeCount = updatedArticle?.likes || 0;
       
-      console.log(`[POST /api/news/${articleId}/like] New like count: ${newLikeCount}`);
+      console.log(`[POST /api/news/${articleId}/like] Successfully incremented for ${req.user.email}. New count: ${newLikeCount}`);
       
       res.json({ success: true, anonymous: false, likes: newLikeCount });
     } catch (error) {
