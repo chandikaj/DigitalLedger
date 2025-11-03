@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Calendar, ExternalLink, Heart, MessageCircle, Share2, Edit, Trash2, Archive, Upload } from "lucide-react";
+import { ArrowLeft, Calendar, ExternalLink, Heart, MessageCircle, Share2, Edit, Trash2, Archive, ArchiveRestore, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { insertNewsArticleSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -197,21 +197,21 @@ export default function Article() {
 
   // Archive article mutation
   const archiveArticleMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest(`/api/news/${id}/archive`, "PATCH");
+    mutationFn: async (isArchived: boolean) => {
+      return apiRequest(`/api/news/${id}/archive`, "PATCH", { isArchived });
     },
-    onSuccess: () => {
+    onSuccess: (_, isArchived) => {
       queryClient.invalidateQueries({ queryKey: ["/api/news", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/news"] });
       toast({
         title: "Success",
-        description: "Article archived successfully",
+        description: isArchived ? "Article archived successfully" : "Article unarchived successfully",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to archive article",
+        description: error.message || "Failed to archive/unarchive article",
         variant: "destructive",
       });
     },
@@ -386,12 +386,21 @@ export default function Article() {
                 <Button 
                   variant="outline" 
                   className="flex items-center gap-2"
-                  onClick={() => archiveArticleMutation.mutate()}
+                  onClick={() => archiveArticleMutation.mutate(!article.isArchived)}
                   disabled={archiveArticleMutation.isPending}
                   data-testid="button-archive-article"
                 >
-                  <Archive className="h-4 w-4" />
-                  {archiveArticleMutation.isPending ? "Archiving..." : "Archive"}
+                  {article.isArchived ? (
+                    <>
+                      <ArchiveRestore className="h-4 w-4" />
+                      {archiveArticleMutation.isPending ? "Unarchiving..." : "Unarchive"}
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="h-4 w-4" />
+                      {archiveArticleMutation.isPending ? "Archiving..." : "Archive"}
+                    </>
+                  )}
                 </Button>
                 
                 <AlertDialog>
