@@ -7,6 +7,11 @@ import { users, newsArticles, podcastEpisodes, forumDiscussions } from "@shared/
 import { storage } from "./storage";
 
 const app = express();
+
+// Trust proxy - required for apps behind reverse proxy (like published Replit apps)
+// This ensures Express correctly recognizes HTTPS connections and sets secure cookies
+app.set("trust proxy", 1);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
