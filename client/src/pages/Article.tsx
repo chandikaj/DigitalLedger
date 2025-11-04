@@ -704,7 +704,7 @@ export default function Article() {
                                 onComplete={async (result) => {
                                   if (result.successful && result.successful.length > 0) {
                                     const uploadedFile = result.successful[0];
-                                    const imageURL = uploadedFile.response?.body?.url;
+                                    const imageURL = uploadedFile.uploadURL;
                                     
                                     if (imageURL) {
                                       try {
