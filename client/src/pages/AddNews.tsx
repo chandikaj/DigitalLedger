@@ -10,13 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ObjectUploader } from "@/components/ObjectUploader";
 import { apiRequest } from "@/lib/queryClient";
 import { insertNewsArticleSchema } from "@shared/schema";
 import { z } from "zod";
-import { Upload, FileText, Image, ArrowLeft } from "lucide-react";
+import { Upload, FileText, Image, ArrowLeft, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import type { UploadResult } from "@uppy/core";
 
 interface NewsCategory {
   id: string;
@@ -42,7 +40,8 @@ const articleFormSchema = z.object({
 type ArticleFormData = z.infer<typeof articleFormSchema>;
 
 export default function AddNews() {
-  const [uploadingArticleImage, setUploadingArticleImage] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -90,36 +89,6 @@ export default function AddNews() {
     },
   });
 
-  const handleGetUploadParameters = async () => {
-    const response = await apiRequest("/api/upload-parameters", "GET");
-    return response as { method: "PUT"; url: string };
-  };
-
-  const handleArticleImageUpload = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
-    if (result.successful && result.successful.length > 0) {
-      const uploadURL = result.successful[0].uploadURL;
-      try {
-        setUploadingArticleImage(true);
-        const response = await apiRequest("/api/articles/images", "PUT", {
-          imageURL: uploadURL,
-        }) as { objectPath: string };
-        articleForm.setValue("imageUrl", response.objectPath);
-        toast({
-          title: "Success",
-          description: "Article image uploaded successfully!",
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to process uploaded image.",
-          variant: "destructive",
-        });
-        console.error("Error processing image upload:", error);
-      } finally {
-        setUploadingArticleImage(false);
-      }
-    }
-  };
 
   const onSubmitArticle = (data: ArticleFormData) => {
     createArticleMutation.mutate(data);
@@ -311,31 +280,157 @@ export default function AddNews() {
                     )}
                   />
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-medium">Featured Image</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Upload an image to accompany your article (Max 5MB).
-                        </p>
-                      </div>
-                      <ObjectUploader
-                        maxNumberOfFiles={1}
-                        maxFileSize={5242880}
-                        onGetUploadParameters={handleGetUploadParameters}
-                        onComplete={handleArticleImageUpload}
-                        buttonClassName="flex items-center gap-2"
-                      >
-                        <Image className="h-4 w-4" />
-                        {uploadingArticleImage ? "Processing..." : "Upload Image"}
-                      </ObjectUploader>
-                    </div>
-                    {articleForm.watch("imageUrl") && (
-                      <Badge variant="secondary" className="text-xs" data-testid="badge-article-image-uploaded">
-                        Image uploaded successfully
-                      </Badge>
+                  <FormField
+                    control={articleForm.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Article Image</FormLabel>
+                        <FormControl>
+                          <div className="space-y-4">
+                            {/* Image Preview */}
+                            {field.value && (
+                              <div className="relative">
+                                <img 
+                                  src={field.value} 
+                                  alt="Article preview" 
+                                  className="w-full max-h-64 object-cover rounded-lg"
+                                  data-testid="img-article-preview"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  className="absolute top-2 right-2"
+                                  onClick={() => {
+                                    field.onChange("");
+                                    articleForm.setValue('imageUrl', "", { shouldDirty: true });
+                                    setSelectedFileName("");
+                                    toast({
+                                      title: "Image removed",
+                                      description: "Article image has been cleared.",
+                                    });
+                                  }}
+                                  data-testid="button-clear-image"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                            
+                            {/* File Upload Option */}
+                            <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6">
+                              <div className="flex flex-col items-center gap-4">
+                                <Upload className="h-8 w-8 text-gray-400" />
+                                <div className="text-center space-y-2">
+                                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {isUploadingImage ? "Uploading..." : "Upload Article Image"}
+                                  </p>
+                                  {selectedFileName && !isUploadingImage && (
+                                    <p className="text-xs text-green-600 dark:text-green-400">
+                                      Selected: {selectedFileName}
+                                    </p>
+                                  )}
+                                  <input
+                                    id="image-upload"
+                                    type="file"
+                                    accept="image/*"
+                                    data-testid="input-upload-image"
+                                    disabled={isUploadingImage}
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+
+                                      setSelectedFileName(file.name);
+
+                                      // Validate file size (5MB)
+                                      if (file.size > 5242880) {
+                                        toast({
+                                          title: "File too large",
+                                          description: "Image must be less than 5MB",
+                                          variant: "destructive",
+                                        });
+                                        setSelectedFileName("");
+                                        e.target.value = '';
+                                        return;
+                                      }
+
+                                      // Validate file type
+                                      if (!file.type.startsWith('image/')) {
+                                        toast({
+                                          title: "Invalid file type",
+                                          description: "Please select an image file",
+                                          variant: "destructive",
+                                        });
+                                        setSelectedFileName("");
+                                        e.target.value = '';
+                                        return;
+                                      }
+
+                                      try {
+                                        setIsUploadingImage(true);
+                                        
+                                        // Get upload URL from backend
+                                        const uploadParams = await apiRequest("/api/objects/upload", "POST");
+
+                                        // Upload file to cloud storage
+                                        const uploadResponse = await fetch(uploadParams.uploadURL, {
+                                          method: "PUT",
+                                          body: file,
+                                          headers: {
+                                            "Content-Type": file.type,
+                                          },
+                                        });
+
+                                        if (!uploadResponse.ok) {
+                                          throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+                                        }
+
+                                        // Set ACL policy
+                                        const aclResponse = await apiRequest("/api/articles/images", "PUT", {
+                                          imageURL: uploadParams.uploadURL.split('?')[0],
+                                        });
+
+                                        // Set the public URL
+                                        const publicURL = `/public-objects${aclResponse.objectPath}`;
+                                        
+                                        field.onChange(publicURL);
+                                        articleForm.setValue('imageUrl', publicURL, { shouldDirty: true, shouldValidate: true });
+
+                                        toast({
+                                          title: "Success",
+                                          description: `${file.name} uploaded successfully!`,
+                                        });
+
+                                        // Reset file input but keep filename visible
+                                        e.target.value = '';
+                                      } catch (error) {
+                                        console.error("Upload error:", error);
+                                        toast({
+                                          title: "Upload Failed",
+                                          description: error instanceof Error ? error.message : "Failed to upload image",
+                                          variant: "destructive",
+                                        });
+                                        setSelectedFileName("");
+                                        e.target.value = '';
+                                      } finally {
+                                        setIsUploadingImage(false);
+                                      }
+                                    }}
+                                  />
+                                  <p className="text-xs text-gray-500">PNG, JPG, WebP up to 5MB</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormDescription>
+                          Upload a featured image for your article. Recommended size: 1200×630px.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </div>
+                  />
 
                   <FormField
                     control={articleForm.control}
