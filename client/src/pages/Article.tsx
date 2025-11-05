@@ -983,7 +983,7 @@ export default function Article() {
                                 })}
                               </p>
                             </div>
-                            {user && (user as any).id === comment.authorId && (
+                            {user && (user as any).id === comment.authorId ? (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -993,7 +993,7 @@ export default function Article() {
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
-                            )}
+                            ) : null}
                           </div>
                           <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                             {comment.content}
