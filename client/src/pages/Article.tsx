@@ -783,11 +783,10 @@ export default function Article() {
 
                                         toast({
                                           title: "Success",
-                                          description: "Image uploaded successfully!",
+                                          description: `${file.name} uploaded successfully!`,
                                         });
 
-                                        // Reset file input and filename
-                                        setSelectedFileName("");
+                                        // Reset file input but keep filename visible as confirmation
                                         e.target.value = '';
                                       } catch (error) {
                                         console.error("Upload error:", error);
