@@ -479,13 +479,11 @@ export default function News() {
                       </button>
                     </div>
                     
-                    {article.sourceUrl && (
-                      <Link href={`/news/${article.id}`}>
-                        <span className="text-sm font-medium text-primary dark:text-ai-teal cursor-pointer">
-                          Read More →
-                        </span>
-                      </Link>
-                    )}
+                    <Link href={`/news/${article.id}`}>
+                      <span className="text-sm font-medium text-primary dark:text-ai-teal cursor-pointer hover:underline" data-testid={`read-more-${article.id}`}>
+                        Read More →
+                      </span>
+                    </Link>
                   </div>
 
                   {isEditorOrAdmin && (
