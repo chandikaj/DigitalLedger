@@ -198,3 +198,63 @@
     display: none !important;
   }
 }
+
+/* Rich Text Editor Content Styles */
+/* Override Tailwind prose to preserve rich text editor formatting */
+
+/* Ensure bold/strong elements are always bold */
+.prose strong,
+.prose b {
+  font-weight: 700 !important;
+}
+
+/* Ensure italic/em elements are always italic */
+.prose em,
+.prose i {
+  font-style: italic !important;
+}
+
+/* Ensure underline is preserved */
+.prose u {
+  text-decoration: underline !important;
+}
+
+/* Preserve inline styles for color and font-family */
+.prose span[style*="color"],
+.prose p[style*="color"],
+.prose strong[style*="color"],
+.prose em[style*="color"] {
+  /* Inline color styles will naturally take precedence */
+}
+
+.prose span[style*="font-family"],
+.prose p[style*="font-family"],
+.prose strong[style*="font-family"],
+.prose em[style*="font-family"] {
+  /* Inline font-family styles will naturally take precedence */
+}
+
+/* Preserve heading sizes */
+.prose h1 {
+  font-size: 2.25em;
+  margin-top: 0;
+  margin-bottom: 0.8888889em;
+  line-height: 1.1111111;
+  font-weight: 800;
+}
+
+.prose h2 {
+  font-size: 1.5em;
+  margin-top: 2em;
+  margin-bottom: 1em;
+  line-height: 1.3333333;
+  font-weight: 700;
+}
+
+.prose h3 {
+  font-size: 1.25em;
+  margin-top: 1.6em;
+  margin-bottom: 0.6em;
+  line-height: 1.6;
+  font-weight: 600;
+}

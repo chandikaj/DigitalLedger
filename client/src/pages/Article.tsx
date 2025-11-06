@@ -503,7 +503,13 @@ export default function Article() {
 
               <div className="prose prose-lg max-w-none dark:prose-invert mb-8" data-testid="article-content">
                 {article.content ? (
-                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }} />
+                  <div dangerouslySetInnerHTML={{ 
+                    __html: DOMPurify.sanitize(article.content, { 
+                      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'span', 'div', 'a', 'img', 'blockquote', 'code', 'pre'],
+                      ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel', 'src', 'alt', 'title'],
+                      ALLOW_DATA_ATTR: false
+                    }) 
+                  }} />
                 ) : (
                   <p className="text-gray-600 dark:text-gray-300">
                     No content available for this article.
