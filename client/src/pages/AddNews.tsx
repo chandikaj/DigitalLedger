@@ -15,6 +15,7 @@ import { insertNewsArticleSchema } from "@shared/schema";
 import { z } from "zod";
 import { Upload, FileText, Image, ArrowLeft, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { RichTextEditor } from "@/components/RichTextEditor";
 
 interface NewsCategory {
   id: string;
@@ -171,14 +172,15 @@ export default function AddNews() {
                       <FormItem>
                         <FormLabel>Content</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="Write the full article content..." 
-                            className="resize-none" 
-                            rows={12}
-                            {...field} 
-                            data-testid="input-article-content"
+                          <RichTextEditor
+                            content={field.value || ''}
+                            onChange={field.onChange}
+                            placeholder="Write the full article content..."
                           />
                         </FormControl>
+                        <FormDescription>
+                          Use the toolbar to format your content with bold, italics, headings, and more.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

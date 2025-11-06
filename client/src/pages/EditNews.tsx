@@ -25,6 +25,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { z } from "zod";
 import { Upload, FileText, Image, ArrowLeft, Loader2, Trash2, X } from "lucide-react";
 import { Link, useLocation, useParams } from "wouter";
+import { RichTextEditor } from "@/components/RichTextEditor";
 
 interface NewsCategory {
   id: string;
@@ -234,14 +235,15 @@ export default function EditNews() {
                       <FormItem>
                         <FormLabel>Content</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="Write the full article content..." 
-                            className="resize-none" 
-                            rows={12}
-                            {...field} 
-                            data-testid="input-article-content"
+                          <RichTextEditor
+                            content={field.value || ''}
+                            onChange={field.onChange}
+                            placeholder="Write the full article content..."
                           />
                         </FormControl>
+                        <FormDescription>
+                          Use the toolbar to format your content with bold, italics, headings, and more.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
