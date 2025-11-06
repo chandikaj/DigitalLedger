@@ -502,7 +502,7 @@ export default function Article() {
 
               <div className="prose prose-lg max-w-none dark:prose-invert mb-8" data-testid="article-content">
                 {article.content ? (
-                  <div dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, '<br />') }} />
+                  <div dangerouslySetInnerHTML={{ __html: article.content }} />
                 ) : (
                   <p className="text-gray-600 dark:text-gray-300">
                     No content available for this article.
