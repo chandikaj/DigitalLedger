@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { z } from "zod";
+import DOMPurify from 'dompurify';
 
 type ArticleFormData = {
   title: string;
@@ -502,7 +503,7 @@ export default function Article() {
 
               <div className="prose prose-lg max-w-none dark:prose-invert mb-8" data-testid="article-content">
                 {article.content ? (
-                  <div dangerouslySetInnerHTML={{ __html: article.content }} />
+                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }} />
                 ) : (
                   <p className="text-gray-600 dark:text-gray-300">
                     No content available for this article.
