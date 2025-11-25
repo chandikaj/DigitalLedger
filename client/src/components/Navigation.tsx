@@ -58,6 +58,7 @@ export function Navigation() {
     { key: "forums", name: "Forums", href: "/forums" },
     { key: "resources", name: "Resources", href: "/resources" },
     { key: "community", name: "Community", href: "/community" },
+    { key: "about", name: "About Us", href: "/about" },
   ].filter(item => {
     // Filter based on menu settings visibility
     const setting = menuSettings.find(s => s.menuKey === item.key);
