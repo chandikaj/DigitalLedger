@@ -184,7 +184,7 @@ export default function Landing() {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary via-secondary to-ai-teal py-16 text-white" data-testid="hero-section">
+      <section className="hero-gradient py-16 text-white" data-testid="hero-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-6xl font-bold mb-6" data-testid="hero-title">
@@ -485,7 +485,7 @@ export default function Landing() {
       )}
 
       {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-primary to-secondary text-white" data-testid="cta-section">
+      <section className="py-16 cta-gradient text-white" data-testid="cta-section">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold mb-6" data-testid="cta-title">
             Ready to Transform Your Accounting Practice?

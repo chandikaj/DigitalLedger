@@ -114,6 +114,16 @@
     @apply bg-gradient-to-r from-primary to-ai-teal bg-clip-text text-transparent;
   }
 
+  /* Hero gradient - same colors in light and dark mode */
+  .hero-gradient {
+    background: linear-gradient(to bottom right, hsl(217, 91%, 60%), hsl(185, 85%, 35%), hsl(172, 80%, 40%));
+  }
+
+  /* CTA gradient - same colors in light and dark mode */
+  .cta-gradient {
+    background: linear-gradient(to right, hsl(217, 91%, 60%), hsl(185, 85%, 35%));
+  }
+
   .glass-effect {
     @apply bg-white/10 backdrop-blur-sm border border-white/20;
   }
