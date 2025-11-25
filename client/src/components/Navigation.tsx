@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import logoImage from "@assets/9519F333-D03D-4EEC-9DBB-415A3407BBBF_1761967718151.jpeg";
+import logoImage from "@assets/Logo_v2_1764111424626.png";
 
 interface MenuSetting {
   id: string;
