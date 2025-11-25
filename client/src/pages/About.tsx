@@ -8,7 +8,8 @@ import {
   TrendingUp,
   Handshake,
   Compass,
-  Heart
+  Heart,
+  Shield
 } from "lucide-react";
 
 export default function About() {
@@ -127,7 +128,7 @@ export default function About() {
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-10" data-testid="text-values-title">
             Our Core Values
           </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
             <Card className="text-center hover:shadow-lg transition-shadow duration-300" data-testid="card-value-curiosity">
               <CardContent className="p-6">
                 <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-4">
@@ -172,6 +173,18 @@ export default function About() {
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Community</h3>
                 <p className="text-gray-600 dark:text-gray-400">
                   Building a supportive network of professionals.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center hover:shadow-lg transition-shadow duration-300" data-testid="card-value-integrity">
+              <CardContent className="p-6">
+                <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-4">
+                  <Shield className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Integrity</h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Upholding honesty, ethics, and trust in all we do.
                 </p>
               </CardContent>
             </Card>
