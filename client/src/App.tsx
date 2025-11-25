@@ -22,6 +22,7 @@ import DiscussionDetail from "@/pages/DiscussionDetail";
 import Resources from "@/pages/Resources";
 import Podcasts from "@/pages/Podcasts";
 import Community from "@/pages/Community";
+import About from "@/pages/About";
 import Admin from "@/pages/Admin";
 import UserManagement from "@/pages/UserManagement";
 import MenuSettings from "@/pages/MenuSettings";
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/resources" component={Resources} />
       <Route path="/podcasts" component={Podcasts} />
       <Route path="/community" component={Community} />
+      <Route path="/about" component={About} />
       <Route path="/login" component={Login} />
       <Route path="/logout" component={Logout} />
       
