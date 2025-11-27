@@ -489,11 +489,11 @@ export default function Article() {
                 )}
               </div>
 
-              <div className="mb-8">
+              <div className="mb-8 aspect-video w-full overflow-hidden rounded-lg shadow-lg">
                 <img 
                   src={article.imageUrl || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop&q=80"}
                   alt={article.title}
-                  className="w-full h-96 object-cover rounded-lg shadow-lg"
+                  className="w-full h-full object-cover"
                   data-testid="article-image"
                   onError={(e) => {
                     // Fallback to default image if the uploaded image fails to load
