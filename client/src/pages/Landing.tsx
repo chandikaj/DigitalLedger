@@ -492,7 +492,7 @@ export default function Landing() {
             Ready to Level Up Your Finance Leadership?
           </h2>
           <p className="text-xl text-blue-100 mb-8" data-testid="cta-description">
-            Join thousands of professionals already using AI to revolutionize their accounting workflows
+            Join thousands of finance professionals using AI and modern tools to transform how finance operates.
           </p>
           <Button 
             size="lg"
