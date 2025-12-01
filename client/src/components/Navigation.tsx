@@ -53,7 +53,7 @@ export function Navigation() {
 
   // Build navigation based on menu settings
   const baseNavigation = [
-    { key: "news", name: "News", href: "/news" },
+    { key: "news", name: "News & Insights", href: "/news" },
     { key: "podcasts", name: "Podcasts", href: "/podcasts" },
     { key: "forums", name: "Forums", href: "/forums" },
     { key: "resources", name: "Resources", href: "/resources" },
