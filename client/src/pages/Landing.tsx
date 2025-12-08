@@ -397,17 +397,7 @@ export default function Landing() {
                           Guest: {podcast.guestName}
                         </div>
                       )}
-                      <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mt-3">
-                        <button 
-                          className="flex items-center space-x-1 transition-colors hover:text-red-500"
-                          onClick={(e) => handlePodcastLike(e, podcast.id)}
-                          data-testid={`like-podcast-${index}`}
-                        >
-                          <Heart className="h-4 w-4" />
-                          <span>{getOptimisticPodcastLikeCount(podcast)}</span>
-                        </button>
                       </div>
-                    </div>
                   </CardContent>
                 </Card>
               ))
