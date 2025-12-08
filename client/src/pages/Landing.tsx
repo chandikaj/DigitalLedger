@@ -386,14 +386,8 @@ export default function Landing() {
                     )}
                     
                     <div className="border-t pt-4 mt-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-2">
-                          <Mic className="h-4 w-4 text-primary dark:text-ai-teal" />
-                          <span className="text-gray-600 dark:text-gray-300">{podcast.hostName}</span>
-                        </div>
-                      </div>
                       {podcast.guestName && (
-                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
                           Guest: {podcast.guestName}
                         </div>
                       )}
