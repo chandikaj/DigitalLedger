@@ -398,10 +398,6 @@ export default function Landing() {
                         </div>
                       )}
                       <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mt-3">
-                        <button className="flex items-center space-x-1 hover:text-primary dark:hover:text-ai-teal">
-                          <PlayCircle className="h-4 w-4" />
-                          <span>{podcast.playCount || 0} plays</span>
-                        </button>
                         <button 
                           className="flex items-center space-x-1 transition-colors hover:text-red-500"
                           onClick={(e) => handlePodcastLike(e, podcast.id)}
