@@ -384,14 +384,6 @@ export default function Landing() {
                         </Button>
                       </div>
                     )}
-                    
-                    <div className="border-t pt-4 mt-4">
-                      {podcast.guestName && (
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          Guest: {podcast.guestName}
-                        </div>
-                      )}
-                      </div>
                   </CardContent>
                 </Card>
               ))
