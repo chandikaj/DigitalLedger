@@ -1193,8 +1193,8 @@ app.use(async (req, res, next) => {
   try {
     log('Serving SEO-optimized HTML for resources page to crawler');
     
-    const resources = await storage.getEducationalResources();
-    const publishedResources = resources.filter(r => !r.isArchived).slice(0, 20);
+    const resourcesList = await storage.getResources();
+    const publishedResources = resourcesList.slice(0, 20);
     
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     
@@ -1211,7 +1211,7 @@ app.use(async (req, res, next) => {
       <article>
         <h3>${escapeHtml(r.title)}</h3>
         <p>${generateDescription(r.description || '', 150)}</p>
-        <p><small>Type: ${r.resourceType || 'Resource'}</small></p>
+        <p><small>Type: ${r.type || 'Resource'}</small></p>
       </article>`).join('\n');
     
     const html = `<!DOCTYPE html>
