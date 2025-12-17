@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { SubscriberSignup } from "@/components/SubscriberSignup";
 import { 
   Brain, 
   Users, 
@@ -456,6 +457,21 @@ export default function Landing() {
         </div>
       </section>
       )}
+
+      {/* Newsletter Subscription Section */}
+      <section className="py-16 bg-gray-50 dark:bg-gray-900" data-testid="newsletter-section">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+              Stay Updated
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              Get the latest insights on AI in Finance & Accounting delivered to your inbox
+            </p>
+          </div>
+          <SubscriberSignup />
+        </div>
+      </section>
 
       {/* CTA Section */}
       <section className="py-16 cta-gradient text-white" data-testid="cta-section">

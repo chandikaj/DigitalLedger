@@ -1249,6 +1249,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Subscriber signup endpoint (public)
+  app.post('/api/subscribers', async (req, res) => {
+    try {
+      const { email, categories, frequency } = req.body;
+      
+      if (!email || !frequency) {
+        return res.status(400).json({ message: "Email and frequency are required" });
+      }
+      
+      // Check if already subscribed
+      const existing = await storage.getSubscriberByEmail(email);
+      if (existing) {
+        // Update existing subscription
+        const updated = await storage.updateSubscriber(existing.id, { categories, frequency });
+        return res.json({ message: "Subscription updated", subscriber: updated });
+      }
+      
+      // Create new subscriber
+      const subscriber = await storage.createSubscriber({ email, categories, frequency });
+      res.status(201).json({ message: "Successfully subscribed", subscriber });
+    } catch (error) {
+      console.error("Error creating subscriber:", error);
+      res.status(500).json({ message: "Failed to subscribe" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
