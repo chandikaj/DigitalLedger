@@ -330,7 +330,7 @@ app.use(async (req, res, next) => {
       : generateDescription(article.content || '', 300);
     
     // Ensure image URL is absolute
-    let imageUrl = article.imageUrl || `${baseUrl}/og-default.jpg`;
+    let imageUrl = article.imageUrl || `${baseUrl}/og-default.png`;
     if (imageUrl.startsWith('/')) {
       imageUrl = `${baseUrl}${imageUrl}`;
     }
