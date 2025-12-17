@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,18 +9,31 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { loginSchema, registerSchema, LoginRequest, RegisterRequest } from "@shared/schema";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { loginSchema, registerSchema, LoginRequest, RegisterRequest, NewsCategory } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { Brain, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Bell, CheckCircle } from "lucide-react";
 import logoImage from "@assets/9519F333-D03D-4EEC-9DBB-415A3407BBBF_1761967718151.jpeg";
+
+type RegistrationStep = "form" | "alerts" | "complete";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const [registrationStep, setRegistrationStep] = useState<RegistrationStep>("form");
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [wantsAlerts, setWantsAlerts] = useState<boolean | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [alertFrequency, setAlertFrequency] = useState("weekly");
 
-  // Login form
+  const { data: categories = [] } = useQuery<NewsCategory[]>({
+    queryKey: ["/api/news-categories"],
+  });
+
   const loginForm = useForm<LoginRequest>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -29,7 +42,6 @@ export default function Login() {
     },
   });
 
-  // Register form
   const registerForm = useForm<RegisterRequest>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -40,7 +52,6 @@ export default function Login() {
     },
   });
 
-  // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (data: LoginRequest) => {
       return await apiRequest("/api/auth/login", "POST", data);
@@ -62,18 +73,18 @@ export default function Login() {
     },
   });
 
-  // Register mutation
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterRequest) => {
       return await apiRequest("/api/auth/register", "POST", data);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setRegisteredEmail(variables.email);
+      setRegistrationStep("alerts");
       toast({
-        title: "Registration Successful",
-        description: "Welcome to The Digital Ledger community!",
+        title: "Account Created",
+        description: "Now let's set up your news preferences!",
       });
-      setLocation("/");
     },
     onError: (error: any) => {
       toast({
@@ -81,6 +92,18 @@ export default function Login() {
         description: error.message || "Failed to create account",
         variant: "destructive",
       });
+    },
+  });
+
+  const subscribeMutation = useMutation({
+    mutationFn: async (data: { email: string; categories: string[]; frequency: string }) => {
+      return await apiRequest("/api/subscribers", "POST", data);
+    },
+    onSuccess: () => {
+      setRegistrationStep("complete");
+    },
+    onError: () => {
+      setLocation("/");
     },
   });
 
@@ -92,21 +115,209 @@ export default function Login() {
     registerMutation.mutate(data);
   };
 
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const handleAlertDecision = (wants: boolean) => {
+    setWantsAlerts(wants);
+  };
+
+  const handleSavePreferences = () => {
+    if (wantsAlerts && selectedCategories.length > 0) {
+      subscribeMutation.mutate({
+        email: registeredEmail,
+        categories: selectedCategories,
+        frequency: alertFrequency,
+      });
+    } else {
+      setRegistrationStep("complete");
+    }
+  };
+
+  const handleFinish = () => {
+    setLocation("/");
+  };
+
+  const frequencyOptions = [
+    { value: "daily", label: "Daily" },
+    { value: "weekly", label: "Weekly" },
+    { value: "bi-weekly", label: "Bi-Weekly" },
+    { value: "monthly", label: "Monthly" },
+  ];
+
+  if (registrationStep === "complete") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6">
+          <Card className="w-full border-0 shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur text-center">
+            <CardContent className="pt-8 pb-6">
+              <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Welcome to The Digital Ledger!
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Your account is ready. {wantsAlerts && selectedCategories.length > 0 && "You'll receive news alerts based on your preferences."}
+              </p>
+              <Button
+                onClick={handleFinish}
+                className="w-full"
+                data-testid="button-finish-registration"
+              >
+                Get Started
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (registrationStep === "alerts") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center space-y-4">
+            <div className="flex items-center justify-center">
+              <img src={logoImage} alt="The Digital Ledger" className="h-14 w-auto" />
+            </div>
+          </div>
+
+          <Card className="w-full border-0 shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur">
+            <CardHeader className="space-y-1">
+              <div className="flex items-center justify-center mb-2">
+                <Bell className="w-8 h-8 text-primary" />
+              </div>
+              <CardTitle className="text-2xl text-center">Stay Informed</CardTitle>
+              <CardDescription className="text-center">
+                Would you like to receive news alerts about AI in Accounting?
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              {wantsAlerts === null ? (
+                <div className="space-y-3">
+                  <Button
+                    onClick={() => handleAlertDecision(true)}
+                    className="w-full"
+                    data-testid="button-want-alerts-yes"
+                  >
+                    Yes, keep me updated
+                  </Button>
+                  <Button
+                    onClick={() => handleAlertDecision(false)}
+                    variant="outline"
+                    className="w-full"
+                    data-testid="button-want-alerts-no"
+                  >
+                    No thanks, maybe later
+                  </Button>
+                </div>
+              ) : wantsAlerts === false ? (
+                <div className="text-center space-y-4">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    No problem! You can always subscribe later from the homepage.
+                  </p>
+                  <Button
+                    onClick={handleFinish}
+                    className="w-full"
+                    data-testid="button-skip-alerts"
+                  >
+                    Continue to Dashboard
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">
+                      Select categories you're interested in:
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                      {categories.map((category) => (
+                        <div
+                          key={category.id}
+                          className="flex items-center space-x-2"
+                        >
+                          <Checkbox
+                            id={`cat-${category.id}`}
+                            checked={selectedCategories.includes(category.id)}
+                            onCheckedChange={() => toggleCategory(category.id)}
+                            data-testid={`checkbox-category-${category.id}`}
+                          />
+                          <Label
+                            htmlFor={`cat-${category.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {category.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">
+                      How often would you like updates?
+                    </Label>
+                    <RadioGroup
+                      value={alertFrequency}
+                      onValueChange={setAlertFrequency}
+                      className="grid grid-cols-2 gap-2"
+                    >
+                      {frequencyOptions.map((option) => (
+                        <div key={option.value} className="flex items-center space-x-2">
+                          <RadioGroupItem
+                            value={option.value}
+                            id={`freq-${option.value}`}
+                            data-testid={`radio-frequency-${option.value}`}
+                          />
+                          <Label htmlFor={`freq-${option.value}`} className="cursor-pointer">
+                            {option.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </div>
+
+                  <div className="flex space-x-3">
+                    <Button
+                      onClick={handleSavePreferences}
+                      className="flex-1"
+                      disabled={selectedCategories.length === 0 || subscribeMutation.isPending}
+                      data-testid="button-save-preferences"
+                    >
+                      {subscribeMutation.isPending ? "Saving..." : "Save Preferences"}
+                    </Button>
+                    <Button
+                      onClick={handleFinish}
+                      variant="outline"
+                      data-testid="button-skip-preferences"
+                    >
+                      Skip
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
-        {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center">
-            <img 
-              src={logoImage} 
-              alt="The Digital Ledger" 
-              className="h-14 w-auto"
-            />
+            <img src={logoImage} alt="The Digital Ledger" className="h-14 w-auto" />
           </div>
         </div>
 
-        {/* Login/Register Card */}
         <Card className="w-full border-0 shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">
@@ -118,14 +329,14 @@ export default function Login() {
                 : "Create your account to get started"}
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent>
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "login" | "register")}>
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="login" data-testid="tab-login">Sign In</TabsTrigger>
                 <TabsTrigger value="register" data-testid="tab-register">Sign Up</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="login" className="space-y-4">
                 <Form {...loginForm}>
                   <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
@@ -147,7 +358,7 @@ export default function Login() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={loginForm.control}
                       name="password"
@@ -166,7 +377,7 @@ export default function Login() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <Button
                       type="submit"
                       className="w-full"
@@ -178,7 +389,7 @@ export default function Login() {
                   </form>
                 </Form>
               </TabsContent>
-              
+
               <TabsContent value="register" className="space-y-4">
                 <Form {...registerForm}>
                   <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
@@ -200,7 +411,7 @@ export default function Login() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={registerForm.control}
                         name="lastName"
@@ -219,7 +430,7 @@ export default function Login() {
                         )}
                       />
                     </div>
-                    
+
                     <FormField
                       control={registerForm.control}
                       name="email"
@@ -238,7 +449,7 @@ export default function Login() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={registerForm.control}
                       name="password"
@@ -257,7 +468,7 @@ export default function Login() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <Button
                       type="submit"
                       className="w-full"
@@ -273,7 +484,6 @@ export default function Login() {
           </CardContent>
         </Card>
 
-        {/* Back to Home Link */}
         <div className="text-center">
           <Button
             variant="ghost"
