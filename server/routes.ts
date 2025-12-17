@@ -1249,6 +1249,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current user's subscription (authenticated)
+  app.get('/api/subscribers/me', isAuthenticated, async (req: any, res) => {
+    try {
+      // Handle both auth methods:
+      // - Simple auth: req.user is full User object with email property
+      // - Replit OIDC: req.user.claims contains email
+      const user = req.user;
+      const userEmail = user?.email || user?.claims?.email;
+      
+      if (!userEmail) {
+        console.error("User email not available. User object:", JSON.stringify(user));
+        return res.status(400).json({ message: "User email not available" });
+      }
+      
+      const subscriber = await storage.getSubscriberByEmail(userEmail);
+      if (!subscriber) {
+        return res.json({ subscribed: false });
+      }
+      
+      res.json({ subscribed: true, subscriber });
+    } catch (error) {
+      console.error("Error fetching subscriber:", error);
+      res.status(500).json({ message: "Failed to fetch subscription" });
+    }
+  });
+
   // Subscriber signup endpoint (public)
   app.post('/api/subscribers', async (req, res) => {
     try {

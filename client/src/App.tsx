@@ -47,9 +47,11 @@ function Router() {
           <Route path="/admin/menu" component={MenuSettings} />
           <Route path="/admin/categories" component={CategoryManagement} />
           <Route path="/admin/main-page" component={MainPageControl} />
-          <Route path="/settings" component={Settings} />
         </>
       )}
+      
+      {/* Settings page - handles auth internally, redirects to login if not authenticated */}
+      <Route path="/settings" component={Settings} />
       
       {/* Public routes - accessible to everyone */}
       <Route path="/news" component={News} />
