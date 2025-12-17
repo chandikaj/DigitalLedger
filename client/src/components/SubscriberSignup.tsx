@@ -35,8 +35,8 @@ export function SubscriberSignup() {
 
   const subscribeMutation = useMutation({
     mutationFn: async (subscriberData: SubscriberData) => {
-      const response = await apiRequest("POST", "/api/subscribers", subscriberData);
-      return response.json();
+      const response = await apiRequest("/api/subscribers", "POST", subscriberData);
+      return response;
     },
     onSuccess: () => {
       setStep(4);
