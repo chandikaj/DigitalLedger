@@ -30,10 +30,20 @@ Preferred communication style: Simple, everyday language.
 - **Automatic Seeding**: Database automatically seeds with sample data on startup if empty, ensuring production readiness without manual steps. Includes users, articles, podcasts, educational resources, and forum discussions with replies.
 
 ### Authentication & Authorization
-- **Provider**: Replit OIDC
+- **Provider**: Simple username/password auth with bcrypt hashing + Replit OIDC support
 - **Session Management**: Express sessions with PostgreSQL storage
 - **Security**: HTTP-only cookies, CSRF protection
 - **User Profiles**: Rich profiles with expertise tags, points, badges
+
+### User Settings & Preferences
+- **Settings Page**: Accessible at /settings for authenticated users
+- **Profile Information**: Display of user name, email, role, and account status
+- **Notification Preferences**: Users can manage email notification subscriptions
+  - Subscribe/unsubscribe to notifications
+  - Select specific news categories to follow
+  - Choose notification frequency (daily, weekly, bi-weekly, monthly)
+  - API: GET /api/subscribers/me, POST /api/subscribers
+- **Security Settings**: Password change functionality
 
 ### Content Management System
 - **Multi-Category System**: Supports many-to-many relationships for all content types (news, podcasts, forums) using junction tables. Features color-coded badges, keyboard navigation, and multi-select filtering with OR logic. Filter selections persist in URL query parameters.
