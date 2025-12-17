@@ -9,7 +9,8 @@ import {
   Moon, 
   Sun, 
   Menu,
-  X
+  X,
+  Settings
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -137,6 +138,16 @@ export function Navigation() {
                 </span>
                 <Button
                   variant="ghost"
+                  size="icon"
+                  onClick={() => setLocation("/settings")}
+                  data-testid="button-settings"
+                  className="hidden sm:inline-flex"
+                  title="Settings"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={handleLogout}
                   disabled={logoutMutation.isPending}
@@ -192,15 +203,31 @@ export function Navigation() {
 
               {/* Mobile auth buttons */}
               {isAuthenticated && user && (
-                <Button
-                  variant="ghost"
-                  onClick={handleLogout}
-                  disabled={logoutMutation.isPending}
-                  data-testid="button-mobile-logout"
-                  className="mx-3 justify-start"
-                >
-                  {logoutMutation.isPending ? "Logging out..." : "Logout"}
-                </Button>
+                <>
+                  <Link
+                    href="/settings"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    data-testid="link-mobile-settings"
+                    className={cn(
+                      "px-3 py-2 rounded-md font-medium transition-colors flex items-center space-x-2",
+                      isActive("/settings")
+                        ? "text-primary dark:text-ai-teal bg-primary/10 dark:bg-ai-teal/10"
+                        : "text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-ai-teal hover:bg-gray-100 dark:hover:bg-gray-800"
+                    )}
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    onClick={handleLogout}
+                    disabled={logoutMutation.isPending}
+                    data-testid="button-mobile-logout"
+                    className="mx-3 justify-start"
+                  >
+                    {logoutMutation.isPending ? "Logging out..." : "Logout"}
+                  </Button>
+                </>
               )}
             </div>
           </div>

@@ -148,6 +148,43 @@ export function setupAuth(app: Express, storage: IStorage) {
     });
   });
 
+  // Change password endpoint
+  app.post("/api/auth/change-password", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new password are required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user || !user.passwordHash) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const isValidPassword = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isValidPassword) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      const newPasswordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+      await storage.updateUser(user.id, { passwordHash: newPasswordHash });
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get current user endpoint
   app.get("/api/auth/user", async (req: Request, res: Response) => {
     if (!req.session.userId) {

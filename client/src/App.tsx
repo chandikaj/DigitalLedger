@@ -28,6 +28,7 @@ import UserManagement from "@/pages/UserManagement";
 import MenuSettings from "@/pages/MenuSettings";
 import CategoryManagement from "@/pages/CategoryManagement";
 import MainPageControl from "@/pages/MainPageControl";
+import Settings from "@/pages/Settings";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -46,6 +47,7 @@ function Router() {
           <Route path="/admin/menu" component={MenuSettings} />
           <Route path="/admin/categories" component={CategoryManagement} />
           <Route path="/admin/main-page" component={MainPageControl} />
+          <Route path="/settings" component={Settings} />
         </>
       )}
       
