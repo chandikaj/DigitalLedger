@@ -58,7 +58,7 @@ export function Navigation() {
     { key: "podcasts", name: "Podcasts", href: "/podcasts" },
     { key: "forums", name: "Forums", href: "/forums" },
     { key: "resources", name: "Resources", href: "/resources" },
-    { key: "toolbox", name: "Controller's Toolbox", href: "/toolbox" },
+    { key: "toolbox", name: "Toolbox", href: "/toolbox" },
     { key: "community", name: "Community", href: "/community" },
     { key: "about", name: "About Us", href: "/about" },
   ].filter(item => {
