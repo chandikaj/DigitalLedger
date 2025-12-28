@@ -29,6 +29,7 @@ import MenuSettings from "@/pages/MenuSettings";
 import CategoryManagement from "@/pages/CategoryManagement";
 import MainPageControl from "@/pages/MainPageControl";
 import Settings from "@/pages/Settings";
+import Toolbox from "@/pages/Toolbox";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -59,6 +60,7 @@ function Router() {
       <Route path="/forums/:id" component={DiscussionDetail} />
       <Route path="/resources" component={Resources} />
       <Route path="/podcasts" component={Podcasts} />
+      <Route path="/toolbox" component={Toolbox} />
       <Route path="/community" component={Community} />
       <Route path="/about" component={About} />
       <Route path="/login" component={Login} />
