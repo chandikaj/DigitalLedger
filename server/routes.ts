@@ -19,6 +19,7 @@ import {
   insertUserSchema,
   adminCreateUserSchema,
   adminUpdateUserSchema,
+  insertToolboxAppSchema,
 } from "@shared/schema";
 import { seedDatabase } from "./seed";
 
@@ -1298,6 +1299,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating subscriber:", error);
       res.status(500).json({ message: "Failed to subscribe" });
+    }
+  });
+
+  // ============================================
+  // Controller's Toolbox Routes
+  // ============================================
+  
+  // Get all toolbox apps (public - active only, admin - all)
+  app.get('/api/toolbox', async (req: any, res) => {
+    try {
+      const isAdminUser = req.user?.role === 'admin' || req.user?.role === 'editor';
+      const apps = await storage.getToolboxApps(!isAdminUser);
+      res.json(apps);
+    } catch (error) {
+      console.error("Error fetching toolbox apps:", error);
+      res.status(500).json({ message: "Failed to fetch toolbox apps" });
+    }
+  });
+
+  // Get single toolbox app
+  app.get('/api/toolbox/:id', async (req, res) => {
+    try {
+      const app = await storage.getToolboxApp(req.params.id);
+      if (!app) {
+        return res.status(404).json({ message: "App not found" });
+      }
+      res.json(app);
+    } catch (error) {
+      console.error("Error fetching toolbox app:", error);
+      res.status(500).json({ message: "Failed to fetch toolbox app" });
+    }
+  });
+
+  // Create toolbox app (admin only)
+  app.post('/api/toolbox', isEditorOrAdmin, async (req: any, res) => {
+    try {
+      const appData = insertToolboxAppSchema.parse(req.body);
+      const newApp = await storage.createToolboxApp(appData);
+      res.status(201).json(newApp);
+    } catch (error) {
+      console.error("Error creating toolbox app:", error);
+      res.status(500).json({ message: "Failed to create toolbox app" });
+    }
+  });
+
+  // Update toolbox app (admin only)
+  app.put('/api/toolbox/:id', isEditorOrAdmin, async (req: any, res) => {
+    try {
+      const appData = insertToolboxAppSchema.partial().parse(req.body);
+      const updated = await storage.updateToolboxApp(req.params.id, appData);
+      if (!updated) {
+        return res.status(404).json({ message: "App not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating toolbox app:", error);
+      res.status(500).json({ message: "Failed to update toolbox app" });
+    }
+  });
+
+  // Delete toolbox app (admin only)
+  app.delete('/api/toolbox/:id', isAdmin, async (req: any, res) => {
+    try {
+      const deleted = await storage.deleteToolboxApp(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "App not found" });
+      }
+      res.json({ message: "App deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting toolbox app:", error);
+      res.status(500).json({ message: "Failed to delete toolbox app" });
     }
   });
 

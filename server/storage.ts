@@ -16,6 +16,7 @@ import {
   userInvitations,
   menuSettings,
   subscribers,
+  toolboxApps,
   type User,
   type UpsertUser,
   type NewsCategory,
@@ -51,6 +52,8 @@ import {
   type UpdateMenuSetting,
   type Subscriber,
   type InsertSubscriber,
+  type ToolboxApp,
+  type InsertToolboxApp,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, or, ilike, inArray } from "drizzle-orm";
@@ -167,6 +170,13 @@ export interface IStorage {
   createSubscriber(subscriber: InsertSubscriber): Promise<Subscriber>;
   getSubscriberByEmail(email: string): Promise<Subscriber | undefined>;
   updateSubscriber(id: string, updates: Partial<InsertSubscriber>): Promise<Subscriber | undefined>;
+  
+  // Toolbox app operations
+  getToolboxApps(activeOnly?: boolean): Promise<ToolboxApp[]>;
+  getToolboxApp(id: string): Promise<ToolboxApp | undefined>;
+  createToolboxApp(app: InsertToolboxApp): Promise<ToolboxApp>;
+  updateToolboxApp(id: string, updates: Partial<InsertToolboxApp>): Promise<ToolboxApp | undefined>;
+  deleteToolboxApp(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1538,6 +1548,56 @@ export class DatabaseStorage implements IStorage {
       .where(eq(subscribers.id, id))
       .returning();
     return updated;
+  }
+
+  // Toolbox app operations
+  async getToolboxApps(activeOnly: boolean = false): Promise<ToolboxApp[]> {
+    if (activeOnly) {
+      return await db
+        .select()
+        .from(toolboxApps)
+        .where(eq(toolboxApps.isActive, true))
+        .orderBy(toolboxApps.displayOrder);
+    }
+    return await db
+      .select()
+      .from(toolboxApps)
+      .orderBy(toolboxApps.displayOrder);
+  }
+
+  async getToolboxApp(id: string): Promise<ToolboxApp | undefined> {
+    const [app] = await db
+      .select()
+      .from(toolboxApps)
+      .where(eq(toolboxApps.id, id));
+    return app;
+  }
+
+  async createToolboxApp(app: InsertToolboxApp): Promise<ToolboxApp> {
+    const [newApp] = await db
+      .insert(toolboxApps)
+      .values(app)
+      .returning();
+    return newApp;
+  }
+
+  async updateToolboxApp(id: string, updates: Partial<InsertToolboxApp>): Promise<ToolboxApp | undefined> {
+    const [updated] = await db
+      .update(toolboxApps)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(toolboxApps.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteToolboxApp(id: string): Promise<boolean> {
+    const result = await db
+      .delete(toolboxApps)
+      .where(eq(toolboxApps.id, id));
+    return true;
   }
 }
 
