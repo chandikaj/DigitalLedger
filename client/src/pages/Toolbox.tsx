@@ -227,7 +227,8 @@ export default function Toolbox() {
         imageURL: uploadURL,
       }) as { objectPath: string };
 
-      setFormData(prev => ({ ...prev, imageUrl: aclResponse.objectPath }));
+      const publicURL = `/public-objects${aclResponse.objectPath}`;
+      setFormData(prev => ({ ...prev, imageUrl: publicURL }));
       toast({
         title: "Success",
         description: "Image uploaded successfully!",
