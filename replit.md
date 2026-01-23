@@ -34,6 +34,12 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Express sessions with PostgreSQL storage
 - **Security**: HTTP-only cookies, CSRF protection
 - **User Profiles**: Rich profiles with expertise tags, points, badges
+- **Welcome Email**: Automatic welcome email sent via SendGrid when new users sign up
+
+### Email Services
+- **Provider**: SendGrid (via Replit connector integration)
+- **Email Service**: server/emailService.ts
+- **Features**: Welcome email on user registration with HTML template
 
 ### User Settings & Preferences
 - **Settings Page**: Accessible at /settings for authenticated users

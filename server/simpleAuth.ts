@@ -2,6 +2,7 @@ import { Express, Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import { loginSchema, registerSchema, LoginRequest, RegisterRequest, User } from "@shared/schema";
 import { IStorage } from "./storage";
+import { sendWelcomeEmail } from "./emailService";
 
 // Extend session type to include userId
 declare module "express-session" {
@@ -64,6 +65,11 @@ export function setupAuth(app: Express, storage: IStorage) {
 
       // Set session
       req.session.userId = user.id;
+      
+      // Send welcome email (don't block registration if email fails)
+      sendWelcomeEmail(user.email!, user.firstName || 'there').catch((err) => {
+        console.error("Failed to send welcome email:", err);
+      });
       
       // Save session explicitly
       req.session.save((err) => {
