@@ -303,6 +303,7 @@ export default function UserManagement() {
                       <TableHead>Role</TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>Company</TableHead>
+                      <TableHead>Signed Up</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -321,6 +322,9 @@ export default function UserManagement() {
                         </TableCell>
                         <TableCell data-testid={`text-title-${user.id}`}>{user.title || "-"}</TableCell>
                         <TableCell data-testid={`text-company-${user.id}`}>{user.company || "-"}</TableCell>
+                        <TableCell data-testid={`text-signup-${user.id}`}>
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}
+                        </TableCell>
                         <TableCell>
                           <Badge
                             variant={user.isActive ? "default" : "secondary"}
