@@ -43,11 +43,11 @@ const WELCOME_EMAIL_TEMPLATE_ID = 'd-c4ab9f7f3c924aef8ba8babe6fd5eebad';
 
 export async function sendWelcomeEmail(userEmail: string, firstName: string): Promise<boolean> {
   try {
-    const { client, fromEmail } = await getUncachableSendGridClient();
+    const { client } = await getUncachableSendGridClient();
     
     const msg = {
       to: userEmail,
-      from: fromEmail,
+      from: 'team@thedigitalledger.org',
       templateId: WELCOME_EMAIL_TEMPLATE_ID,
       dynamicTemplateData: {
         firstName: firstName,
