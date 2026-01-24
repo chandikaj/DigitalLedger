@@ -170,6 +170,7 @@ export interface IStorage {
   createSubscriber(subscriber: InsertSubscriber): Promise<Subscriber>;
   getSubscriberByEmail(email: string): Promise<Subscriber | undefined>;
   updateSubscriber(id: string, updates: Partial<InsertSubscriber>): Promise<Subscriber | undefined>;
+  deleteSubscriber(id: string): Promise<boolean>;
   
   // Toolbox app operations
   getToolboxApps(activeOnly?: boolean): Promise<ToolboxApp[]>;
@@ -1548,6 +1549,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(subscribers.id, id))
       .returning();
     return updated;
+  }
+
+  async deleteSubscriber(id: string): Promise<boolean> {
+    const result = await db
+      .delete(subscribers)
+      .where(eq(subscribers.id, id))
+      .returning();
+    return result.length > 0;
   }
 
   // Toolbox app operations

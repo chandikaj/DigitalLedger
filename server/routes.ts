@@ -1302,6 +1302,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Unsubscribe endpoint
+  app.post('/api/subscribers/unsubscribe', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const userEmail = user?.email || user?.claims?.email;
+      
+      if (!userEmail) {
+        return res.status(400).json({ message: "User email not available" });
+      }
+      
+      const subscriber = await storage.getSubscriberByEmail(userEmail);
+      if (!subscriber) {
+        return res.status(404).json({ message: "Not subscribed" });
+      }
+      
+      await storage.deleteSubscriber(subscriber.id);
+      res.json({ message: "Successfully unsubscribed" });
+    } catch (error) {
+      console.error("Error unsubscribing:", error);
+      res.status(500).json({ message: "Failed to unsubscribe" });
+    }
+  });
+
   // ============================================
   // Controller's Toolbox Routes
   // ============================================
