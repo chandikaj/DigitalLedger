@@ -1,7 +1,7 @@
 # The Digital Ledger Community Platform
 
 ## Overview
-The Digital Ledger is a community platform for "AI in Accounting" professionals, supporting over 10,000 members. It provides a hub for knowledge-sharing, discussions, educational resources, and podcasts, focusing on AI developments in accounting. Key features include a news aggregator, podcast hub, educational library, forums, polls, and gamification, all built for scalability.
+The Digital Ledger is a community platform for "AI in Accounting" professionals. It provides a hub for knowledge-sharing, discussions, educational resources, and podcasts, focusing on AI developments in accounting. Key features include a news aggregator, podcast hub, educational library, forums, polls, and gamification, all built for scalability.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

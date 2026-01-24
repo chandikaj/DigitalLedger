@@ -195,7 +195,7 @@ export default function About() {
         <section className="text-center bg-gradient-to-r from-primary to-secondary rounded-2xl p-12 text-white" data-testid="cta-section">
           <h2 className="text-3xl font-bold mb-4">Join Our Community</h2>
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Connect with over 10,000 finance and accounting professionals who are shaping the future of the industry.
+            Connect with finance and accounting professionals who are shaping the future of the industry.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="/news" className="inline-flex items-center justify-center gap-2 bg-white text-primary hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors" data-testid="link-explore-news">
