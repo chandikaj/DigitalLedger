@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { loginSchema, registerSchema, LoginRequest, RegisterRequest, NewsCategory } from "@shared/schema";
+import { loginSchema, registerSchema, LoginRequest, RegisterRequest } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Bell, CheckCircle } from "lucide-react";
 import logoImage from "@assets/9519F333-D03D-4EEC-9DBB-415A3407BBBF_1761967718151.jpeg";
@@ -27,12 +24,6 @@ export default function Login() {
   const [registrationStep, setRegistrationStep] = useState<RegistrationStep>("form");
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [wantsAlerts, setWantsAlerts] = useState<boolean | null>(null);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [alertFrequency, setAlertFrequency] = useState("weekly");
-
-  const { data: categories = [] } = useQuery<NewsCategory[]>({
-    queryKey: ["/api/news-categories"],
-  });
 
   const loginForm = useForm<LoginRequest>({
     resolver: zodResolver(loginSchema),
@@ -83,7 +74,7 @@ export default function Login() {
       setRegistrationStep("alerts");
       toast({
         title: "Account Created",
-        description: "Now let's set up your news preferences!",
+        description: "One more quick question!",
       });
     },
     onError: (error: any) => {
@@ -100,10 +91,11 @@ export default function Login() {
       return await apiRequest("/api/subscribers", "POST", data);
     },
     onSuccess: () => {
+      setWantsAlerts(true);
       setRegistrationStep("complete");
     },
     onError: () => {
-      setLocation("/");
+      setRegistrationStep("complete");
     },
   });
 
@@ -115,40 +107,9 @@ export default function Login() {
     registerMutation.mutate(data);
   };
 
-  const toggleCategory = (categoryId: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
-    );
-  };
-
-  const handleAlertDecision = (wants: boolean) => {
-    setWantsAlerts(wants);
-  };
-
-  const handleSavePreferences = () => {
-    if (wantsAlerts && selectedCategories.length > 0) {
-      subscribeMutation.mutate({
-        email: registeredEmail,
-        categories: selectedCategories,
-        frequency: alertFrequency,
-      });
-    } else {
-      setRegistrationStep("complete");
-    }
-  };
-
   const handleFinish = () => {
     setLocation("/");
   };
-
-  const frequencyOptions = [
-    { value: "daily", label: "Daily" },
-    { value: "weekly", label: "Weekly" },
-    { value: "bi-weekly", label: "Bi-Weekly" },
-    { value: "monthly", label: "Monthly" },
-  ];
 
   if (registrationStep === "complete") {
     return (
@@ -161,7 +122,7 @@ export default function Login() {
                 Welcome to The Digital Ledger!
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Your account is ready. {wantsAlerts && selectedCategories.length > 0 && "You'll receive news alerts based on your preferences."}
+                Your account is ready. {wantsAlerts && "You're subscribed to our newsletter!"}
               </p>
               <Button
                 onClick={handleFinish}
@@ -194,114 +155,38 @@ export default function Login() {
               </div>
               <CardTitle className="text-2xl text-center">Stay Informed</CardTitle>
               <CardDescription className="text-center">
-                Would you like to receive news alerts about AI in Accounting?
+                Do you want to subscribe to the newsletter?
               </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-6">
-              {wantsAlerts === null ? (
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => handleAlertDecision(true)}
-                    className="w-full"
-                    data-testid="button-want-alerts-yes"
-                  >
-                    Yes, keep me updated
-                  </Button>
-                  <Button
-                    onClick={() => handleAlertDecision(false)}
-                    variant="outline"
-                    className="w-full"
-                    data-testid="button-want-alerts-no"
-                  >
-                    No thanks, maybe later
-                  </Button>
-                </div>
-              ) : wantsAlerts === false ? (
-                <div className="text-center space-y-4">
-                  <p className="text-gray-600 dark:text-gray-400">
-                    No problem! You can always subscribe later from the homepage.
-                  </p>
-                  <Button
-                    onClick={handleFinish}
-                    className="w-full"
-                    data-testid="button-skip-alerts"
-                  >
-                    Continue to Dashboard
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <Label className="text-base font-semibold mb-3 block">
-                      Select categories you're interested in:
-                    </Label>
-                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                      {categories.map((category) => (
-                        <div
-                          key={category.id}
-                          className="flex items-center space-x-2"
-                        >
-                          <Checkbox
-                            id={`cat-${category.id}`}
-                            checked={selectedCategories.includes(category.id)}
-                            onCheckedChange={() => toggleCategory(category.id)}
-                            data-testid={`checkbox-category-${category.id}`}
-                          />
-                          <Label
-                            htmlFor={`cat-${category.id}`}
-                            className="text-sm cursor-pointer"
-                          >
-                            {category.name}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-base font-semibold mb-3 block">
-                      How often would you like updates?
-                    </Label>
-                    <RadioGroup
-                      value={alertFrequency}
-                      onValueChange={setAlertFrequency}
-                      className="grid grid-cols-2 gap-2"
-                    >
-                      {frequencyOptions.map((option) => (
-                        <div key={option.value} className="flex items-center space-x-2">
-                          <RadioGroupItem
-                            value={option.value}
-                            id={`freq-${option.value}`}
-                            data-testid={`radio-frequency-${option.value}`}
-                          />
-                          <Label htmlFor={`freq-${option.value}`} className="cursor-pointer">
-                            {option.label}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </div>
-
-                  <div className="flex space-x-3">
-                    <Button
-                      onClick={handleSavePreferences}
-                      className="flex-1"
-                      disabled={selectedCategories.length === 0 || subscribeMutation.isPending}
-                      data-testid="button-save-preferences"
-                    >
-                      {subscribeMutation.isPending ? "Saving..." : "Save Preferences"}
-                    </Button>
-                    <Button
-                      onClick={handleFinish}
-                      variant="outline"
-                      data-testid="button-skip-preferences"
-                    >
-                      Skip
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <div className="space-y-3">
+                <Button
+                  onClick={() => {
+                    subscribeMutation.mutate({
+                      email: registeredEmail,
+                      categories: [],
+                      frequency: "weekly",
+                    });
+                  }}
+                  className="w-full"
+                  disabled={subscribeMutation.isPending}
+                  data-testid="button-want-alerts-yes"
+                >
+                  {subscribeMutation.isPending ? "Subscribing..." : "Yes"}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setWantsAlerts(false);
+                    setRegistrationStep("complete");
+                  }}
+                  variant="outline"
+                  className="w-full"
+                  data-testid="button-want-alerts-no"
+                >
+                  No thanks
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
