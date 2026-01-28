@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin, isEditorOrAdmin } from "./simpleAuth";
-import { getSession, setupAuth as setupReplitAuth } from "./replitAuth";
+import { getSession } from "./replitAuth"; // Keep session config
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -24,19 +24,19 @@ import {
 import { seedDatabase } from "./seed";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Session middleware
+  app.use(getSession());
+  
   // Storage middleware - make storage accessible to auth middleware
   app.use((req: any, res, next) => {
     req.storage = storage;
     next();
   });
   
-  // Setup Replit OIDC authentication (includes session, passport, and Google login routes)
-  await setupReplitAuth(app);
-  
-  // Setup simple email/password authentication
+  // Auth middleware
   setupAuth(app, storage);
 
-  // Auth routes are now handled in simpleAuth.ts and replitAuth.ts
+  // Auth route is now handled in simpleAuth.ts
 
   // User management routes (admin only)
   app.get('/api/admin/users', isAdmin, async (req: any, res) => {

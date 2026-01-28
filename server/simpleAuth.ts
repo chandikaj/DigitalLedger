@@ -215,26 +215,15 @@ export function setupAuth(app: Express, storage: IStorage) {
     }
   });
 
-  // Get current user endpoint - supports both simple auth and Replit OIDC
+  // Get current user endpoint
   app.get("/api/auth/user", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     try {
-      let user = null;
-      
-      // Check for simple auth (session.userId)
-      if (req.session.userId) {
-        user = await storage.getUser(req.session.userId);
-      }
-      // Check for Replit OIDC auth (passport session)
-      else if (req.isAuthenticated?.() && (req.user as any)?.claims?.sub) {
-        const userId = (req.user as any).claims.sub;
-        user = await storage.getUser(userId);
-      }
-      
-      if (!user) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      if (!user.isActive) {
+      const user = await storage.getUser(req.session.userId);
+      if (!user || !user.isActive) {
         req.session.destroy(() => {});
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -249,31 +238,21 @@ export function setupAuth(app: Express, storage: IStorage) {
   });
 }
 
-// Middleware to check if user is authenticated - supports both simple auth and Replit OIDC
+// Middleware to check if user is authenticated
 export async function isAuthenticated(
   req: Request,
   res: Response,
   next: NextFunction,
 ) {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
   try {
     const storage: IStorage = (req as any).storage;
-    let user = null;
-    
-    // Check for simple auth (session.userId)
-    if (req.session.userId) {
-      user = await storage.getUser(req.session.userId);
-    }
-    // Check for Replit OIDC auth (passport session)
-    else if (req.isAuthenticated?.() && (req.user as any)?.claims?.sub) {
-      const userId = (req.user as any).claims.sub;
-      user = await storage.getUser(userId);
-    }
-    
-    if (!user) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    const user = await storage.getUser(req.session.userId);
 
-    if (!user.isActive) {
+    if (!user || !user.isActive) {
       req.session.destroy(() => {});
       return res.status(401).json({ message: "Unauthorized" });
     }
