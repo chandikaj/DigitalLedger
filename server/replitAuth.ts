@@ -65,7 +65,7 @@ async function upsertUser(
   let existingUser = await storage.getUser(userId);
   
   // If no user found by ID, check by email (for cases where ID changed but email is same)
-  if (!existingUser) {
+  if (!existingUser && email) {
     existingUser = await storage.getUserByEmail(email);
   }
   
@@ -76,13 +76,14 @@ async function upsertUser(
       firstName: claims["first_name"],
       lastName: claims["last_name"],
       profileImageUrl: claims["profile_image_url"],
+      googleId: userId, // Store the OIDC sub as googleId for Google OAuth users
       // role and isActive are intentionally not included to preserve existing values
     });
     return;
   }
   
   // For new users, determine role from invitation or environment variable
-  const invitation = await storage.findInvitationByEmail(email);
+  const invitation = email ? await storage.findInvitationByEmail(email) : null;
   let role = "member"; // default role
   
   if (invitation) {
@@ -99,6 +100,7 @@ async function upsertUser(
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
+    googleId: userId, // Store the OIDC sub as googleId for Google OAuth users
     role: role,
   });
 }
