@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { loginSchema, registerSchema, LoginRequest, RegisterRequest } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Bell, CheckCircle } from "lucide-react";
+import { SiGoogle } from "react-icons/si";
 import logoImage from "@assets/9519F333-D03D-4EEC-9DBB-415A3407BBBF_1761967718151.jpeg";
 
 type RegistrationStep = "form" | "alerts" | "complete";
@@ -273,6 +274,26 @@ export default function Login() {
                     </Button>
                   </form>
                 </Form>
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white dark:bg-gray-800 px-2 text-muted-foreground">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+
+                <a
+                  href="/api/login"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+                  data-testid="button-google-signin"
+                >
+                  <SiGoogle className="h-4 w-4 text-[#4285F4]" />
+                  Sign in with Google
+                </a>
               </TabsContent>
 
               <TabsContent value="register" className="space-y-4">
@@ -364,6 +385,26 @@ export default function Login() {
                     </Button>
                   </form>
                 </Form>
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white dark:bg-gray-800 px-2 text-muted-foreground">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+
+                <a
+                  href="/api/login"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+                  data-testid="button-google-signup"
+                >
+                  <SiGoogle className="h-4 w-4 text-[#4285F4]" />
+                  Sign up with Google
+                </a>
               </TabsContent>
             </Tabs>
           </CardContent>
