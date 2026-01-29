@@ -551,36 +551,6 @@ export default function Podcasts() {
           </div>
         )}
 
-        {/* Subscription CTA */}
-        <div className="mt-16 bg-gradient-to-r from-primary to-secondary rounded-2xl p-8 text-white text-center" data-testid="subscription-cta">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">Never Miss an Episode</h2>
-          <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-            Subscribe to stay updated with the latest insights from industry leaders and AI accounting experts
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-            <Button 
-              className="bg-white text-primary hover:bg-gray-100 flex items-center justify-center space-x-2"
-              data-testid="button-spotify"
-            >
-              <span>🎵</span>
-              <span>Spotify</span>
-            </Button>
-            <Button 
-              className="bg-white text-primary hover:bg-gray-100 flex items-center justify-center space-x-2"
-              data-testid="button-apple"
-            >
-              <span>🍎</span>
-              <span>Apple Podcasts</span>
-            </Button>
-            <Button 
-              className="bg-white text-primary hover:bg-gray-100 flex items-center justify-center space-x-2"
-              data-testid="button-google"
-            >
-              <span>🎧</span>
-              <span>Google Podcasts</span>
-            </Button>
-          </div>
-        </div>
       </>
     );
   }
