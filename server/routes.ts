@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin, isEditorOrAdmin } from "./simpleAuth";
 import { getSession } from "./replitAuth"; // Keep session config
+import passport from "passport";
+import { setupGoogleAuth } from "./googleAuth";
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -27,6 +29,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Session middleware
   app.use(getSession());
   
+  // Initialize passport
+  app.use(passport.initialize());
+  app.use(passport.session());
+  
+  // Setup Google OAuth strategy
+  setupGoogleAuth(storage);
+  
   // Storage middleware - make storage accessible to auth middleware
   app.use((req: any, res, next) => {
     req.storage = storage;
@@ -35,6 +44,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Auth middleware
   setupAuth(app, storage);
+
+  // Google OAuth routes
+  app.get('/api/auth/google', 
+    passport.authenticate('google', { 
+      scope: ['profile', 'email'] 
+    })
+  );
+
+  app.get('/api/auth/google/callback',
+    passport.authenticate('google', { 
+      failureRedirect: '/login?error=google_auth_failed' 
+    }),
+    (req: any, res) => {
+      // Successful authentication
+      // Set session userId (same as other auth methods)
+      req.session.userId = req.user.id;
+      
+      req.session.save((err: any) => {
+        if (err) {
+          console.error("Session save error after Google auth:", err);
+          return res.redirect('/login?error=session_error');
+        }
+        // Redirect to home page
+        res.redirect('/');
+      });
+    }
+  );
 
   // Auth route is now handled in simpleAuth.ts
 

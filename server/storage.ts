@@ -61,7 +61,9 @@ import { eq, desc, sql, and, or, ilike, inArray } from "drizzle-orm";
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | undefined>; // Alias for getUser
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   
   // User management operations
@@ -88,8 +90,8 @@ export interface IStorage {
   initializeNewsCategories(): Promise<void>;
   
   // News operations
-  getNewsArticles(categoryIds?: string[], limit?: number, userRole?: string, archivedOnly?: boolean): Promise<(NewsArticle & { categories: NewsCategory[] })[]>;
-  getNewsArticle(id: string): Promise<(NewsArticle & { categories: NewsCategory[] }) | undefined>;
+  getNewsArticles(categoryIds?: string[], limit?: number, userRole?: string, archivedOnly?: boolean): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number })[]>;
+  getNewsArticle(id: string): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number }) | undefined>;
   createNewsArticle(article: InsertNewsArticle, categoryIds: string[]): Promise<NewsArticle & { categories: NewsCategory[] }>;
   updateNewsArticle(articleId: string, updates: Partial<InsertNewsArticle>, categoryIds?: string[]): Promise<(NewsArticle & { categories: NewsCategory[] }) | undefined>;
   deleteNewsArticle(articleId: string): Promise<boolean>;
@@ -186,8 +188,17 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUserById(id: string): Promise<User | undefined> {
+    return this.getUser(id);
+  }
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
     return user;
   }
 
@@ -441,7 +452,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getNewsArticles(categoryIds?: string[], limit = 10, userRole?: string, archivedOnly = false): Promise<(NewsArticle & { categories: NewsCategory[] })[]> {
+  async getNewsArticles(categoryIds?: string[], limit = 10, userRole?: string, archivedOnly = false): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number })[]> {
     let articles: NewsArticle[];
     
     // Admins and editors can see all articles; regular users only see published
@@ -508,7 +519,7 @@ export class DatabaseStorage implements IStorage {
     return articlesWithCategories;
   }
 
-  async getNewsArticle(id: string): Promise<(NewsArticle & { categories: NewsCategory[] }) | undefined> {
+  async getNewsArticle(id: string): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number }) | undefined> {
     const [article] = await db
       .select()
       .from(newsArticles)
