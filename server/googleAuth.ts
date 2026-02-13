@@ -2,6 +2,7 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { IStorage } from "./storage";
 import type { User } from "@shared/schema";
+import { sendWelcomeEmail } from "./emailService";
 
 export function setupGoogleAuth(storage: IStorage) {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
@@ -70,6 +71,12 @@ export function setupGoogleAuth(storage: IStorage) {
             role: "subscriber",
             isActive: true,
           });
+
+          if (newUser.email) {
+            sendWelcomeEmail(newUser.email, newUser.firstName || "there").catch((err) => {
+              console.error("Failed to send welcome email for Google signup:", err);
+            });
+          }
 
           return done(null, newUser);
         } catch (error) {
