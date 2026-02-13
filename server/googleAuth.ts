@@ -4,6 +4,11 @@ import { IStorage } from "./storage";
 import type { User } from "@shared/schema";
 
 export function setupGoogleAuth(storage: IStorage) {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    console.log("Google OAuth not configured: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET missing. Skipping Google auth setup.");
+    return passport;
+  }
+
   // Serialize user for session
   passport.serializeUser((user: any, done) => {
     done(null, user.id);

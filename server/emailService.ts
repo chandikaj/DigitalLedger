@@ -61,7 +61,7 @@ export async function sendWelcomeEmail(
 
     const msg = {
       to: userEmail,
-      from: "team@thedigitalledger.org",
+      from: "info@thedigitalledger.org",
       templateId: WELCOME_EMAIL_TEMPLATE_ID,
       dynamicTemplateData: {
         firstName: firstName,
