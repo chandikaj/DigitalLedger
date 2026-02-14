@@ -28,6 +28,39 @@ declare global {
 
 const SALT_ROUNDS = 12;
 
+// Password strength validation
+function validatePasswordStrength(password: string): { valid: boolean; message?: string } {
+  if (password.length < 8) {
+    return { valid: false, message: "Password must be at least 8 characters long" };
+  }
+  
+  if (password.length > 128) {
+    return { valid: false, message: "Password must not exceed 128 characters" };
+  }
+  
+  // Check for at least one uppercase letter
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one uppercase letter" };
+  }
+  
+  // Check for at least one lowercase letter
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one lowercase letter" };
+  }
+  
+  // Check for at least one number
+  if (!/\d/.test(password)) {
+    return { valid: false, message: "Password must contain at least one number" };
+  }
+  
+  // Optional: Check for at least one special character (recommended but not required)
+  // if (!/[@$!%*?&#]/.test(password)) {
+  //   return { valid: false, message: "Password must contain at least one special character" };
+  // }
+  
+  return { valid: true };
+}
+
 export function setupAuth(app: Express, storage: IStorage) {
   // Register endpoint
   app.post("/api/auth/register", async (req: Request, res: Response) => {
@@ -40,6 +73,12 @@ export function setupAuth(app: Express, storage: IStorage) {
       }
 
       const { email, password, firstName, lastName } = result.data;
+
+      // Validate password strength
+      const passwordValidation = validatePasswordStrength(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ message: passwordValidation.message });
+      }
 
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email.toLowerCase());
@@ -184,10 +223,10 @@ export function setupAuth(app: Express, storage: IStorage) {
           .json({ message: "Current and new password are required" });
       }
 
-      if (newPassword.length < 6) {
-        return res
-          .status(400)
-          .json({ message: "New password must be at least 6 characters" });
+      // Validate new password strength
+      const passwordValidation = validatePasswordStrength(newPassword);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ message: passwordValidation.message });
       }
 
       const user = await storage.getUser(req.session.userId);
