@@ -31,17 +31,23 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    name: 'sessionId', // Don't use default 'connect.sid' - makes it harder to fingerprint
     cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Only secure in production
-      sameSite: "lax", // Allow cross-site requests for better compatibility
+      httpOnly: true, // Prevent XSS access to cookie
+      secure: process.env.NODE_ENV === "production", // Only use secure cookies in production (HTTPS)
+      sameSite: "lax", // Prevent CSRF while allowing some cross-site navigation
       maxAge: sessionTtl,
+      domain: undefined, // Let the browser set the domain
+      path: '/', // Cookie available on all paths
     },
+    rolling: true, // Reset cookie expiration on every request
+    proxy: true, // Trust the reverse proxy
   });
 }
 

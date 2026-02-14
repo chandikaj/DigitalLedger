@@ -380,12 +380,17 @@ export const insertUserSchema = createInsertSchema(users).omit({
 // Auth schemas for login/register
 export const loginSchema = z.object({
   email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(1, "Password is required"), // Don't reveal length requirement on login
 });
 
 export const registerSchema = z.object({
   email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must not exceed 128 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/\d/, "Password must contain at least one number"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
 });
@@ -502,7 +507,12 @@ export const insertToolboxAppSchema = createInsertSchema(toolboxApps).omit({
 // Admin user management schemas
 export const adminCreateUserSchema = z.object({
   email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must not exceed 128 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/\d/, "Password must contain at least one number"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   role: z.enum(["subscriber", "contributor", "editor", "admin"]).default("subscriber"),
@@ -519,7 +529,13 @@ export const adminUpdateUserSchema = z.object({
   title: z.string().optional(),
   company: z.string().optional(),
   isActive: z.boolean().optional(),
-  password: z.string().min(6, "Password must be at least 6 characters").optional(),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must not exceed 128 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/\d/, "Password must contain at least one number")
+    .optional(),
 });
 
 // Types

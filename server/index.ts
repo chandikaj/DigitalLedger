@@ -5,6 +5,15 @@ import { seedDatabase } from "./seed";
 import { db } from "./db";
 import { users, newsArticles, podcastEpisodes, forumDiscussions } from "@shared/schema";
 import { storage } from "./storage";
+import {
+  setupCORS,
+  setupSecurityHeaders,
+  setupRateLimiting,
+  sanitizeInput,
+  setupRequestSizeLimits,
+  setupErrorHandler,
+  httpsRedirect,
+} from "./securityMiddleware";
 
 // ============================================
 // SEO & Bot Detection Utilities
@@ -109,6 +118,16 @@ const app = express();
 // Trust proxy - required for apps behind reverse proxy (like published Replit apps)
 // This ensures Express correctly recognizes HTTPS connections and sets secure cookies
 app.set("trust proxy", 1);
+
+// ============================================
+// Security Middleware (must be early in middleware chain)
+// ============================================
+setupRequestSizeLimits(app);
+setupCORS(app);
+setupSecurityHeaders(app);
+app.use(httpsRedirect);
+setupRateLimiting(app);
+app.use(sanitizeInput);
 
 // ============================================
 // Robots.txt - Allow all crawlers
@@ -1438,13 +1457,8 @@ app.use((req, res, next) => {
     // Continue server startup even if seeding fails
   }
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
+  // Setup secure error handler
+  setupErrorHandler(app);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
