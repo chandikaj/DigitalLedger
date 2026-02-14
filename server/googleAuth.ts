@@ -2,18 +2,14 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { IStorage } from "./storage";
 import type { User } from "@shared/schema";
-import { sendWelcomeEmail } from "./emailService";
 
 export function setupGoogleAuth(storage: IStorage) {
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    console.log("Google OAuth not configured: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET missing. Skipping Google auth setup.");
-    return passport;
-  }
-
+  // Serialize user for session
   passport.serializeUser((user: any, done) => {
     done(null, user.id);
   });
 
+  // Deserialize user from session
   passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await storage.getUserById(id);
@@ -23,6 +19,7 @@ export function setupGoogleAuth(storage: IStorage) {
     }
   });
 
+  // Google OAuth Strategy
   passport.use(
     new GoogleStrategy(
       {
@@ -32,21 +29,21 @@ export function setupGoogleAuth(storage: IStorage) {
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
-          const email = profile.emails?.[0]?.value;
-          console.log(`[Google Auth] Processing login for email: ${email}, googleId: ${profile.id}`);
-
+          // Check if user exists by Google ID
           let user = await storage.getUserByGoogleId(profile.id);
 
           if (user) {
-            console.log(`[Google Auth] Existing user found by Google ID: ${user.id}`);
+            // User already exists, return them
             return done(null, user);
           }
 
+          // Check if user exists by email
+          const email = profile.emails?.[0]?.value;
           if (email) {
             user = await storage.getUserByEmail(email.toLowerCase());
 
             if (user) {
-              console.log(`[Google Auth] Existing user found by email, linking Google account: ${user.id}`);
+              // Link Google account to existing user
               const updatedUser = await storage.updateUser(user.id, {
                 googleId: profile.id,
                 authProvider: "google",
@@ -56,7 +53,7 @@ export function setupGoogleAuth(storage: IStorage) {
             }
           }
 
-          console.log(`[Google Auth] Creating new user for email: ${email}`);
+          // Create new user from Google profile
           const newUser = await storage.createUser({
             email: email?.toLowerCase(),
             googleId: profile.id,
@@ -64,28 +61,14 @@ export function setupGoogleAuth(storage: IStorage) {
             firstName: profile.name?.givenName || profile.displayName?.split(" ")[0],
             lastName: profile.name?.familyName || profile.displayName?.split(" ").slice(1).join(" "),
             profileImageUrl: profile.photos?.[0]?.value,
-            passwordHash: null,
+            passwordHash: null, // No password for OAuth users
             role: "subscriber",
             isActive: true,
           });
 
-          console.log(`[Google Auth] New user created: ${newUser.id}, email: ${newUser.email}`);
-
-          if (newUser.email) {
-            console.log(`[Google Auth] Sending welcome email to: ${newUser.email}`);
-            try {
-              const result = await sendWelcomeEmail(newUser.email, newUser.firstName || "there");
-              console.log(`[Google Auth] Welcome email result: ${result}`);
-            } catch (emailErr) {
-              console.error("[Google Auth] Failed to send welcome email:", emailErr);
-            }
-          } else {
-            console.log("[Google Auth] No email found for new user, skipping welcome email");
-          }
-
           return done(null, newUser);
         } catch (error) {
-          console.error("[Google Auth] Error during authentication:", error);
+          console.error("Google OAuth error:", error);
           return done(error as Error, undefined);
         }
       }
