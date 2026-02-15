@@ -4,12 +4,10 @@ import { IStorage } from "./storage";
 import type { User } from "@shared/schema";
 
 export function setupGoogleAuth(storage: IStorage) {
-  // Serialize user for session
   passport.serializeUser((user: any, done) => {
     done(null, user.id);
   });
 
-  // Deserialize user from session
   passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await storage.getUserById(id);
@@ -19,12 +17,16 @@ export function setupGoogleAuth(storage: IStorage) {
     }
   });
 
-  // Google OAuth Strategy
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    console.warn("Google OAuth credentials not configured. Google login will be disabled.");
+    return;
+  }
+
   passport.use(
     new GoogleStrategy(
       {
-        clientID: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         callbackURL: process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback",
       },
       async (accessToken, refreshToken, profile, done) => {
