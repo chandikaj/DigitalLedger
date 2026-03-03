@@ -57,11 +57,11 @@ export async function sendWelcomeEmail(
   firstName: string,
 ): Promise<boolean> {
   try {
-    const { client } = await getUncachableSendGridClient();
+    const { client, fromEmail } = await getUncachableSendGridClient();
 
     const msg = {
       to: userEmail,
-      from: "team@thedigitalledger.org",
+      from: fromEmail,
       templateId: WELCOME_EMAIL_TEMPLATE_ID,
       dynamicTemplateData: {
         firstName: firstName,

@@ -2,6 +2,7 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { IStorage } from "./storage";
 import type { User } from "@shared/schema";
+import { sendWelcomeEmail } from "./emailService";
 
 export function setupGoogleAuth(storage: IStorage) {
   passport.serializeUser((user: any, done) => {
@@ -66,6 +67,11 @@ export function setupGoogleAuth(storage: IStorage) {
             passwordHash: null, // No password for OAuth users
             role: "subscriber",
             isActive: true,
+          });
+
+          // Send welcome email (don't block OAuth flow if email fails)
+          sendWelcomeEmail(newUser.email!, newUser.firstName || "there").catch((err) => {
+            console.error("Failed to send welcome email after Google sign-up:", err);
           });
 
           return done(null, newUser);
