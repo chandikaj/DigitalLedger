@@ -1588,32 +1588,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public unsubscribe via link in email (no login required)
-  app.get("/api/unsubscribe", async (req, res) => {
+  // Public unsubscribe via link in email — redirect to frontend page
+  app.get("/api/unsubscribe", (req, res) => {
     const { id } = req.query as { id?: string };
     if (!id) {
-      return res.status(400).send("<p>Invalid unsubscribe link.</p>");
+      return res.redirect("/unsubscribe");
+    }
+    return res.redirect(`/unsubscribe?id=${encodeURIComponent(id)}`);
+  });
+
+  // Public: get subscriber status by id (no auth required — used by unsubscribe page)
+  app.get("/api/subscribers/info", async (req, res) => {
+    const { id } = req.query as { id?: string };
+    if (!id) {
+      return res.status(400).json({ message: "id is required" });
     }
     try {
       const subscriber = await storage.getSubscriberById(id);
       if (!subscriber) {
-        return res.status(404).send("<p>Subscription not found.</p>");
+        return res.status(404).json({ message: "Subscriber not found" });
       }
-      if (!subscriber.isActive) {
-        return res.send("<p>You have already been unsubscribed.</p>");
-      }
-      await storage.updateSubscriber(id, { isActive: false });
-      return res.send(`
-        <div style="font-family:Arial,sans-serif;max-width:480px;margin:60px auto;text-align:center;">
-          <h2 style="color:#16a34a;">Unsubscribed Successfully</h2>
-          <p>You have been removed from the DigitalLedger newsletter.<br/>You will no longer receive emails from us.</p>
-        </div>
-      `);
+      return res.json({ isActive: subscriber.isActive, email: subscriber.email });
     } catch (error) {
-      console.error("Error processing unsubscribe:", error);
-      return res
-        .status(500)
-        .send("<p>Something went wrong. Please try again later.</p>");
+      console.error("Error fetching subscriber info:", error);
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Public: toggle subscriber isActive (no auth required — used by unsubscribe page)
+  app.post("/api/subscribers/toggle", async (req, res) => {
+    const { id } = req.query as { id?: string };
+    if (!id) {
+      return res.status(400).json({ message: "id is required" });
+    }
+    try {
+      const subscriber = await storage.getSubscriberById(id);
+      if (!subscriber) {
+        return res.status(404).json({ message: "Subscriber not found" });
+      }
+      const newActive = !subscriber.isActive;
+      await storage.updateSubscriber(id, { isActive: newActive });
+      return res.json({ isActive: newActive });
+    } catch (error) {
+      console.error("Error toggling subscriber:", error);
+      return res.status(500).json({ message: "Server error" });
     }
   });
 

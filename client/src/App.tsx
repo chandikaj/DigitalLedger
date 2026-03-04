@@ -31,6 +31,7 @@ import MainPageControl from "@/pages/MainPageControl";
 import Settings from "@/pages/Settings";
 import Toolbox from "@/pages/Toolbox";
 import Welcome from "@/pages/Welcome";
+import Unsubscribe from "@/pages/Unsubscribe";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -67,6 +68,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/logout" component={Logout} />
       <Route path="/welcome" component={Welcome} />
+      <Route path="/unsubscribe" component={Unsubscribe} />
       
       {/* Article detail route must come AFTER /news/add to avoid matching "add" as an id */}
       <Route path="/news/:id" component={Article} />

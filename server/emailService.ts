@@ -50,7 +50,119 @@ async function getUncachableSendGridClient() {
   };
 }
 
-const WELCOME_EMAIL_TEMPLATE_ID = process.env.SENDGRID_WELCOME_TEMPLATE_ID;
+function buildWelcomeHtml(unsubscribeUrl: string | null): string {
+  const unsubscribeHref = unsubscribeUrl ?? "#";
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Welcome to The Digital Ledger</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:#0f172a;padding:28px 40px;">
+              <img src="http://cdn.mcauto-images-production.sendgrid.net/78d231ba0f636805/e1a876f9-37fe-47bb-8ae3-e42ad5d3baa7/802x429.png" width="400" style="display:block;" />
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 40px 32px 40px;color:#1a1a1a;">
+
+              <p style="margin:0 0 20px 0;font-size:15px;line-height:1.7;">Hello,</p>
+
+              <p style="margin:0 0 20px 0;font-size:15px;line-height:1.7;">
+                Thank you for joining <strong>The Digital Ledger</strong>. We're glad to have you!
+              </p>
+
+              <p style="margin:0 0 20px 0;font-size:15px;line-height:1.7;">
+                You'll see us in your inbox about three times per week. If not, check your spam folder or promotions tab, just in case.
+              </p>
+
+              <p style="margin:0 0 20px 0;font-size:15px;line-height:1.7;">
+                You'll receive one curated article and one podcast each week — designed to be concise, practical, and easy to absorb, so you can stay informed without sifting through endless sources.
+              </p>
+
+              <!-- Article block -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0;border-left:4px solid #0f172a;padding-left:16px;">
+                <tr>
+                  <td>
+                    <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.8px;">The Digital Ledger Article</p>
+                    <p style="margin:0;font-size:14px;line-height:1.7;color:#1a1a1a;">
+                      A condensed breakdown of the latest in AI, finance transformation, and corporate strategy — with practical insights you can use.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Podcast block -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0;border-left:4px solid #2563eb;padding-left:16px;">
+                <tr>
+                  <td>
+                    <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.8px;">The Digital Ledger Podcast</p>
+                    <p style="margin:0;font-size:14px;line-height:1.7;color:#1a1a1a;">
+                      Conversations with CFOs, operators, analysts, and innovators shaping modern corporate finance. Real stories. Real challenges. Real strategy.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 20px 0;font-size:15px;line-height:1.7;">
+                If you want to jump right in, here's a recent podcast:<br/>
+                <a href="https://www.youtube.com/watch?v=3CpRPVnxZ-4" style="color:#2563eb;text-decoration:none;">
+                  <strong>How Finance Professionals Build Trust, with AI</strong>
+                </a>
+              </p>
+
+              <p style="margin:0 0 20px 0;font-size:15px;line-height:1.7;">
+                You can also follow us on <a href="https://www.linkedin.com/company/110532681/" style="color:#2563eb;text-decoration:none;">LinkedIn</a> or visit our
+                <a href="https://thedigitalledger.org/" style="color:#2563eb;text-decoration:none;">website</a> anytime for additional updates and featured content.
+              </p>
+
+              <p style="margin:0 0 20px 0;font-size:15px;line-height:1.7;">
+                <strong>This is a focused platform for finance professionals who value clarity and practicality — and we're glad you're part of it.</strong>
+              </p>
+
+              <p style="margin:0 0 32px 0;font-size:15px;line-height:1.7;">
+                If you ever have feedback or ideas, simply reply to this email. We'd love to hear from you.
+              </p>
+
+              <p style="margin:0;font-size:15px;line-height:1.8;">
+                Welcome aboard,<br/><br/>
+                <strong>DJ Rana</strong><br/>
+                <span style="color:#64748b;font-size:13px;">Host, The Digital Ledger</span>
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer with unsubscribe -->
+          <tr>
+            <td style="background-color:#f8fafc;padding:20px 40px;border-top:1px solid #e2e8f0;">
+              <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
+                The Digital Ledger &nbsp;|&nbsp;
+                You are receiving this because you subscribed. &nbsp;|&nbsp;
+                <a href="${unsubscribeHref}" style="color:#94a3b8;text-decoration:underline;">Unsubscribe</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
+}
 
 export async function sendWelcomeEmail(
   userEmail: string,
@@ -60,20 +172,26 @@ export async function sendWelcomeEmail(
   try {
     const { client, fromEmail } = await getUncachableSendGridClient();
 
-    const appUrl = process.env.APP_URL;
+    const appUrl = process.env.APP_URL || "https://thedigitalledger.org";
     const unsubscribeUrl = subscriberId
       ? `${appUrl}/api/unsubscribe?id=${subscriberId}`
       : null;
 
-    const msg = {
+    const htmlContent = buildWelcomeHtml(unsubscribeUrl);
+
+    const msg: any = {
       to: userEmail,
       from: fromEmail,
-      templateId: WELCOME_EMAIL_TEMPLATE_ID,
-      dynamicTemplateData: {
-        firstName,
-        ...(unsubscribeUrl ? { unsubscribeUrl } : {}),
-      },
+      subject: "Welcome to The Digital Ledger",
+      html: htmlContent,
     };
+
+    if (unsubscribeUrl) {
+      msg.headers = {
+        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      };
+    }
 
     await client.send(msg);
     console.log(`Welcome email sent to ${userEmail}`);
