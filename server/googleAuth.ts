@@ -1,88 +1,90 @@
-import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import { IStorage } from "./storage";
-import type { User } from "@shared/schema";
-import { sendWelcomeEmail } from "./emailService";
+import sgMail from "@sendgrid/mail";
 
-export function setupGoogleAuth(storage: IStorage) {
-  passport.serializeUser((user: any, done) => {
-    done(null, user.id);
-  });
+let connectionSettings: any;
 
-  passport.deserializeUser(async (id: string, done) => {
-    try {
-      const user = await storage.getUserById(id);
-      done(null, user || false);
-    } catch (error) {
-      console.error("Failed to deserialize user from session, treating as unauthenticated:", error);
-      done(null, false);
-    }
-  });
+async function getCredentials() {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY
+    ? "repl " + process.env.REPL_IDENTITY
+    : process.env.WEB_REPL_RENEWAL
+      ? "depl " + process.env.WEB_REPL_RENEWAL
+      : null;
 
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    console.warn("Google OAuth credentials not configured. Google login will be disabled.");
-    return;
+  if (!xReplitToken) {
+    throw new Error("X_REPLIT_TOKEN not found for repl/depl");
   }
 
-  passport.use(
-    new GoogleStrategy(
-      {
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback",
+  connectionSettings = await fetch(
+    "https://" +
+      hostname +
+      "/api/v2/connection?include_secrets=true&connector_names=sendgrid",
+    {
+      headers: {
+        Accept: "application/json",
+        X_REPLIT_TOKEN: xReplitToken,
       },
-      async (accessToken, refreshToken, profile, done) => {
-        try {
-          // Check if user exists by Google ID
-          let user = await storage.getUserByGoogleId(profile.id);
+    },
+  )
+    .then((res) => res.json())
+    .then((data) => data.items?.[0]);
 
-          if (user) {
-            // User already exists, return them
-            return done(null, user);
-          }
+  if (
+    !connectionSettings ||
+    !connectionSettings.settings.api_key ||
+    !connectionSettings.settings.from_email
+  ) {
+    throw new Error("SendGrid not connected");
+  }
+  return {
+    apiKey: connectionSettings.settings.api_key,
+    email: connectionSettings.settings.from_email,
+  };
+}
 
-          // Check if user exists by email
-          const email = profile.emails?.[0]?.value;
-          if (email) {
-            user = await storage.getUserByEmail(email.toLowerCase());
+async function getUncachableSendGridClient() {
+  const { apiKey, email } = await getCredentials();
+  sgMail.setApiKey(apiKey);
+  return {
+    client: sgMail,
+    fromEmail: email,
+  };
+}
 
-            if (user) {
-              // Link Google account to existing user
-              const updatedUser = await storage.updateUser(user.id, {
-                googleId: profile.id,
-                authProvider: "google",
-                profileImageUrl: user.profileImageUrl || profile.photos?.[0]?.value,
-              });
-              return done(null, updatedUser);
-            }
-          }
+const WELCOME_EMAIL_TEMPLATE_ID = process.env.SENDGRID_WELCOME_TEMPLATE_ID;
 
-          // Create new user from Google profile
-          const newUser = await storage.createUser({
-            email: email?.toLowerCase(),
-            googleId: profile.id,
-            authProvider: "google",
-            firstName: profile.name?.givenName || profile.displayName?.split(" ")[0],
-            lastName: profile.name?.familyName || profile.displayName?.split(" ").slice(1).join(" "),
-            profileImageUrl: profile.photos?.[0]?.value,
-            passwordHash: null, // No password for OAuth users
-            role: "subscriber",
-            isActive: true,
-          });
+export async function sendWelcomeEmail(
+  userEmail: string,
+  firstName: string,
+  subscriberId?: string,
+): Promise<boolean> {
+  try {
+    const { client, fromEmail } = await getUncachableSendGridClient();
 
-          // Send welcome email (don't block OAuth flow if email fails)
-          sendWelcomeEmail(newUser.email!, newUser.firstName || "there").catch((err) => {
-            console.error("Failed to send welcome email after Google sign-up:", err);
-          });
+    const appUrl = process.env.APP_URL;
+    const unsubscribeUrl = subscriberId
+      ? `${appUrl}/api/unsubscribe?id=${subscriberId}`
+      : null;
 
-          return done(null, newUser);
-        } catch (error) {
-          console.error("Google OAuth error:", error);
-          return done(error as Error, undefined);
-        }
-      }
-    )
-  );
+    const msg = {
+      to: userEmail,
+      from: fromEmail,
+      templateId: WELCOME_EMAIL_TEMPLATE_ID,
+      dynamicTemplateData: {
+        firstName,
+        ...(unsubscribeUrl ? { unsubscribeUrl } : {}),
+      },
+    };
 
-  return passport;
+    await client.send(msg);
+    console.log(`Welcome email sent to ${userEmail}`);
+    return true;
+  } catch (error: any) {
+    console.error(
+      `Error sending welcome email to ${userEmail}. ` +
+        `Check that the 'from' address is verified as a Sender Identity in SendGrid. ` +
+        `Raw error:`,
+      error?.response?.body ?? error,
+    );
+    return false;
+  }
 }

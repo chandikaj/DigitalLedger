@@ -1,14 +1,16 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, isAdmin, isEditorOrAdmin } from "./simpleAuth";
+import {
+  setupAuth,
+  isAuthenticated,
+  isAdmin,
+  isEditorOrAdmin,
+} from "./simpleAuth";
 import { getSession } from "./replitAuth"; // Keep session config
 import passport from "passport";
 import { setupGoogleAuth } from "./googleAuth";
-import {
-  ObjectStorageService,
-  ObjectNotFoundError,
-} from "./objectStorage";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import {
   insertNewsArticleSchema,
   insertForumCategorySchema,
@@ -25,77 +27,82 @@ import {
 } from "@shared/schema";
 import { seedDatabase } from "./seed";
 
-
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session middleware
   app.use(getSession());
-  
+
   // Initialize passport
   app.use(passport.initialize());
   app.use(passport.session());
-  
+
   // Setup Google OAuth strategy
   setupGoogleAuth(storage);
-  
+
   // Storage middleware - make storage accessible to auth middleware
   app.use((req: any, res, next) => {
     req.storage = storage;
     next();
   });
-  
+
   // Auth middleware
   setupAuth(app, storage);
 
   // Google OAuth routes
-  app.get('/api/auth/google', 
-    passport.authenticate('google', { 
-      scope: ['profile', 'email'] 
-    })
+  app.get(
+    "/api/auth/google",
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+    }),
   );
 
-  app.get('/api/auth/google/callback',
-    passport.authenticate('google', { 
-      failureRedirect: '/login?error=google_auth_failed' 
+  app.get(
+    "/api/auth/google/callback",
+    passport.authenticate("google", {
+      failureRedirect: "/login?error=google_auth_failed",
     }),
     (req: any, res) => {
       // Successful authentication
       // Set session userId (same as other auth methods)
       req.session.userId = req.user.id;
-      
+
       req.session.save((err: any) => {
         if (err) {
           console.error("Session save error after Google auth:", err);
-          return res.redirect('/login?error=session_error');
+          return res.redirect("/login?error=session_error");
         }
-        // Redirect to home page with welcome flag for new sign-ups
-        res.redirect('/?welcome=1');
+        // Redirect to home page
+        res.redirect("/");
       });
-    }
+    },
   );
 
   // Auth route is now handled in simpleAuth.ts
 
   // User management routes (admin only)
-  app.get('/api/admin/users', isAdmin, async (req: any, res) => {
+  app.get("/api/admin/users", isAdmin, async (req: any, res) => {
     try {
       const { q, role, active } = req.query;
       const filters: any = {};
       if (q) filters.q = q as string;
       if (role) filters.role = role as string;
-      if (active !== undefined) filters.active = active === 'true';
-      
+      if (active !== undefined) filters.active = active === "true";
+
       const users = await storage.listUsers(filters);
-      
+
       // Remove password hashes and add subscription status for all users
-      const sanitizedUsers = await Promise.all(users.map(async (user: any) => {
-        const { passwordHash, ...userWithoutPassword } = user;
-        const subscriber = user.email ? await storage.getSubscriberByEmail(user.email) : null;
-        return {
-          ...userWithoutPassword,
-          isSubscribed: !!subscriber,
-        };
-      }));
-      
+      const sanitizedUsers = await Promise.all(
+        users.map(async (user: any) => {
+          const { passwordHash, ...userWithoutPassword } = user;
+          const subscriber = user.email
+            ? await storage.getSubscriberByEmail(user.email)
+            : null;
+          return {
+            ...userWithoutPassword,
+            isSubscribed: !!subscriber,
+          };
+        }),
+      );
+
       res.json(sanitizedUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -103,14 +110,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/users/invite', isAdmin, async (req: any, res) => {
+  app.post("/api/users/invite", isAdmin, async (req: any, res) => {
     try {
       const adminUserId = req.user.id;
       const invitationData = insertUserInvitationSchema.parse({
         ...req.body,
         invitedBy: adminUserId,
       });
-      
+
       const invitation = await storage.createInvitation(invitationData);
       res.json(invitation);
     } catch (error) {
@@ -119,28 +126,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/users/:id/role', isAdmin, async (req: any, res) => {
+  app.patch("/api/users/:id/role", isAdmin, async (req: any, res) => {
     try {
       const userId = req.params.id;
       const { role } = req.body;
       const adminUserId = req.user.id;
-      
+
       // Prevent demoting the last admin
-      if (role !== 'admin') {
-        const admins = await storage.listUsers({ role: 'admin', active: true });
+      if (role !== "admin") {
+        const admins = await storage.listUsers({ role: "admin", active: true });
         if (admins.length === 1 && admins[0].id === userId) {
-          return res.status(400).json({ message: "Cannot demote the last admin" });
+          return res
+            .status(400)
+            .json({ message: "Cannot demote the last admin" });
         }
       }
-      
+
       // Prevent self-demotion if last admin
-      if (userId === adminUserId && role !== 'admin') {
-        const admins = await storage.listUsers({ role: 'admin', active: true });
+      if (userId === adminUserId && role !== "admin") {
+        const admins = await storage.listUsers({ role: "admin", active: true });
         if (admins.length === 1) {
-          return res.status(400).json({ message: "Cannot demote yourself as the last admin" });
+          return res
+            .status(400)
+            .json({ message: "Cannot demote yourself as the last admin" });
         }
       }
-      
+
       await storage.setUserRole(userId, role);
       res.json({ success: true });
     } catch (error) {
@@ -149,20 +160,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/users/:id/status', isAdmin, async (req: any, res) => {
+  app.patch("/api/users/:id/status", isAdmin, async (req: any, res) => {
     try {
       const userId = req.params.id;
       const { isActive } = req.body;
       const adminUserId = req.user.id;
-      
+
       // Prevent self-deactivation if last admin
       if (!isActive && userId === adminUserId) {
-        const admins = await storage.listUsers({ role: 'admin', active: true });
+        const admins = await storage.listUsers({ role: "admin", active: true });
         if (admins.length === 1) {
-          return res.status(400).json({ message: "Cannot deactivate yourself as the last admin" });
+          return res
+            .status(400)
+            .json({ message: "Cannot deactivate yourself as the last admin" });
         }
       }
-      
+
       await storage.setUserActive(userId, isActive);
       res.json({ success: true });
     } catch (error) {
@@ -171,7 +184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/users/invitations', isAdmin, async (req: any, res) => {
+  app.get("/api/users/invitations", isAdmin, async (req: any, res) => {
     try {
       const invitations = await storage.listInvitations();
       res.json(invitations);
@@ -181,43 +194,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/users/invitations/:id/revoke', isAdmin, async (req: any, res) => {
-    try {
-      const invitationId = req.params.id;
-      await storage.revokeInvitation(invitationId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error revoking invitation:", error);
-      res.status(500).json({ message: "Failed to revoke invitation" });
-    }
-  });
+  app.post(
+    "/api/users/invitations/:id/revoke",
+    isAdmin,
+    async (req: any, res) => {
+      try {
+        const invitationId = req.params.id;
+        await storage.revokeInvitation(invitationId);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error revoking invitation:", error);
+        res.status(500).json({ message: "Failed to revoke invitation" });
+      }
+    },
+  );
 
   // Direct user management routes (admin only)
-  app.post('/api/admin/users', isAdmin, async (req: any, res) => {
+  app.post("/api/admin/users", isAdmin, async (req: any, res) => {
     try {
-      const bcrypt = await import('bcrypt');
+      const bcrypt = await import("bcrypt");
       const result = adminCreateUserSchema.safeParse(req.body);
-      
+
       if (!result.success) {
-        return res.status(400).json({ message: "Invalid input", errors: result.error.errors });
+        return res
+          .status(400)
+          .json({ message: "Invalid input", errors: result.error.errors });
       }
-      
+
       const { password, ...userData } = result.data;
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
-        return res.status(409).json({ message: "User already exists with this email" });
+        return res
+          .status(409)
+          .json({ message: "User already exists with this email" });
       }
-      
+
       // Hash password
       const passwordHash = await bcrypt.hash(password, 12);
-      
+
       const user = await storage.createUser({
         ...userData,
         passwordHash,
       });
-      
+
       // Remove password hash from response
       const { passwordHash: _, ...userResponse } = user as any;
       res.json(userResponse);
@@ -227,35 +248,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/admin/users/:id', isAdmin, async (req: any, res) => {
+  app.patch("/api/admin/users/:id", isAdmin, async (req: any, res) => {
     try {
-      const bcrypt = await import('bcrypt');
+      const bcrypt = await import("bcrypt");
       const userId = req.params.id;
       const adminUserId = req.user.id;
-      
+
       const result = adminUpdateUserSchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ message: "Invalid input", errors: result.error.errors });
+        return res
+          .status(400)
+          .json({ message: "Invalid input", errors: result.error.errors });
       }
-      
+
       const { password, ...updates } = result.data;
-      
+
       // Prevent self-demotion if last admin
-      if (updates.role && updates.role !== 'admin' && userId === adminUserId) {
-        const admins = await storage.listUsers({ role: 'admin', active: true });
+      if (updates.role && updates.role !== "admin" && userId === adminUserId) {
+        const admins = await storage.listUsers({ role: "admin", active: true });
         if (admins.length === 1) {
-          return res.status(400).json({ message: "Cannot demote yourself as the last admin" });
+          return res
+            .status(400)
+            .json({ message: "Cannot demote yourself as the last admin" });
         }
       }
-      
+
       // Hash password if provided
       const finalUpdates: any = { ...updates };
       if (password) {
         finalUpdates.passwordHash = await bcrypt.hash(password, 12);
       }
-      
+
       const user = await storage.updateUser(userId, finalUpdates);
-      
+
       // Remove password hash from response
       const { passwordHash: _, ...userResponse } = user as any;
       res.json(userResponse);
@@ -265,20 +290,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/users/:id', isAdmin, async (req: any, res) => {
+  app.delete("/api/admin/users/:id", isAdmin, async (req: any, res) => {
     try {
       const userId = req.params.id;
       const adminUserId = req.user.id;
-      
+
       // Prevent self-deletion if last admin
       const user = await storage.getUser(userId);
-      if (user?.role === 'admin' && userId === adminUserId) {
-        const admins = await storage.listUsers({ role: 'admin', active: true });
+      if (user?.role === "admin" && userId === adminUserId) {
+        const admins = await storage.listUsers({ role: "admin", active: true });
         if (admins.length === 1) {
-          return res.status(400).json({ message: "Cannot delete yourself as the last admin" });
+          return res
+            .status(400)
+            .json({ message: "Cannot delete yourself as the last admin" });
         }
       }
-      
+
       await storage.deleteUser(userId);
       res.json({ success: true });
     } catch (error) {
@@ -288,58 +315,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to toggle user subscription
-  app.post('/api/admin/users/:id/subscription', isAdmin, async (req: any, res) => {
-    try {
-      const userId = req.params.id;
-      const { subscribe } = req.body;
-      
-      const user = await storage.getUser(userId);
-      if (!user || !user.email) {
-        return res.status(404).json({ message: "User not found or has no email" });
-      }
-      
-      const existingSubscriber = await storage.getSubscriberByEmail(user.email);
-      
-      if (subscribe) {
-        if (!existingSubscriber) {
-          await storage.createSubscriber({
-            email: user.email,
-            categories: [],
-            frequency: "weekly",
+  app.post(
+    "/api/admin/users/:id/subscription",
+    isAdmin,
+    async (req: any, res) => {
+      try {
+        const userId = req.params.id;
+        const { subscribe } = req.body;
+
+        const user = await storage.getUser(userId);
+        if (!user || !user.email) {
+          return res
+            .status(404)
+            .json({ message: "User not found or has no email" });
+        }
+
+        const existingSubscriber = await storage.getSubscriberByEmail(
+          user.email,
+        );
+
+        if (subscribe) {
+          if (!existingSubscriber) {
+            await storage.createSubscriber({
+              email: user.email,
+              categories: [],
+              frequency: "weekly",
+            });
+          }
+          res.json({
+            message: "User subscribed successfully",
+            isSubscribed: true,
+          });
+        } else {
+          if (existingSubscriber) {
+            await storage.deleteSubscriber(existingSubscriber.id);
+          }
+          res.json({
+            message: "User unsubscribed successfully",
+            isSubscribed: false,
           });
         }
-        res.json({ message: "User subscribed successfully", isSubscribed: true });
-      } else {
-        if (existingSubscriber) {
-          await storage.deleteSubscriber(existingSubscriber.id);
-        }
-        res.json({ message: "User unsubscribed successfully", isSubscribed: false });
+      } catch (error) {
+        console.error("Error toggling subscription:", error);
+        res.status(500).json({ message: "Failed to toggle subscription" });
       }
-    } catch (error) {
-      console.error("Error toggling subscription:", error);
-      res.status(500).json({ message: "Failed to toggle subscription" });
-    }
-  });
+    },
+  );
 
   // Database seeding endpoint (admin only)
-  app.post('/api/admin/seed-database', isAdmin, async (req: any, res) => {
+  app.post("/api/admin/seed-database", isAdmin, async (req: any, res) => {
     try {
       const force = req.body.force === true;
-      console.log("Seed database request from admin:", req.user.email, "Force:", force);
+      console.log(
+        "Seed database request from admin:",
+        req.user.email,
+        "Force:",
+        force,
+      );
       const result = await seedDatabase(force);
       res.json(result);
     } catch (error) {
       console.error("Error seeding database:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to seed database", 
-        error: error instanceof Error ? error.message : "Unknown error" 
+      res.status(500).json({
+        success: false,
+        message: "Failed to seed database",
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });
 
   // Menu settings routes (admin only)
-  app.get('/api/menu-settings', async (req, res) => {
+  app.get("/api/menu-settings", async (req, res) => {
     try {
       const settings = await storage.getMenuSettings();
       res.json(settings);
@@ -349,27 +395,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/admin/menu-settings/:menuKey', isAdmin, async (req: any, res) => {
-    try {
-      const { menuKey } = req.params;
-      const { isVisible } = req.body;
-      
-      const updated = await storage.updateMenuSetting(menuKey, { isVisible });
-      if (!updated) {
-        return res.status(404).json({ message: "Menu item not found" });
+  app.patch(
+    "/api/admin/menu-settings/:menuKey",
+    isAdmin,
+    async (req: any, res) => {
+      try {
+        const { menuKey } = req.params;
+        const { isVisible } = req.body;
+
+        const updated = await storage.updateMenuSetting(menuKey, { isVisible });
+        if (!updated) {
+          return res.status(404).json({ message: "Menu item not found" });
+        }
+
+        res.json(updated);
+      } catch (error) {
+        console.error("Error updating menu setting:", error);
+        res.status(500).json({ message: "Failed to update menu setting" });
       }
-      
-      res.json(updated);
-    } catch (error) {
-      console.error("Error updating menu setting:", error);
-      res.status(500).json({ message: "Failed to update menu setting" });
-    }
-  });
+    },
+  );
 
   // News category routes
-  app.get('/api/news-categories', async (req, res) => {
+  app.get("/api/news-categories", async (req, res) => {
     try {
-      const activeOnly = req.query.activeOnly === 'true';
+      const activeOnly = req.query.activeOnly === "true";
       const categories = await storage.getNewsCategories(activeOnly);
       res.json(categories);
     } catch (error) {
@@ -378,7 +428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/news-categories/:id', async (req, res) => {
+  app.get("/api/news-categories/:id", async (req, res) => {
     try {
       const category = await storage.getNewsCategory(req.params.id);
       if (!category) {
@@ -391,7 +441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/news-categories', isAdmin, async (req: any, res) => {
+  app.post("/api/admin/news-categories", isAdmin, async (req: any, res) => {
     try {
       const categoryData = req.body;
       const category = await storage.createNewsCategory(categoryData);
@@ -402,34 +452,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/admin/news-categories/:id', isAdmin, async (req: any, res) => {
-    try {
-      const updated = await storage.updateNewsCategory(req.params.id, req.body);
-      if (!updated) {
-        return res.status(404).json({ message: "Category not found" });
+  app.patch(
+    "/api/admin/news-categories/:id",
+    isAdmin,
+    async (req: any, res) => {
+      try {
+        const updated = await storage.updateNewsCategory(
+          req.params.id,
+          req.body,
+        );
+        if (!updated) {
+          return res.status(404).json({ message: "Category not found" });
+        }
+        res.json(updated);
+      } catch (error) {
+        console.error("Error updating news category:", error);
+        res.status(500).json({ message: "Failed to update news category" });
       }
-      res.json(updated);
-    } catch (error) {
-      console.error("Error updating news category:", error);
-      res.status(500).json({ message: "Failed to update news category" });
-    }
-  });
+    },
+  );
 
-  app.delete('/api/admin/news-categories/:id', isAdmin, async (req: any, res) => {
-    try {
-      const deleted = await storage.deleteNewsCategory(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ message: "Category not found" });
+  app.delete(
+    "/api/admin/news-categories/:id",
+    isAdmin,
+    async (req: any, res) => {
+      try {
+        const deleted = await storage.deleteNewsCategory(req.params.id);
+        if (!deleted) {
+          return res.status(404).json({ message: "Category not found" });
+        }
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error deleting news category:", error);
+        res.status(500).json({ message: "Failed to delete news category" });
       }
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting news category:", error);
-      res.status(500).json({ message: "Failed to delete news category" });
-    }
-  });
+    },
+  );
 
   // News routes
-  app.get('/api/news', async (req: any, res) => {
+  app.get("/api/news", async (req: any, res) => {
     try {
       const { category, categories, limit, archivedOnly } = req.query;
       // Support both single category (legacy) and multiple categories (new)
@@ -439,7 +500,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (Array.isArray(categories)) {
           categoryIds = categories as string[];
         } else {
-          categoryIds = (categories as string).split(',').map(id => id.trim()).filter(Boolean);
+          categoryIds = (categories as string)
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean);
         }
       } else if (category) {
         categoryIds = [category as string];
@@ -450,7 +514,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.session?.userId) {
         const user = await storage.getUser(req.session.userId);
         userRole = user?.role || undefined;
-        console.log(`[GET /api/news] Authenticated user: ${user?.email}, role: ${userRole}`);
+        console.log(
+          `[GET /api/news] Authenticated user: ${user?.email}, role: ${userRole}`,
+        );
       } else {
         console.log(`[GET /api/news] Unauthenticated request (no session)`);
       }
@@ -458,13 +524,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryIds,
         limit ? parseInt(limit as string) : undefined,
         userRole,
-        archivedOnly === 'true'
+        archivedOnly === "true",
       );
-      console.log(`[GET /api/news] Returning ${articles.length} articles, userRole: ${userRole}, archivedOnly: ${archivedOnly}, statuses: ${articles.map(a => a.status).join(', ')}`);
+      console.log(
+        `[GET /api/news] Returning ${articles.length} articles, userRole: ${userRole}, archivedOnly: ${archivedOnly}, statuses: ${articles.map((a) => a.status).join(", ")}`,
+      );
       // Prevent browser caching to ensure React Query gets fresh data after mutations
-      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.set('Pragma', 'no-cache');
-      res.set('Expires', '0');
+      res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.set("Pragma", "no-cache");
+      res.set("Expires", "0");
       res.json(articles);
     } catch (error) {
       console.error("Error fetching news:", error);
@@ -472,7 +540,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/news/:id', async (req, res) => {
+  app.get("/api/news/:id", async (req, res) => {
     try {
       const article = await storage.getNewsArticle(req.params.id);
       if (!article) {
@@ -485,19 +553,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/news', isEditorOrAdmin, async (req: any, res) => {
+  app.post("/api/news", isEditorOrAdmin, async (req: any, res) => {
     try {
       const userId = req.user.id;
       // Extract categoryIds from request body (support both old and new format)
       const { categoryIds, category, ...articleFields } = req.body;
       const categoryIdsArray = categoryIds || (category ? [category] : []);
-      
+
       const articleData = insertNewsArticleSchema.parse({
         ...articleFields,
         authorId: userId,
-        category: 'general', // Legacy field, will be overwritten by storage layer
+        category: "general", // Legacy field, will be overwritten by storage layer
       });
-      const article = await storage.createNewsArticle(articleData, categoryIdsArray);
+      const article = await storage.createNewsArticle(
+        articleData,
+        categoryIdsArray,
+      );
       res.json(article);
     } catch (error) {
       console.error("Error creating news article:", error);
@@ -505,25 +576,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/news/:id', isAdmin, async (req: any, res) => {
+  app.put("/api/news/:id", isAdmin, async (req: any, res) => {
     try {
       const articleId = req.params.id;
       // Extract categoryIds from request body (support both old and new format)
       const { categoryIds, category, ...articleFields } = req.body;
-      const categoryIdsArray = categoryIds || (category ? [category] : undefined);
-      
-      const articleData = insertNewsArticleSchema.partial().parse(articleFields);
-      
+      const categoryIdsArray =
+        categoryIds || (category ? [category] : undefined);
+
+      const articleData = insertNewsArticleSchema
+        .partial()
+        .parse(articleFields);
+
       // If imageUrl is being updated, delete the old image
       if (articleData.imageUrl) {
         const existingArticle = await storage.getNewsArticle(articleId);
-        if (existingArticle?.imageUrl && existingArticle.imageUrl !== articleData.imageUrl) {
+        if (
+          existingArticle?.imageUrl &&
+          existingArticle.imageUrl !== articleData.imageUrl
+        ) {
           const objectStorageService = new ObjectStorageService();
-          await objectStorageService.deleteObjectEntity(existingArticle.imageUrl);
+          await objectStorageService.deleteObjectEntity(
+            existingArticle.imageUrl,
+          );
         }
       }
-      
-      const updatedArticle = await storage.updateNewsArticle(articleId, articleData, categoryIdsArray);
+
+      const updatedArticle = await storage.updateNewsArticle(
+        articleId,
+        articleData,
+        categoryIdsArray,
+      );
       if (!updatedArticle) {
         return res.status(404).json({ message: "Article not found" });
       }
@@ -534,25 +617,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/news/:id', isEditorOrAdmin, async (req: any, res) => {
+  app.patch("/api/news/:id", isEditorOrAdmin, async (req: any, res) => {
     try {
       const articleId = req.params.id;
       // Extract categoryIds from request body (support both old and new format)
       const { categoryIds, category, ...articleFields } = req.body;
-      const categoryIdsArray = categoryIds || (category ? [category] : undefined);
-      
-      const articleData = insertNewsArticleSchema.partial().parse(articleFields);
-      
+      const categoryIdsArray =
+        categoryIds || (category ? [category] : undefined);
+
+      const articleData = insertNewsArticleSchema
+        .partial()
+        .parse(articleFields);
+
       // If imageUrl is being updated, delete the old image
       if (articleData.imageUrl) {
         const existingArticle = await storage.getNewsArticle(articleId);
-        if (existingArticle?.imageUrl && existingArticle.imageUrl !== articleData.imageUrl) {
+        if (
+          existingArticle?.imageUrl &&
+          existingArticle.imageUrl !== articleData.imageUrl
+        ) {
           const objectStorageService = new ObjectStorageService();
-          await objectStorageService.deleteObjectEntity(existingArticle.imageUrl);
+          await objectStorageService.deleteObjectEntity(
+            existingArticle.imageUrl,
+          );
         }
       }
-      
-      const updatedArticle = await storage.updateNewsArticle(articleId, articleData, categoryIdsArray);
+
+      const updatedArticle = await storage.updateNewsArticle(
+        articleId,
+        articleData,
+        categoryIdsArray,
+      );
       if (!updatedArticle) {
         return res.status(404).json({ message: "Article not found" });
       }
@@ -563,34 +658,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/news/:id/like', async (req: any, res) => {
+  app.post("/api/news/:id/like", async (req: any, res) => {
     try {
       const articleId = req.params.id;
-      
+
       // Populate req.user from session if not already set (supports both auth systems)
       if (!req.user && req.session?.userId) {
         req.user = await storage.getUser(req.session.userId);
       }
-      
+
       const userId = req.user?.id;
-      
-      console.log(`[POST /api/news/${articleId}/like] User: ${req.user?.email || 'anonymous'}, userId: ${userId || 'none'}`);
-      
+
+      console.log(
+        `[POST /api/news/${articleId}/like] User: ${req.user?.email || "anonymous"}, userId: ${userId || "none"}`,
+      );
+
       // Only authenticated users can persist likes to database
       if (!userId) {
         // Anonymous users: likes stored in localStorage only, no database change
         return res.json({ success: true, anonymous: true });
       }
-      
+
       // Authenticated users: increment like count in database (no toggle, always increment)
       await storage.incrementNewsArticleLikes(articleId, userId);
-      
+
       // Fetch updated article to get new like count
       const updatedArticle = await storage.getNewsArticle(articleId);
       const newLikeCount = updatedArticle?.likes || 0;
-      
-      console.log(`[POST /api/news/${articleId}/like] Successfully incremented for ${req.user.email}. New count: ${newLikeCount}`);
-      
+
+      console.log(
+        `[POST /api/news/${articleId}/like] Successfully incremented for ${req.user.email}. New count: ${newLikeCount}`,
+      );
+
       res.json({ success: true, anonymous: false, likes: newLikeCount });
     } catch (error) {
       console.error("Error liking news article:", error);
@@ -599,7 +698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get comments for an article (public)
-  app.get('/api/news/:id/comments', async (req, res) => {
+  app.get("/api/news/:id/comments", async (req, res) => {
     try {
       const articleId = req.params.id;
       const comments = await storage.getNewsComments(articleId);
@@ -611,7 +710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a comment (requires authentication)
-  app.post('/api/news/:id/comments', isAuthenticated, async (req: any, res) => {
+  app.post("/api/news/:id/comments", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.id;
       const articleId = req.params.id;
@@ -635,24 +734,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a comment (owner only)
-  app.delete('/api/news/comments/:commentId', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.id;
-      const commentId = req.params.commentId;
+  app.delete(
+    "/api/news/comments/:commentId",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user?.id;
+        const commentId = req.params.commentId;
 
-      const deleted = await storage.deleteNewsComment(commentId, userId);
-      if (!deleted) {
-        return res.status(404).json({ message: "Comment not found or you don't have permission to delete it" });
+        const deleted = await storage.deleteNewsComment(commentId, userId);
+        if (!deleted) {
+          return res
+            .status(404)
+            .json({
+              message:
+                "Comment not found or you don't have permission to delete it",
+            });
+        }
+
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error deleting comment:", error);
+        res.status(500).json({ message: "Failed to delete comment" });
       }
+    },
+  );
 
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting comment:", error);
-      res.status(500).json({ message: "Failed to delete comment" });
-    }
-  });
-
-  app.delete('/api/news/:id', isAdmin, async (req: any, res) => {
+  app.delete("/api/news/:id", isAdmin, async (req: any, res) => {
     try {
       const articleId = req.params.id;
       const deleted = await storage.deleteNewsArticle(articleId);
@@ -666,14 +774,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/news/:id/archive', isEditorOrAdmin, async (req: any, res) => {
+  app.patch("/api/news/:id/archive", isEditorOrAdmin, async (req: any, res) => {
     try {
       const articleId = req.params.id;
       const { isArchived } = req.body;
-      if (typeof isArchived !== 'boolean') {
-        return res.status(400).json({ message: "Invalid isArchived value. Must be boolean" });
+      if (typeof isArchived !== "boolean") {
+        return res
+          .status(400)
+          .json({ message: "Invalid isArchived value. Must be boolean" });
       }
-      const archivedArticle = await storage.archiveNewsArticle(articleId, isArchived);
+      const archivedArticle = await storage.archiveNewsArticle(
+        articleId,
+        isArchived,
+      );
       if (!archivedArticle) {
         return res.status(404).json({ message: "Article not found" });
       }
@@ -684,14 +797,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/news/:id/status', isEditorOrAdmin, async (req: any, res) => {
+  app.patch("/api/news/:id/status", isEditorOrAdmin, async (req: any, res) => {
     try {
       const articleId = req.params.id;
       const { status } = req.body;
-      if (!status || (status !== 'published' && status !== 'draft')) {
-        return res.status(400).json({ message: "Invalid status. Must be 'published' or 'draft'" });
+      if (!status || (status !== "published" && status !== "draft")) {
+        return res
+          .status(400)
+          .json({ message: "Invalid status. Must be 'published' or 'draft'" });
       }
-      const updatedArticle = await storage.toggleNewsArticleStatus(articleId, status);
+      const updatedArticle = await storage.toggleNewsArticleStatus(
+        articleId,
+        status,
+      );
       if (!updatedArticle) {
         return res.status(404).json({ message: "Article not found" });
       }
@@ -702,26 +820,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/news/:id/featured', isEditorOrAdmin, async (req: any, res) => {
-    try {
-      const articleId = req.params.id;
-      const { isFeatured } = req.body;
-      if (typeof isFeatured !== 'boolean') {
-        return res.status(400).json({ message: "Invalid isFeatured value. Must be boolean" });
+  app.patch(
+    "/api/news/:id/featured",
+    isEditorOrAdmin,
+    async (req: any, res) => {
+      try {
+        const articleId = req.params.id;
+        const { isFeatured } = req.body;
+        if (typeof isFeatured !== "boolean") {
+          return res
+            .status(400)
+            .json({ message: "Invalid isFeatured value. Must be boolean" });
+        }
+        const updatedArticle = await storage.toggleNewsArticleFeatured(
+          articleId,
+          isFeatured,
+        );
+        if (!updatedArticle) {
+          return res.status(404).json({ message: "Article not found" });
+        }
+        res.json(updatedArticle);
+      } catch (error) {
+        console.error("Error toggling news article featured status:", error);
+        res
+          .status(500)
+          .json({ message: "Failed to toggle news article featured status" });
       }
-      const updatedArticle = await storage.toggleNewsArticleFeatured(articleId, isFeatured);
-      if (!updatedArticle) {
-        return res.status(404).json({ message: "Article not found" });
-      }
-      res.json(updatedArticle);
-    } catch (error) {
-      console.error("Error toggling news article featured status:", error);
-      res.status(500).json({ message: "Failed to toggle news article featured status" });
-    }
-  });
+    },
+  );
 
   // Forum routes
-  app.get('/api/forum/categories', async (req, res) => {
+  app.get("/api/forum/categories", async (req, res) => {
     try {
       const categories = await storage.getForumCategories();
       res.json(categories);
@@ -731,7 +860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/forum/categories', isAuthenticated, async (req: any, res) => {
+  app.post("/api/forum/categories", isAuthenticated, async (req: any, res) => {
     try {
       const categoryData = insertForumCategorySchema.parse(req.body);
       const category = await storage.createForumCategory(categoryData);
@@ -742,12 +871,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/forum/discussions', async (req: any, res) => {
+  app.get("/api/forum/discussions", async (req: any, res) => {
     try {
       const { categoryId, newsCategories, limit } = req.query;
       let newsCategoryIds: string[] | undefined;
       if (newsCategories) {
-        newsCategoryIds = Array.isArray(newsCategories) ? newsCategories as string[] : [newsCategories as string];
+        newsCategoryIds = Array.isArray(newsCategories)
+          ? (newsCategories as string[])
+          : [newsCategories as string];
       }
       // Pass user role to filter by status
       const userRole = req.user?.role;
@@ -755,7 +886,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryId as string,
         newsCategoryIds,
         limit ? parseInt(limit as string) : undefined,
-        userRole
+        userRole,
       );
       res.json(discussions);
     } catch (error) {
@@ -764,7 +895,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/forum/discussions/:id', async (req, res) => {
+  app.get("/api/forum/discussions/:id", async (req, res) => {
     try {
       const discussion = await storage.getForumDiscussion(req.params.id);
       if (!discussion) {
@@ -777,7 +908,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/forum/discussions', isAuthenticated, async (req: any, res) => {
+  app.post("/api/forum/discussions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { newsCategoryIds, ...discussionFields } = req.body;
@@ -786,7 +917,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...discussionFields,
         authorId: userId,
       });
-      const discussion = await storage.createForumDiscussion(discussionData, newsCategoryIdsArray);
+      const discussion = await storage.createForumDiscussion(
+        discussionData,
+        newsCategoryIdsArray,
+      );
       res.json(discussion);
     } catch (error) {
       console.error("Error creating forum discussion:", error);
@@ -794,18 +928,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/forum/discussions/:id', isAdmin, async (req: any, res) => {
+  app.patch("/api/forum/discussions/:id", isAdmin, async (req: any, res) => {
     try {
       const discussionId = req.params.id;
       const { newsCategoryIds, ...discussionFields } = req.body;
       const newsCategoryIdsArray = newsCategoryIds || undefined;
-      const updates = insertForumDiscussionSchema.partial().parse(discussionFields);
-      const updated = await storage.updateForumDiscussion(discussionId, updates, newsCategoryIdsArray);
-      
+      const updates = insertForumDiscussionSchema
+        .partial()
+        .parse(discussionFields);
+      const updated = await storage.updateForumDiscussion(
+        discussionId,
+        updates,
+        newsCategoryIdsArray,
+      );
+
       if (!updated) {
         return res.status(404).json({ message: "Discussion not found" });
       }
-      
+
       res.json(updated);
     } catch (error) {
       console.error("Error updating forum discussion:", error);
@@ -813,15 +953,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/forum/discussions/:id', isAdmin, async (req: any, res) => {
+  app.delete("/api/forum/discussions/:id", isAdmin, async (req: any, res) => {
     try {
       const discussionId = req.params.id;
       const deleted = await storage.deleteForumDiscussion(discussionId);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: "Discussion not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting forum discussion:", error);
@@ -829,55 +969,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/forum/discussions/:id/status', isEditorOrAdmin, async (req: any, res) => {
-    try {
-      const discussionId = req.params.id;
-      const { status } = req.body;
-      if (!status || (status !== 'published' && status !== 'draft')) {
-        return res.status(400).json({ message: "Invalid status. Must be 'published' or 'draft'" });
+  app.patch(
+    "/api/forum/discussions/:id/status",
+    isEditorOrAdmin,
+    async (req: any, res) => {
+      try {
+        const discussionId = req.params.id;
+        const { status } = req.body;
+        if (!status || (status !== "published" && status !== "draft")) {
+          return res
+            .status(400)
+            .json({
+              message: "Invalid status. Must be 'published' or 'draft'",
+            });
+        }
+        const updatedDiscussion = await storage.toggleForumDiscussionStatus(
+          discussionId,
+          status,
+        );
+        if (!updatedDiscussion) {
+          return res.status(404).json({ message: "Discussion not found" });
+        }
+        res.json(updatedDiscussion);
+      } catch (error) {
+        console.error("Error toggling forum discussion status:", error);
+        res
+          .status(500)
+          .json({ message: "Failed to toggle forum discussion status" });
       }
-      const updatedDiscussion = await storage.toggleForumDiscussionStatus(discussionId, status);
-      if (!updatedDiscussion) {
-        return res.status(404).json({ message: "Discussion not found" });
-      }
-      res.json(updatedDiscussion);
-    } catch (error) {
-      console.error("Error toggling forum discussion status:", error);
-      res.status(500).json({ message: "Failed to toggle forum discussion status" });
-    }
-  });
+    },
+  );
 
-  app.patch('/api/forum/discussions/:id/featured', isEditorOrAdmin, async (req: any, res) => {
-    try {
-      const discussionId = req.params.id;
-      const { isFeatured } = req.body;
-      if (typeof isFeatured !== 'boolean') {
-        return res.status(400).json({ message: "Invalid isFeatured value. Must be boolean" });
+  app.patch(
+    "/api/forum/discussions/:id/featured",
+    isEditorOrAdmin,
+    async (req: any, res) => {
+      try {
+        const discussionId = req.params.id;
+        const { isFeatured } = req.body;
+        if (typeof isFeatured !== "boolean") {
+          return res
+            .status(400)
+            .json({ message: "Invalid isFeatured value. Must be boolean" });
+        }
+        const updatedDiscussion = await storage.toggleForumDiscussionFeatured(
+          discussionId,
+          isFeatured,
+        );
+        if (!updatedDiscussion) {
+          return res.status(404).json({ message: "Discussion not found" });
+        }
+        res.json(updatedDiscussion);
+      } catch (error) {
+        console.error(
+          "Error toggling forum discussion featured status:",
+          error,
+        );
+        res
+          .status(500)
+          .json({
+            message: "Failed to toggle forum discussion featured status",
+          });
       }
-      const updatedDiscussion = await storage.toggleForumDiscussionFeatured(discussionId, isFeatured);
-      if (!updatedDiscussion) {
-        return res.status(404).json({ message: "Discussion not found" });
+    },
+  );
+
+  app.post(
+    "/api/forum/discussions/:id/like",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user.id;
+        const discussionId = req.params.id;
+        await storage.likeForumDiscussion(discussionId, userId);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error liking forum discussion:", error);
+        res.status(500).json({ message: "Failed to like forum discussion" });
       }
-      res.json(updatedDiscussion);
-    } catch (error) {
-      console.error("Error toggling forum discussion featured status:", error);
-      res.status(500).json({ message: "Failed to toggle forum discussion featured status" });
-    }
-  });
+    },
+  );
 
-  app.post('/api/forum/discussions/:id/like', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const discussionId = req.params.id;
-      await storage.likeForumDiscussion(discussionId, userId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error liking forum discussion:", error);
-      res.status(500).json({ message: "Failed to like forum discussion" });
-    }
-  });
-
-  app.post('/api/forum/replies', isAuthenticated, async (req: any, res) => {
+  app.post("/api/forum/replies", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const replyData = insertForumReplySchema.parse({
@@ -892,23 +1065,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/forum/replies/:id/like', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const replyId = req.params.id;
-      await storage.likeForumReply(replyId, userId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error liking forum reply:", error);
-      res.status(500).json({ message: "Failed to like forum reply" });
-    }
-  });
+  app.post(
+    "/api/forum/replies/:id/like",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user.id;
+        const replyId = req.params.id;
+        await storage.likeForumReply(replyId, userId);
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error liking forum reply:", error);
+        res.status(500).json({ message: "Failed to like forum reply" });
+      }
+    },
+  );
 
   // Resource routes
-  app.get('/api/resources', async (req, res) => {
+  app.get("/api/resources", async (req, res) => {
     try {
       const { type, category, limit, search } = req.query;
-      
+
       if (search) {
         const resources = await storage.searchResources(search as string);
         res.json(resources);
@@ -916,7 +1093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const resources = await storage.getResources(
           type as string,
           category as string,
-          limit ? parseInt(limit as string) : undefined
+          limit ? parseInt(limit as string) : undefined,
         );
         res.json(resources);
       }
@@ -926,7 +1103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/resources', isAuthenticated, async (req: any, res) => {
+  app.post("/api/resources", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const resourceData = insertResourceSchema.parse({
@@ -941,16 +1118,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/resources/:id', isAdmin, async (req: any, res) => {
+  app.patch("/api/resources/:id", isAdmin, async (req: any, res) => {
     try {
       const resourceId = req.params.id;
       const updates = insertResourceSchema.partial().parse(req.body);
       const updated = await storage.updateResource(resourceId, updates);
-      
+
       if (!updated) {
         return res.status(404).json({ message: "Resource not found" });
       }
-      
+
       res.json(updated);
     } catch (error) {
       console.error("Error updating resource:", error);
@@ -958,15 +1135,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/resources/:id', isAdmin, async (req: any, res) => {
+  app.delete("/api/resources/:id", isAdmin, async (req: any, res) => {
     try {
       const resourceId = req.params.id;
       const deleted = await storage.deleteResource(resourceId);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: "Resource not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting resource:", error);
@@ -975,7 +1152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Podcast routes
-  app.get('/api/podcasts', async (req: any, res) => {
+  app.get("/api/podcasts", async (req: any, res) => {
     try {
       const { categories, limit, archivedOnly } = req.query;
       let categoryIds: string[] | undefined;
@@ -984,7 +1161,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (Array.isArray(categories)) {
           categoryIds = categories as string[];
         } else {
-          categoryIds = (categories as string).split(',').map(id => id.trim()).filter(Boolean);
+          categoryIds = (categories as string)
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean);
         }
       }
       // Pass user role to filter by status (admins/editors see all, regular users see only published)
@@ -993,7 +1173,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.session?.userId) {
         const user = await storage.getUser(req.session.userId);
         userRole = user?.role || undefined;
-        console.log(`[GET /api/podcasts] Authenticated user: ${user?.email}, role: ${userRole}`);
+        console.log(
+          `[GET /api/podcasts] Authenticated user: ${user?.email}, role: ${userRole}`,
+        );
       } else {
         console.log(`[GET /api/podcasts] Unauthenticated request (no session)`);
       }
@@ -1001,9 +1183,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryIds,
         limit ? parseInt(limit as string) : undefined,
         userRole,
-        archivedOnly === 'true'
+        archivedOnly === "true",
       );
-      console.log(`[GET /api/podcasts] Returning ${episodes.length} episodes, userRole: ${userRole}, archivedOnly: ${archivedOnly}, statuses: ${episodes.map(e => e.status).join(', ')}`);
+      console.log(
+        `[GET /api/podcasts] Returning ${episodes.length} episodes, userRole: ${userRole}, archivedOnly: ${archivedOnly}, statuses: ${episodes.map((e) => e.status).join(", ")}`,
+      );
       res.json(episodes);
     } catch (error) {
       console.error("Error fetching podcast episodes:", error);
@@ -1011,7 +1195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/podcasts/featured', async (req, res) => {
+  app.get("/api/podcasts/featured", async (req, res) => {
     try {
       const episode = await storage.getFeaturedPodcastEpisode();
       res.json(episode);
@@ -1021,7 +1205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/podcasts/:id', async (req, res) => {
+  app.get("/api/podcasts/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const episode = await storage.getPodcastEpisode(id);
@@ -1035,12 +1219,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/podcasts', isEditorOrAdmin, async (req: any, res) => {
+  app.post("/api/podcasts", isEditorOrAdmin, async (req: any, res) => {
     try {
       const { categoryIds, ...episodeFields } = req.body;
       const categoryIdsArray = categoryIds || [];
       const episodeData = insertPodcastEpisodeSchema.parse(episodeFields);
-      const episode = await storage.createPodcastEpisode(episodeData, categoryIdsArray);
+      const episode = await storage.createPodcastEpisode(
+        episodeData,
+        categoryIdsArray,
+      );
       res.json(episode);
     } catch (error) {
       console.error("Error creating podcast episode:", error);
@@ -1048,23 +1235,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/podcasts/:id', isEditorOrAdmin, async (req: any, res) => {
+  app.patch("/api/podcasts/:id", isEditorOrAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
       const { categoryIds, ...episodeFields } = req.body;
       const categoryIdsArray = categoryIds || undefined;
-      const episodeData = insertPodcastEpisodeSchema.partial().parse(episodeFields);
-      
+      const episodeData = insertPodcastEpisodeSchema
+        .partial()
+        .parse(episodeFields);
+
       // If imageUrl is being updated, delete the old image
       if (episodeData.imageUrl) {
         const existingEpisode = await storage.getPodcastEpisode(id);
-        if (existingEpisode?.imageUrl && existingEpisode.imageUrl !== episodeData.imageUrl) {
+        if (
+          existingEpisode?.imageUrl &&
+          existingEpisode.imageUrl !== episodeData.imageUrl
+        ) {
           const objectStorageService = new ObjectStorageService();
-          await objectStorageService.deleteObjectEntity(existingEpisode.imageUrl);
+          await objectStorageService.deleteObjectEntity(
+            existingEpisode.imageUrl,
+          );
         }
       }
-      
-      const episode = await storage.updatePodcastEpisode(id, episodeData, categoryIdsArray);
+
+      const episode = await storage.updatePodcastEpisode(
+        id,
+        episodeData,
+        categoryIdsArray,
+      );
       if (!episode) {
         return res.status(404).json({ message: "Podcast episode not found" });
       }
@@ -1075,7 +1273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/podcasts/:id', isEditorOrAdmin, async (req: any, res) => {
+  app.delete("/api/podcasts/:id", isEditorOrAdmin, async (req: any, res) => {
     try {
       const { id } = req.params;
       await storage.deletePodcastEpisode(id);
@@ -1086,71 +1284,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/podcasts/:id/archive', isEditorOrAdmin, async (req: any, res) => {
-    try {
-      const episodeId = req.params.id;
-      const { isArchived } = req.body;
-      if (typeof isArchived !== 'boolean') {
-        return res.status(400).json({ message: "Invalid isArchived value. Must be boolean" });
+  app.patch(
+    "/api/podcasts/:id/archive",
+    isEditorOrAdmin,
+    async (req: any, res) => {
+      try {
+        const episodeId = req.params.id;
+        const { isArchived } = req.body;
+        if (typeof isArchived !== "boolean") {
+          return res
+            .status(400)
+            .json({ message: "Invalid isArchived value. Must be boolean" });
+        }
+        const archivedEpisode = await storage.archivePodcastEpisode(
+          episodeId,
+          isArchived,
+        );
+        if (!archivedEpisode) {
+          return res.status(404).json({ message: "Podcast episode not found" });
+        }
+        res.json(archivedEpisode);
+      } catch (error) {
+        console.error("Error archiving podcast episode:", error);
+        res.status(500).json({ message: "Failed to archive podcast episode" });
       }
-      const archivedEpisode = await storage.archivePodcastEpisode(episodeId, isArchived);
-      if (!archivedEpisode) {
-        return res.status(404).json({ message: "Podcast episode not found" });
-      }
-      res.json(archivedEpisode);
-    } catch (error) {
-      console.error("Error archiving podcast episode:", error);
-      res.status(500).json({ message: "Failed to archive podcast episode" });
-    }
-  });
+    },
+  );
 
-  app.patch('/api/podcasts/:id/status', isEditorOrAdmin, async (req: any, res) => {
-    try {
-      const episodeId = req.params.id;
-      const { status } = req.body;
-      if (!status || (status !== 'published' && status !== 'draft')) {
-        return res.status(400).json({ message: "Invalid status. Must be 'published' or 'draft'" });
+  app.patch(
+    "/api/podcasts/:id/status",
+    isEditorOrAdmin,
+    async (req: any, res) => {
+      try {
+        const episodeId = req.params.id;
+        const { status } = req.body;
+        if (!status || (status !== "published" && status !== "draft")) {
+          return res
+            .status(400)
+            .json({
+              message: "Invalid status. Must be 'published' or 'draft'",
+            });
+        }
+        const updatedEpisode = await storage.togglePodcastEpisodeStatus(
+          episodeId,
+          status,
+        );
+        if (!updatedEpisode) {
+          return res.status(404).json({ message: "Podcast episode not found" });
+        }
+        res.json(updatedEpisode);
+      } catch (error) {
+        console.error("Error toggling podcast episode status:", error);
+        res
+          .status(500)
+          .json({ message: "Failed to toggle podcast episode status" });
       }
-      const updatedEpisode = await storage.togglePodcastEpisodeStatus(episodeId, status);
-      if (!updatedEpisode) {
-        return res.status(404).json({ message: "Podcast episode not found" });
-      }
-      res.json(updatedEpisode);
-    } catch (error) {
-      console.error("Error toggling podcast episode status:", error);
-      res.status(500).json({ message: "Failed to toggle podcast episode status" });
-    }
-  });
+    },
+  );
 
-  app.patch('/api/podcasts/:id/featured', isEditorOrAdmin, async (req: any, res) => {
-    try {
-      const episodeId = req.params.id;
-      const { isFeatured } = req.body;
-      if (typeof isFeatured !== 'boolean') {
-        return res.status(400).json({ message: "Invalid isFeatured value. Must be boolean" });
+  app.patch(
+    "/api/podcasts/:id/featured",
+    isEditorOrAdmin,
+    async (req: any, res) => {
+      try {
+        const episodeId = req.params.id;
+        const { isFeatured } = req.body;
+        if (typeof isFeatured !== "boolean") {
+          return res
+            .status(400)
+            .json({ message: "Invalid isFeatured value. Must be boolean" });
+        }
+        const updatedEpisode = await storage.togglePodcastEpisodeFeatured(
+          episodeId,
+          isFeatured,
+        );
+        if (!updatedEpisode) {
+          return res.status(404).json({ message: "Podcast episode not found" });
+        }
+        res.json(updatedEpisode);
+      } catch (error) {
+        console.error("Error toggling podcast episode featured status:", error);
+        res
+          .status(500)
+          .json({
+            message: "Failed to toggle podcast episode featured status",
+          });
       }
-      const updatedEpisode = await storage.togglePodcastEpisodeFeatured(episodeId, isFeatured);
-      if (!updatedEpisode) {
-        return res.status(404).json({ message: "Podcast episode not found" });
-      }
-      res.json(updatedEpisode);
-    } catch (error) {
-      console.error("Error toggling podcast episode featured status:", error);
-      res.status(500).json({ message: "Failed to toggle podcast episode featured status" });
-    }
-  });
+    },
+  );
 
-  app.post('/api/podcasts/:id/like', async (req: any, res) => {
+  app.post("/api/podcasts/:id/like", async (req: any, res) => {
     try {
       const userId = req.user?.id;
       const episodeId = req.params.id;
-      
+
       // Only authenticated users can persist likes to database
       if (!userId) {
         // Anonymous users: likes stored in localStorage only, no database change
         return res.json({ success: true, anonymous: true });
       }
-      
+
       // Authenticated users: increment like count in database (no toggle, always increment)
       await storage.incrementPodcastEpisodeLikes(episodeId, userId);
       res.json({ success: true, anonymous: false });
@@ -1160,10 +1393,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/podcasts/:id/play', async (req: any, res) => {
+  app.post("/api/podcasts/:id/play", async (req: any, res) => {
     try {
       const episodeId = req.params.id;
-      
+
       // Increment play count for all users (authenticated and anonymous)
       await storage.incrementPodcastPlayCount(episodeId);
       res.json({ success: true });
@@ -1174,7 +1407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Poll routes
-  app.get('/api/polls', async (req, res) => {
+  app.get("/api/polls", async (req, res) => {
     try {
       const polls = await storage.getActivePolls();
       res.json(polls);
@@ -1184,7 +1417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/polls', isAuthenticated, async (req: any, res) => {
+  app.post("/api/polls", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const pollData = insertPollSchema.parse({
@@ -1199,7 +1432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/polls/:id/vote', isAuthenticated, async (req: any, res) => {
+  app.post("/api/polls/:id/vote", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const pollId = req.params.id;
@@ -1213,11 +1446,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Community routes
-  app.get('/api/community/contributors', async (req, res) => {
+  app.get("/api/community/contributors", async (req, res) => {
     try {
       const { limit } = req.query;
       const contributors = await storage.getTopContributors(
-        limit ? parseInt(limit as string) : undefined
+        limit ? parseInt(limit as string) : undefined,
       );
       res.json(contributors);
     } catch (error) {
@@ -1226,7 +1459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/community/stats', async (req, res) => {
+  app.get("/api/community/stats", async (req, res) => {
     try {
       const stats = await storage.getCommunityStats();
       res.json(stats);
@@ -1242,7 +1475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const objectStorageService = new ObjectStorageService();
     try {
       let file = await objectStorageService.searchPublicObject(filePath);
-      
+
       // If not found in public directories and path starts with "objects/",
       // try to get it from the private directory (it may have public ACL)
       if (!file && filePath.startsWith("objects/")) {
@@ -1253,7 +1486,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // File not found in private directory either
         }
       }
-      
+
       if (!file) {
         return res.status(404).json({ error: "File not found" });
       }
@@ -1326,24 +1559,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get current user's subscription (authenticated)
-  app.get('/api/subscribers/me', isAuthenticated, async (req: any, res) => {
+  app.get("/api/subscribers/me", isAuthenticated, async (req: any, res) => {
     try {
       // Handle both auth methods:
       // - Simple auth: req.user is full User object with email property
       // - Replit OIDC: req.user.claims contains email
       const user = req.user;
       const userEmail = user?.email || user?.claims?.email;
-      
+
       if (!userEmail) {
-        console.error("User email not available. User object:", JSON.stringify(user));
+        console.error(
+          "User email not available. User object:",
+          JSON.stringify(user),
+        );
         return res.status(400).json({ message: "User email not available" });
       }
-      
+
       const subscriber = await storage.getSubscriberByEmail(userEmail);
       if (!subscriber) {
         return res.json({ subscribed: false });
       }
-      
+
       res.json({ subscribed: true, subscriber });
     } catch (error) {
       console.error("Error fetching subscriber:", error);
@@ -1352,20 +1588,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public unsubscribe via link in email (no login required)
-  app.get('/api/unsubscribe', async (req, res) => {
+  app.get("/api/unsubscribe", async (req, res) => {
     const { id } = req.query as { id?: string };
     if (!id) {
-      return res.status(400).send('<p>Invalid unsubscribe link.</p>');
+      return res.status(400).send("<p>Invalid unsubscribe link.</p>");
     }
     try {
       const subscriber = await storage.getSubscriberById(id);
       if (!subscriber) {
-        return res.status(404).send('<p>Subscription not found.</p>');
+        return res.status(404).send("<p>Subscription not found.</p>");
       }
       if (!subscriber.isActive) {
-        return res.send('<p>You have already been unsubscribed.</p>');
+        return res.send("<p>You have already been unsubscribed.</p>");
       }
-      await storage.updateSubscriber(id, { isActive: false  });
+      await storage.updateSubscriber(id, { isActive: false });
       return res.send(`
         <div style="font-family:Arial,sans-serif;max-width:480px;margin:60px auto;text-align:center;">
           <h2 style="color:#16a34a;">Unsubscribed Successfully</h2>
@@ -1373,20 +1609,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         </div>
       `);
     } catch (error) {
-      console.error('Error processing unsubscribe:', error);
-      return res.status(500).send('<p>Something went wrong. Please try again later.</p>');
+      console.error("Error processing unsubscribe:", error);
+      return res
+        .status(500)
+        .send("<p>Something went wrong. Please try again later.</p>");
     }
   });
 
   // Subscriber signup endpoint (public)
-  app.post('/api/subscribers', async (req, res) => {
+  app.post("/api/subscribers", async (req, res) => {
     try {
       const { email, categories, frequency } = req.body;
-      
+
       if (!email || !frequency) {
-        return res.status(400).json({ message: "Email and frequency are required" });
+        return res
+          .status(400)
+          .json({ message: "Email and frequency are required" });
       }
-      
+
       // Check if already subscribed
       const existing = await storage.getSubscriberByEmail(email);
       if (existing) {
@@ -1394,11 +1634,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const updateData: any = { categories, frequency, isActive: true };
         if (!existing.isActive) updateData.confirmedAt = new Date();
         const updated = await storage.updateSubscriber(existing.id, updateData);
-        return res.json({ message: "Subscription updated", subscriber: updated });
+        return res.json({
+          message: "Subscription updated",
+          subscriber: updated,
+        });
       }
-      
+
       // Create new subscriber
-      const subscriber = await storage.createSubscriber({ email, categories, frequency });
+      const subscriber = await storage.createSubscriber({
+        email,
+        categories,
+        frequency,
+      });
       res.status(201).json({ message: "Successfully subscribed", subscriber });
     } catch (error) {
       console.error("Error creating subscriber:", error);
@@ -1407,37 +1654,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unsubscribe endpoint (authenticated – from app UI)
-  app.post('/api/subscribers/unsubscribe', isAuthenticated, async (req: any, res) => {
-    try {
-      const user = req.user;
-      const userEmail = user?.email || user?.claims?.email;
-      
-      if (!userEmail) {
-        return res.status(400).json({ message: "User email not available" });
+  app.post(
+    "/api/subscribers/unsubscribe",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const user = req.user;
+        const userEmail = user?.email || user?.claims?.email;
+
+        if (!userEmail) {
+          return res.status(400).json({ message: "User email not available" });
+        }
+
+        const subscriber = await storage.getSubscriberByEmail(userEmail);
+        if (!subscriber) {
+          return res.status(404).json({ message: "Not subscribed" });
+        }
+
+        // Set isActive = false instead of deleting so the record is preserved
+        await storage.updateSubscriber(subscriber.id, { isActive: false });
+        res.json({ message: "Successfully unsubscribed" });
+      } catch (error) {
+        console.error("Error unsubscribing:", error);
+        res.status(500).json({ message: "Failed to unsubscribe" });
       }
-      
-      const subscriber = await storage.getSubscriberByEmail(userEmail);
-      if (!subscriber) {
-        return res.status(404).json({ message: "Not subscribed" });
-      }
-      
-      // Set isActive = false instead of deleting so the record is preserved
-      await storage.updateSubscriber(subscriber.id, { isActive: false });
-      res.json({ message: "Successfully unsubscribed" });
-    } catch (error) {
-      console.error("Error unsubscribing:", error);
-      res.status(500).json({ message: "Failed to unsubscribe" });
-    }
-  });
+    },
+  );
 
   // ============================================
   // Controller's Toolbox Routes
   // ============================================
-  
+
   // Get all toolbox apps (public - active only, admin - all)
-  app.get('/api/toolbox', async (req: any, res) => {
+  app.get("/api/toolbox", async (req: any, res) => {
     try {
-      const isAdminUser = req.user?.role === 'admin' || req.user?.role === 'editor';
+      const isAdminUser =
+        req.user?.role === "admin" || req.user?.role === "editor";
       const apps = await storage.getToolboxApps(!isAdminUser);
       res.json(apps);
     } catch (error) {
@@ -1474,7 +1726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single toolbox app
-  app.get('/api/toolbox/:id', async (req, res) => {
+  app.get("/api/toolbox/:id", async (req, res) => {
     try {
       const app = await storage.getToolboxApp(req.params.id);
       if (!app) {
@@ -1488,7 +1740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create toolbox app (admin only)
-  app.post('/api/toolbox', isEditorOrAdmin, async (req: any, res) => {
+  app.post("/api/toolbox", isEditorOrAdmin, async (req: any, res) => {
     try {
       const appData = insertToolboxAppSchema.parse(req.body);
       const newApp = await storage.createToolboxApp(appData);
@@ -1500,7 +1752,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update toolbox app (admin only)
-  app.put('/api/toolbox/:id', isEditorOrAdmin, async (req: any, res) => {
+  app.put("/api/toolbox/:id", isEditorOrAdmin, async (req: any, res) => {
     try {
       const appData = insertToolboxAppSchema.partial().parse(req.body);
       const updated = await storage.updateToolboxApp(req.params.id, appData);
@@ -1515,7 +1767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete toolbox app (admin only)
-  app.delete('/api/toolbox/:id', isAdmin, async (req: any, res) => {
+  app.delete("/api/toolbox/:id", isAdmin, async (req: any, res) => {
     try {
       const deleted = await storage.deleteToolboxApp(req.params.id);
       if (!deleted) {
