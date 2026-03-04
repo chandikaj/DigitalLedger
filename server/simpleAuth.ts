@@ -79,9 +79,30 @@ export function setupAuth(app: Express, storage: IStorage) {
       // Set session
       req.session.userId = user.id;
 
-      // Send welcome email (don't block registration if email fails)
-      sendWelcomeEmail(user.email!, user.firstName || "there").catch((err) => {
-        console.error("Failed to send welcome email:", err);
+      // Look up or create a subscriber record so the welcome email unsubscribe link works
+      storage.getSubscriberByEmail(user.email!).then(async (existing) => {
+        let subscriberId: string | undefined;
+        if (existing) {
+          subscriberId = existing.id;
+        } else {
+          try {
+            const sub = await storage.createSubscriber({
+              email: user.email!,
+              categories: [],
+              frequency: "weekly",
+              isActive: false,
+            });
+            subscriberId = sub.id;
+          } catch (e) {
+            console.error("Failed to create subscriber record for welcome email:", e);
+          }
+        }
+        sendWelcomeEmail(user.email!, user.firstName || "there", subscriberId).catch((err) => {
+          console.error("Failed to send welcome email:", err);
+        });
+      }).catch((err) => {
+        console.error("Failed to look up subscriber for welcome email:", err);
+        sendWelcomeEmail(user.email!, user.firstName || "there").catch(() => {});
       });
 
       // Save session explicitly

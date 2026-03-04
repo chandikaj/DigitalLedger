@@ -65,8 +65,30 @@ export function setupGoogleAuth(storage: IStorage) {
             isActive: true,
           });
 
-          sendWelcomeEmail(newUser.email!, newUser.firstName || "there").catch((err) => {
-            console.error("Failed to send welcome email after Google sign-up:", err);
+          // Look up or create a subscriber record so the welcome email unsubscribe link works
+          storage.getSubscriberByEmail(newUser.email!).then(async (existing) => {
+            let subscriberId: string | undefined;
+            if (existing) {
+              subscriberId = existing.id;
+            } else {
+              try {
+                const sub = await storage.createSubscriber({
+                  email: newUser.email!,
+                  categories: [],
+                  frequency: "weekly",
+                  isActive: false,
+                });
+                subscriberId = sub.id;
+              } catch (e) {
+                console.error("Failed to create subscriber record for welcome email:", e);
+              }
+            }
+            sendWelcomeEmail(newUser.email!, newUser.firstName || "there", subscriberId).catch((err) => {
+              console.error("Failed to send welcome email after Google sign-up:", err);
+            });
+          }).catch((err) => {
+            console.error("Failed to look up subscriber for welcome email:", err);
+            sendWelcomeEmail(newUser.email!, newUser.firstName || "there").catch(() => {});
           });
 
           // Pass isNewUser flag so the route handler can redirect to welcome page
