@@ -69,7 +69,8 @@ export function setupGoogleAuth(storage: IStorage) {
             console.error("Failed to send welcome email after Google sign-up:", err);
           });
 
-          return done(null, newUser);
+          // Pass isNewUser flag so the route handler can redirect to welcome page
+          return done(null, newUser, { isNewUser: true } as any);
         } catch (error) {
           console.error("Google OAuth error:", error);
           return done(error as Error, undefined);

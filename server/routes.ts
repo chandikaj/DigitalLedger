@@ -70,8 +70,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Session save error after Google auth:", err);
           return res.redirect("/login?error=session_error");
         }
-        // Redirect to home page
-        res.redirect("/");
+        // New sign-ups go to welcome page; existing logins go straight home
+        const isNewUser = (req as any).authInfo?.isNewUser;
+        res.redirect(isNewUser ? "/welcome" : "/");
       });
     },
   );

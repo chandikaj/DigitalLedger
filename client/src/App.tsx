@@ -30,6 +30,7 @@ import CategoryManagement from "@/pages/CategoryManagement";
 import MainPageControl from "@/pages/MainPageControl";
 import Settings from "@/pages/Settings";
 import Toolbox from "@/pages/Toolbox";
+import Welcome from "@/pages/Welcome";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -65,6 +66,7 @@ function Router() {
       <Route path="/about" component={About} />
       <Route path="/login" component={Login} />
       <Route path="/logout" component={Logout} />
+      <Route path="/welcome" component={Welcome} />
       
       {/* Article detail route must come AFTER /news/add to avoid matching "add" as an id */}
       <Route path="/news/:id" component={Article} />
