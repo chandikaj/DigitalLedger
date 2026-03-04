@@ -50,65 +50,28 @@ async function getUncachableSendGridClient() {
   };
 }
 
-const APP_URL = process.env.APP_URL || "https://thedigitalledger.org";
+const WELCOME_EMAIL_TEMPLATE_ID = process.env.SENDGRID_WELCOME_TEMPLATE_ID;
 
 export async function sendWelcomeEmail(
   userEmail: string,
   firstName: string,
+  subscriberId?: string,
 ): Promise<boolean> {
   try {
     const { client, fromEmail } = await getUncachableSendGridClient();
 
-    const unsubscribeUrl = `${APP_URL}/unsubscribe?email=${encodeURIComponent(userEmail)}`;
+    const appUrl = process.env.APP_URL;
+    const unsubscribeUrl = subscriberId
+      ? `${appUrl}/api/unsubscribe?id=${subscriberId}`
+      : null;
 
-    const htmlBody = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-  <div style="text-align: center; margin-bottom: 32px;">
-    <h1 style="color: #1a1a2e; font-size: 24px; margin-bottom: 4px;">The Digital Ledger</h1>
-    <p style="color: #666; font-size: 14px; margin: 0;">AI &middot; Finance &middot; Accounting</p>
-  </div>
-
-  <h2 style="font-size: 22px; color: #1a1a2e;">Welcome, ${firstName}!</h2>
-  <p style="font-size: 16px; line-height: 1.6;">
-    Thank you for joining The Digital Ledger. Your account has been created and you're all set to explore our content — news articles, podcasts, forum discussions, and resources covering AI, Finance, and Accounting.
-  </p>
-
-  <div style="text-align: center; margin: 32px 0;">
-    <a href="${APP_URL}" style="background-color: #1a1a2e; color: #fff; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-size: 16px; display: inline-block;">
-      Visit The Digital Ledger
-    </a>
-  </div>
-
-  <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
-  <p style="font-size: 12px; color: #999; text-align: center;">
-    You received this email because you created an account at The Digital Ledger.<br>
-    <a href="${unsubscribeUrl}" style="color: #999;">Unsubscribe</a>
-  </p>
-</body>
-</html>`;
-
-    const textBody = `Welcome to The Digital Ledger, ${firstName}!
-
-Thank you for joining. Your account has been created and you're all set to explore our content — news articles, podcasts, forum discussions, and resources covering AI, Finance, and Accounting.
-
-Visit us at: ${APP_URL}
-
----
-You received this email because you created an account at The Digital Ledger.
-To unsubscribe: ${unsubscribeUrl}`;
-
-    const msg: any = {
+    const msg = {
       to: userEmail,
       from: fromEmail,
-      subject: "Welcome to The Digital Ledger!",
-      html: htmlBody,
-      text: textBody,
-      headers: {
-        "List-Unsubscribe": `<${unsubscribeUrl}>`,
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      templateId: WELCOME_EMAIL_TEMPLATE_ID,
+      dynamicTemplateData: {
+        firstName,
+        ...(unsubscribeUrl ? { unsubscribeUrl } : {}),
       },
     };
 
@@ -118,9 +81,9 @@ To unsubscribe: ${unsubscribeUrl}`;
   } catch (error: any) {
     console.error(
       `Error sending welcome email to ${userEmail}. ` +
-      `Check that the 'from' address is verified as a Sender Identity in SendGrid. ` +
-      `Raw error:`,
-      error?.response?.body ?? error
+        `Check that the 'from' address is verified as a Sender Identity in SendGrid. ` +
+        `Raw error:`,
+      error?.response?.body ?? error,
     );
     return false;
   }
