@@ -25,6 +25,7 @@ import {
 } from "@shared/schema";
 import { seedDatabase } from "./seed";
 
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session middleware
   app.use(getSession());
@@ -1350,6 +1351,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public unsubscribe via link in email (no login required)
+  app.get('/api/unsubscribe', async (req, res) => {
+    const { id } = req.query as { id?: string };
+    if (!id) {
+      return res.status(400).send('<p>Invalid unsubscribe link.</p>');
+    }
+    try {
+      const subscriber = await storage.getSubscriberById(id);
+      if (!subscriber) {
+        return res.status(404).send('<p>Subscription not found.</p>');
+      }
+      if (!subscriber.isActive) {
+        return res.send('<p>You have already been unsubscribed.</p>');
+      }
+      await storage.updateSubscriber(id, { isActive: false  });
+      return res.send(`
+        <div style="font-family:Arial,sans-serif;max-width:480px;margin:60px auto;text-align:center;">
+          <h2 style="color:#16a34a;">Unsubscribed Successfully</h2>
+          <p>You have been removed from the DigitalLedger newsletter.<br/>You will no longer receive emails from us.</p>
+        </div>
+      `);
+    } catch (error) {
+      console.error('Error processing unsubscribe:', error);
+      return res.status(500).send('<p>Something went wrong. Please try again later.</p>');
+    }
+  });
+
   // Subscriber signup endpoint (public)
   app.post('/api/subscribers', async (req, res) => {
     try {
@@ -1362,8 +1390,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if already subscribed
       const existing = await storage.getSubscriberByEmail(email);
       if (existing) {
-        // Update existing subscription
-        const updated = await storage.updateSubscriber(existing.id, { categories, frequency });
+        // Reactivate if previously unsubscribed; set confirmedAt to track when reactivation occurred
+        const updateData: any = { categories, frequency, isActive: true };
+        if (!existing.isActive) updateData.confirmedAt = new Date();
+        const updated = await storage.updateSubscriber(existing.id, updateData);
         return res.json({ message: "Subscription updated", subscriber: updated });
       }
       
@@ -1376,7 +1406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Unsubscribe endpoint
+  // Unsubscribe endpoint (authenticated – from app UI)
   app.post('/api/subscribers/unsubscribe', isAuthenticated, async (req: any, res) => {
     try {
       const user = req.user;
@@ -1391,7 +1421,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Not subscribed" });
       }
       
-      await storage.deleteSubscriber(subscriber.id);
+      // Set isActive = false instead of deleting so the record is preserved
+      await storage.updateSubscriber(subscriber.id, { isActive: false });
       res.json({ message: "Successfully unsubscribed" });
     } catch (error) {
       console.error("Error unsubscribing:", error);

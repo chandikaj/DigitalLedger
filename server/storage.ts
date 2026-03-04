@@ -52,6 +52,7 @@ import {
   type UpdateMenuSetting,
   type Subscriber,
   type InsertSubscriber,
+  type UpdateSubscriber,
   type ToolboxApp,
   type InsertToolboxApp,
 } from "@shared/schema";
@@ -171,7 +172,8 @@ export interface IStorage {
   // Subscriber operations
   createSubscriber(subscriber: InsertSubscriber): Promise<Subscriber>;
   getSubscriberByEmail(email: string): Promise<Subscriber | undefined>;
-  updateSubscriber(id: string, updates: Partial<InsertSubscriber>): Promise<Subscriber | undefined>;
+  getSubscriberById(id: string): Promise<Subscriber | undefined>;
+  updateSubscriber(id: string, updates: UpdateSubscriber): Promise<Subscriber | undefined>;
   deleteSubscriber(id: string): Promise<boolean>;
   
   // Toolbox app operations
@@ -1553,7 +1555,15 @@ export class DatabaseStorage implements IStorage {
     return subscriber;
   }
 
-  async updateSubscriber(id: string, updates: Partial<InsertSubscriber>): Promise<Subscriber | undefined> {
+  async getSubscriberById(id: string): Promise<Subscriber | undefined> {
+    const [subscriber] = await db
+      .select()
+      .from(subscribers)
+      .where(eq(subscribers.id, id));
+    return subscriber;
+  }
+
+  async updateSubscriber(id: string, updates: UpdateSubscriber): Promise<Subscriber | undefined> {
     const [updated] = await db
       .update(subscribers)
       .set(updates)

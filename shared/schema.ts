@@ -493,6 +493,14 @@ export const insertSubscriberSchema = createInsertSchema(subscribers).omit({
   isActive: true,
 });
 
+// Only mutable fields — id, email, createdAt are intentionally excluded
+export const updateSubscriberSchema = z.object({
+  categories: z.array(z.string()).optional(),
+  frequency: z.enum(["daily", "weekly", "bi-weekly", "monthly"]).optional(),
+  isActive: z.boolean().optional(),
+  confirmedAt: z.coerce.date().nullable().optional(),
+});
+
 export const insertToolboxAppSchema = createInsertSchema(toolboxApps).omit({
   id: true,
   createdAt: true,
@@ -562,5 +570,6 @@ export type DiscussionNewsCategory = typeof discussionNewsCategories.$inferSelec
 export type InsertDiscussionNewsCategory = z.infer<typeof insertDiscussionNewsCategorySchema>;
 export type Subscriber = typeof subscribers.$inferSelect;
 export type InsertSubscriber = z.infer<typeof insertSubscriberSchema>;
+export type UpdateSubscriber = z.infer<typeof updateSubscriberSchema>;
 export type ToolboxApp = typeof toolboxApps.$inferSelect;
 export type InsertToolboxApp = z.infer<typeof insertToolboxAppSchema>;

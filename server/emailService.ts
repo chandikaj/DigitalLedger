@@ -50,21 +50,28 @@ async function getUncachableSendGridClient() {
   };
 }
 
-const WELCOME_EMAIL_TEMPLATE_ID = "d-64ab79f349214e1f8ba8babefd5e6bad";
+const WELCOME_EMAIL_TEMPLATE_ID = process.env.SENDGRID_WELCOME_TEMPLATE_ID;
 
 export async function sendWelcomeEmail(
   userEmail: string,
   firstName: string,
+  subscriberId?: string,
 ): Promise<boolean> {
   try {
     const { client, fromEmail } = await getUncachableSendGridClient();
+
+    const appUrl = process.env.APP_URL;
+    const unsubscribeUrl = subscriberId
+      ? `${appUrl}/api/unsubscribe?id=${subscriberId}`
+      : null;
 
     const msg = {
       to: userEmail,
       from: fromEmail,
       templateId: WELCOME_EMAIL_TEMPLATE_ID,
       dynamicTemplateData: {
-        firstName: firstName,
+        firstName,
+        ...(unsubscribeUrl ? { unsubscribeUrl } : {}),
       },
     };
 
@@ -72,7 +79,6 @@ export async function sendWelcomeEmail(
     console.log(`Welcome email sent to ${userEmail}`);
     return true;
   } catch (error: any) {
-    const fromAddr = error?.response?.body?.errors?.[0]?.message || "unknown";
     console.error(
       `Error sending welcome email to ${userEmail}. ` +
       `Check that the 'from' address is verified as a Sender Identity in SendGrid. ` +

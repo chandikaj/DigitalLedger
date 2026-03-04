@@ -108,14 +108,19 @@ export function SubscriberSignup() {
   if (step === 4) {
     return (
       <Card className="w-full max-w-md mx-auto border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
-        <CardContent className="pt-6 text-center">
+        <CardContent className="pt-8 pb-8 text-center">
           <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
-          <h3 className="text-xl font-semibold text-green-700 dark:text-green-300 mb-2">
-            You're All Set!
+          <h3 className="text-xl font-semibold text-green-700 dark:text-green-300 mb-4">
+            Welcome to The Digital Ledger.
           </h3>
-          <p className="text-green-600 dark:text-green-400">
-            Thank you for subscribing. You'll receive updates at {data.email}
-          </p>
+          <div className="space-y-3 text-left text-green-700 dark:text-green-400 text-sm">
+            <p>A confirmation email is on its way to <span className="font-medium">{data.email}</span>.</p>
+            <p className="flex items-start gap-2">
+              <span className="mt-0.5 text-amber-500 shrink-0">✉</span>
+              Be sure to check your spam or promotions folder just in case.
+            </p>
+            <p>We look forward to having you with us.</p>
+          </div>
         </CardContent>
       </Card>
     );

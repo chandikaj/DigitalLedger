@@ -191,8 +191,8 @@ export default function Landing() {
               Welcome to <span className="text-yellow-300">The Digital Ledger</span>
             </h1>
             <div className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto mb-8" data-testid="hero-subtitle">
-              <p className="font-bold mb-3">Where CFOs, Controllers, FP&A leaders, and senior finance professionals come to stay sharp and stay ahead.</p>
-              <p>Join a growing community focused on AI, finance transformation, and modern corporate finance.</p>
+              <p className="font-bold mb-3">The Digital Ledger Weekly delivers one curated article and one podcast every week with practical insights on Accounting, finance transformation, and modern corporate finance and AI in Finance and accounting.</p>
+              <p>Stay informed, save time, and get actionable ideas — all in one place, curated for busy finance and accounting professionals.</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button 
@@ -201,11 +201,11 @@ export default function Landing() {
                 onClick={() => setLocation("/login")}
                 data-testid="button-join-community"
               >
-                Join Community
+                Become a Member
               </Button>
             </div>
             <p className="text-xl md:text-2xl text-blue-100 mt-4" data-testid="text-no-spam">
-              No spam, just powerful insights!
+              No spam. No fluff. Just insights that matter, delivered straight to your inbox.
             </p>
           </div>
         </div>
