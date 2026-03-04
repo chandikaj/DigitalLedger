@@ -81,9 +81,9 @@ export async function sendWelcomeEmail(
   } catch (error: any) {
     console.error(
       `Error sending welcome email to ${userEmail}. ` +
-        `Check that the 'from' address is verified as a Sender Identity in SendGrid. ` +
-        `Raw error:`,
-      error?.response?.body ?? error,
+      `Check that the 'from' address is verified as a Sender Identity in SendGrid. ` +
+      `Raw error:`,
+      error?.response?.body ?? error
     );
     return false;
   }
