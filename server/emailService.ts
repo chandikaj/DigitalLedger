@@ -149,7 +149,11 @@ export async function sendArticleNotification(
         title: article.title,
         preview,
         articleUrl,
-        ...(article.imageUrl ? { imageUrl: article.imageUrl } : {}),
+        ...(article.imageUrl ? {
+          imageUrl: article.imageUrl.startsWith('http')
+            ? article.imageUrl
+            : `${appUrl}${article.imageUrl}`,
+        } : {}),
         unsubscribeUrl,
       },
       headers: {
@@ -203,7 +207,11 @@ export async function sendPodcastNotification(
         title: episode.title,
         preview,
         podcastUrl,
-        ...(episode.imageUrl ? { imageUrl: episode.imageUrl } : {}),
+        ...(episode.imageUrl ? {
+          imageUrl: episode.imageUrl.startsWith('http')
+            ? episode.imageUrl
+            : `${appUrl}${episode.imageUrl}`,
+        } : {}),
         unsubscribeUrl,
       },
       headers: {
