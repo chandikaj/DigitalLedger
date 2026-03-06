@@ -14,7 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function Welcome() {
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState<"alerts" | "complete">("complete");
+  const [step, setStep] = useState<"alerts" | "complete">("alerts");
   const [subscribed, setSubscribed] = useState(false);
 
   const { data: user } = useQuery<any>({ queryKey: ["/api/auth/user"] });
@@ -102,9 +102,10 @@ export default function Welcome() {
                   <>
                     <p>A confirmation email is on its way.</p>
                     <p>
-                      Please check your spam or promotions folder if you don't
-                      see it shortly.
+                      Be sure to check your spam or promotions folder just in
+                      case.
                     </p>
+                    <p>We look forward to having you with us.</p>
                   </>
                 )}
               </div>
