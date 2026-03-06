@@ -89,10 +89,7 @@ export default function Welcome() {
                 {subscribed && (
                   <>
                     <p>A confirmation email is on its way.</p>
-                    <p className="flex items-start gap-2">
-                      <span className="mt-0.5 text-amber-500 shrink-0">✉</span>
-                      Be sure to check your spam or promotions folder just in case.
-                    </p>
+                    <p>Please check your spam or promotions folder if you don't see it shortly.</p>
                   </>
                 )}
                 <p>We look forward to having you with us.</p>
