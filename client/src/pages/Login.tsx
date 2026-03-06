@@ -3,13 +3,31 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { loginSchema, registerSchema, LoginRequest, RegisterRequest } from "@shared/schema";
+import {
+  loginSchema,
+  registerSchema,
+  LoginRequest,
+  RegisterRequest,
+} from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Bell, CheckCircle } from "lucide-react";
 import logoImage from "@assets/9519F333-D03D-4EEC-9DBB-415A3407BBBF_1761967718151.jpeg";
@@ -21,7 +39,8 @@ export default function Login() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
-  const [registrationStep, setRegistrationStep] = useState<RegistrationStep>("form");
+  const [registrationStep, setRegistrationStep] =
+    useState<RegistrationStep>("form");
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [wantsAlerts, setWantsAlerts] = useState<boolean | null>(null);
 
@@ -87,7 +106,11 @@ export default function Login() {
   });
 
   const subscribeMutation = useMutation({
-    mutationFn: async (data: { email: string; categories: string[]; frequency: string }) => {
+    mutationFn: async (data: {
+      email: string;
+      categories: string[];
+      frequency: string;
+    }) => {
       return await apiRequest("/api/subscribers", "POST", data);
     },
     onSuccess: () => {
@@ -128,7 +151,8 @@ export default function Login() {
                     <p>A confirmation email is on its way.</p>
                     <p className="flex items-start gap-2">
                       <span className="mt-0.5 text-amber-500 shrink-0">✉</span>
-                      Be sure to check your spam or promotions folder just in case.
+                      Be sure to check your spam or promotions folder just in
+                      case.
                     </p>
                   </>
                 )}
@@ -154,7 +178,11 @@ export default function Login() {
         <div className="w-full max-w-md space-y-6">
           <div className="text-center space-y-4">
             <div className="flex items-center justify-center">
-              <img src={logoImage} alt="The Digital Ledger" className="h-14 w-auto" />
+              <img
+                src={logoImage}
+                alt="The Digital Ledger"
+                className="h-14 w-auto"
+              />
             </div>
           </div>
 
@@ -163,7 +191,9 @@ export default function Login() {
               <div className="flex items-center justify-center mb-2">
                 <Bell className="w-8 h-8 text-primary" />
               </div>
-              <CardTitle className="text-2xl text-center">Stay Informed</CardTitle>
+              <CardTitle className="text-2xl text-center">
+                Stay Informed
+              </CardTitle>
               <CardDescription className="text-center">
                 Do you want to subscribe to the newsletter?
               </CardDescription>
@@ -209,7 +239,11 @@ export default function Login() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center">
-            <img src={logoImage} alt="The Digital Ledger" className="h-14 w-auto" />
+            <img
+              src={logoImage}
+              alt="The Digital Ledger"
+              className="h-14 w-auto"
+            />
           </div>
         </div>
 
@@ -221,20 +255,32 @@ export default function Login() {
             <CardDescription className="text-center">
               {activeTab === "login"
                 ? "Sign in to access your account"
-                : "Get one curated article and one podcast each week — concise, practical insights on AI, finance transformation, and modern corporate finance, delivered straight to your inbox."}
+                : "One curated article and one podcast each week — concise insights for busy finance professionals."}
             </CardDescription>
           </CardHeader>
 
           <CardContent>
-            <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as "login" | "register")}>
+            <Tabs
+              value={activeTab}
+              onValueChange={(value: string) =>
+                setActiveTab(value as "login" | "register")
+              }
+            >
               <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login" data-testid="tab-login">Sign In</TabsTrigger>
-                <TabsTrigger value="register" data-testid="tab-register">Sign Up</TabsTrigger>
+                <TabsTrigger value="login" data-testid="tab-login">
+                  Sign In
+                </TabsTrigger>
+                <TabsTrigger value="register" data-testid="tab-register">
+                  Sign Up
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="login" className="space-y-4">
                 <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
+                  <form
+                    onSubmit={loginForm.handleSubmit(onLogin)}
+                    className="space-y-4"
+                  >
                     <FormField
                       control={loginForm.control}
                       name="email"
@@ -298,7 +344,7 @@ export default function Login() {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => window.location.href = '/api/auth/google'}
+                  onClick={() => (window.location.href = "/api/auth/google")}
                   data-testid="button-google-signin"
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -325,7 +371,10 @@ export default function Login() {
 
               <TabsContent value="register" className="space-y-4">
                 <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
+                  <form
+                    onSubmit={registerForm.handleSubmit(onRegister)}
+                    className="space-y-4"
+                  >
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={registerForm.control}
@@ -408,13 +457,12 @@ export default function Login() {
                       disabled={registerMutation.isPending}
                       data-testid="button-register-submit"
                     >
-                      {registerMutation.isPending ? "Creating Account..." : "Become a Member"}
+                      {registerMutation.isPending
+                        ? "Creating Account..."
+                        : "Become a Member"}
                     </Button>
                   </form>
                 </Form>
-                <p className="text-center text-xs text-muted-foreground mt-2">
-                  We respect your inbox. Unsubscribe anytime.
-                </p>
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -430,7 +478,7 @@ export default function Login() {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => window.location.href = '/api/auth/google'}
+                  onClick={() => (window.location.href = "/api/auth/google")}
                   data-testid="button-google-signup"
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
