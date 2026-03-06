@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bell, CheckCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,7 +20,11 @@ export default function Welcome() {
   const { data: user } = useQuery<any>({ queryKey: ["/api/auth/user"] });
 
   const subscribeMutation = useMutation({
-    mutationFn: async (data: { email: string; categories: string[]; frequency: string }) => {
+    mutationFn: async (data: {
+      email: string;
+      categories: string[];
+      frequency: string;
+    }) => {
       return await apiRequest("/api/subscribers", "POST", data);
     },
     onSuccess: () => {
@@ -49,7 +59,9 @@ export default function Welcome() {
               <div className="flex items-center justify-center mb-2">
                 <Bell className="w-8 h-8 text-primary" />
               </div>
-              <CardTitle className="text-2xl text-center">Stay Informed</CardTitle>
+              <CardTitle className="text-2xl text-center">
+                Stay Informed
+              </CardTitle>
               <CardDescription className="text-center">
                 Do you want to subscribe to the newsletter?
               </CardDescription>
@@ -89,10 +101,12 @@ export default function Welcome() {
                 {subscribed && (
                   <>
                     <p>A confirmation email is on its way.</p>
-                    <p>Please check your spam or promotions folder if you don't see it shortly.</p>
+                    <p>
+                      Please check your spam or promotions folder if you don't
+                      see it shortly.
+                    </p>
                   </>
                 )}
-                <p>We look forward to having you with us.</p>
               </div>
               <Button
                 onClick={handleGetStarted}
