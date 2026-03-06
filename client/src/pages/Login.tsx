@@ -121,6 +121,10 @@ export default function Login() {
                 Welcome to The Digital Ledger.
               </h2>
               <div className="space-y-3 text-left text-gray-600 dark:text-gray-400 mb-8">
+                <p>A confirmation email is on its way.</p>
+                <p>
+                  Be sure to check your spam or promotions folder just in case.
+                </p>
                 <p>Your account has been created successfully.</p>
                 <p>We look forward to having you with us.</p>
               </div>
