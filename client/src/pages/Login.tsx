@@ -90,10 +90,10 @@ export default function Login() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setRegisteredEmail(variables.email);
-      setRegistrationStep("complete");
+      setRegistrationStep("alerts");
       toast({
         title: "Account Created",
-        description: "Welcome aboard!",
+        description: "One more quick question!",
       });
     },
     onError: (error: any) => {
