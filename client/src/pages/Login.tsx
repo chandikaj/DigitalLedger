@@ -29,10 +29,10 @@ import {
   RegisterRequest,
 } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Bell, CheckCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle } from "lucide-react";
 import logoImage from "@assets/9519F333-D03D-4EEC-9DBB-415A3407BBBF_1761967718151.jpeg";
 
-type RegistrationStep = "form" | "alerts" | "complete";
+type RegistrationStep = "form" | "complete";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -41,8 +41,6 @@ export default function Login() {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [registrationStep, setRegistrationStep] =
     useState<RegistrationStep>("form");
-  const [registeredEmail, setRegisteredEmail] = useState("");
-  const [wantsAlerts, setWantsAlerts] = useState<boolean | null>(null);
 
   const loginForm = useForm<LoginRequest>({
     resolver: zodResolver(loginSchema),
@@ -87,14 +85,9 @@ export default function Login() {
     mutationFn: async (data: RegisterRequest) => {
       return await apiRequest("/api/auth/register", "POST", data);
     },
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setRegisteredEmail(variables.email);
-      setRegistrationStep("alerts");
-      toast({
-        title: "Account Created",
-        description: "One more quick question!",
-      });
+      setRegistrationStep("complete");
     },
     onError: (error: any) => {
       toast({
@@ -102,23 +95,6 @@ export default function Login() {
         description: error.message || "Failed to create account",
         variant: "destructive",
       });
-    },
-  });
-
-  const subscribeMutation = useMutation({
-    mutationFn: async (data: {
-      email: string;
-      categories: string[];
-      frequency: string;
-    }) => {
-      return await apiRequest("/api/subscribers", "POST", data);
-    },
-    onSuccess: () => {
-      setWantsAlerts(true);
-      setRegistrationStep("complete");
-    },
-    onError: () => {
-      setRegistrationStep("complete");
     },
   });
 
@@ -146,16 +122,6 @@ export default function Login() {
               </h2>
               <div className="space-y-3 text-left text-gray-600 dark:text-gray-400 mb-8">
                 <p>Your account has been created successfully.</p>
-                {wantsAlerts && (
-                  <>
-                    <p>A confirmation email is on its way.</p>
-                    <p className="flex items-start gap-2">
-                      <span className="mt-0.5 text-amber-500 shrink-0">✉</span>
-                      Be sure to check your spam or promotions folder just in
-                      case.
-                    </p>
-                  </>
-                )}
                 <p>We look forward to having you with us.</p>
               </div>
               <Button
@@ -165,68 +131,6 @@ export default function Login() {
               >
                 Get Started
               </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  if (registrationStep === "alerts") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-4">
-            <div className="flex items-center justify-center">
-              <img
-                src={logoImage}
-                alt="The Digital Ledger"
-                className="h-14 w-auto"
-              />
-            </div>
-          </div>
-
-          <Card className="w-full border-0 shadow-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur">
-            <CardHeader className="space-y-1">
-              <div className="flex items-center justify-center mb-2">
-                <Bell className="w-8 h-8 text-primary" />
-              </div>
-              <CardTitle className="text-2xl text-center">
-                Stay Informed
-              </CardTitle>
-              <CardDescription className="text-center">
-                Do you want to subscribe to the newsletter?
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <Button
-                  onClick={() => {
-                    subscribeMutation.mutate({
-                      email: registeredEmail,
-                      categories: [],
-                      frequency: "weekly",
-                    });
-                  }}
-                  className="w-full"
-                  disabled={subscribeMutation.isPending}
-                  data-testid="button-want-alerts-yes"
-                >
-                  {subscribeMutation.isPending ? "Subscribing..." : "Yes"}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setWantsAlerts(false);
-                    setRegistrationStep("complete");
-                  }}
-                  variant="outline"
-                  className="w-full"
-                  data-testid="button-want-alerts-no"
-                >
-                  No thanks
-                </Button>
-              </div>
             </CardContent>
           </Card>
         </div>
