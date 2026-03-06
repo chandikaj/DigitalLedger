@@ -1,4 +1,5 @@
 import sgMail from "@sendgrid/mail";
+import type { Subscriber } from "@shared/schema";
 
 let connectionSettings: any;
 
@@ -50,7 +51,24 @@ async function getUncachableSendGridClient() {
   };
 }
 
+function extractTextPreview(html: string, sentenceCount: number): string {
+  const text = html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+  return sentences.slice(0, sentenceCount).join(" ").trim() || text.slice(0, 300);
+}
+
 const WELCOME_EMAIL_TEMPLATE_ID = process.env.SENDGRID_WELCOME_TEMPLATE_ID;
+const ARTICLE_EMAIL_TEMPLATE_ID = process.env.SENDGRID_ARTICLE_TEMPLATE_ID;
+const PODCAST_EMAIL_TEMPLATE_ID = process.env.SENDGRID_PODCAST_TEMPLATE_ID;
 
 export async function sendWelcomeEmail(
   userEmail: string,
@@ -94,4 +112,112 @@ export async function sendWelcomeEmail(
     );
     return false;
   }
+}
+
+export async function sendArticleNotification(
+  subscribers: Subscriber[],
+  article: { id: string; title: string; content: string; excerpt?: string | null; imageUrl?: string | null },
+  appUrl: string,
+): Promise<void> {
+  if (!ARTICLE_EMAIL_TEMPLATE_ID) {
+    console.warn("SENDGRID_ARTICLE_TEMPLATE_ID not set — skipping article notifications");
+    return;
+  }
+  if (subscribers.length === 0) return;
+
+  let sgClient: Awaited<ReturnType<typeof getUncachableSendGridClient>>;
+  try {
+    sgClient = await getUncachableSendGridClient();
+  } catch (err) {
+    console.error("Article notification: failed to get SendGrid client:", err);
+    return;
+  }
+
+  const { client, fromEmail } = sgClient;
+  const articleUrl = `${appUrl}/news/${article.id}`;
+  const preview = article.excerpt
+    ? extractTextPreview(article.excerpt, 3)
+    : extractTextPreview(article.content, 3);
+
+  const sends = subscribers.map((sub) => {
+    const unsubscribeUrl = `${appUrl}/api/unsubscribe?id=${sub.id}`;
+    const msg: any = {
+      to: sub.email,
+      from: fromEmail,
+      templateId: ARTICLE_EMAIL_TEMPLATE_ID,
+      dynamicTemplateData: {
+        title: article.title,
+        preview,
+        articleUrl,
+        ...(article.imageUrl ? { imageUrl: article.imageUrl } : {}),
+        unsubscribeUrl,
+      },
+      headers: {
+        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    };
+    return client.send(msg).then(() => ({ ok: true, email: sub.email })).catch((err: any) => {
+      console.error(`Article notification failed for ${sub.email}:`, err?.response?.body ?? err);
+      return { ok: false, email: sub.email };
+    });
+  });
+
+  const results = await Promise.allSettled(sends);
+  const succeeded = results.filter((r) => r.status === "fulfilled" && (r.value as any).ok).length;
+  console.log(`Article notification "${article.title}": ${succeeded}/${subscribers.length} sent`);
+}
+
+export async function sendPodcastNotification(
+  subscribers: Subscriber[],
+  episode: { id: string; title: string; description?: string | null; audioUrl?: string | null; imageUrl?: string | null },
+  appUrl: string,
+): Promise<void> {
+  if (!PODCAST_EMAIL_TEMPLATE_ID) {
+    console.warn("SENDGRID_PODCAST_TEMPLATE_ID not set — skipping podcast notifications");
+    return;
+  }
+  if (subscribers.length === 0) return;
+
+  let sgClient: Awaited<ReturnType<typeof getUncachableSendGridClient>>;
+  try {
+    sgClient = await getUncachableSendGridClient();
+  } catch (err) {
+    console.error("Podcast notification: failed to get SendGrid client:", err);
+    return;
+  }
+
+  const { client, fromEmail } = sgClient;
+  const podcastUrl = episode.audioUrl || appUrl;
+  const preview = episode.description
+    ? extractTextPreview(episode.description, 3)
+    : "";
+
+  const sends = subscribers.map((sub) => {
+    const unsubscribeUrl = `${appUrl}/api/unsubscribe?id=${sub.id}`;
+    const msg: any = {
+      to: sub.email,
+      from: fromEmail,
+      templateId: PODCAST_EMAIL_TEMPLATE_ID,
+      dynamicTemplateData: {
+        title: episode.title,
+        preview,
+        podcastUrl,
+        ...(episode.imageUrl ? { imageUrl: episode.imageUrl } : {}),
+        unsubscribeUrl,
+      },
+      headers: {
+        "List-Unsubscribe": `<${unsubscribeUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    };
+    return client.send(msg).then(() => ({ ok: true, email: sub.email })).catch((err: any) => {
+      console.error(`Podcast notification failed for ${sub.email}:`, err?.response?.body ?? err);
+      return { ok: false, email: sub.email };
+    });
+  });
+
+  const results = await Promise.allSettled(sends);
+  const succeeded = results.filter((r) => r.status === "fulfilled" && (r.value as any).ok).length;
+  console.log(`Podcast notification "${episode.title}": ${succeeded}/${subscribers.length} sent`);
 }

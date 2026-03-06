@@ -7,6 +7,10 @@ import {
   isAdmin,
   isEditorOrAdmin,
 } from "./simpleAuth";
+import {
+  sendArticleNotification,
+  sendPodcastNotification,
+} from "./emailService";
 import { getSession } from "./replitAuth"; // Keep session config
 import passport from "passport";
 import { setupGoogleAuth } from "./googleAuth";
@@ -571,6 +575,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryIdsArray,
       );
       res.json(article);
+
+      // Notify subscribers if published immediately
+      if (article.status === "published") {
+        const appUrl = process.env.APP_URL || "https://thedigitalledger.org";
+        storage.getActiveSubscribers().then((subs) => {
+          if (subs.length > 0) sendArticleNotification(subs, article, appUrl);
+        }).catch((err) => console.error("Article notification error:", err));
+      }
     } catch (error) {
       console.error("Error creating news article:", error);
       res.status(500).json({ message: "Failed to create news article" });
@@ -815,6 +827,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Article not found" });
       }
       res.json(updatedArticle);
+
+      // Notify subscribers when an article is published (not when moved back to draft)
+      if (status === "published") {
+        const appUrl = process.env.APP_URL || "https://thedigitalledger.org";
+        storage.getActiveSubscribers().then((subs) => {
+          if (subs.length > 0) sendArticleNotification(subs, updatedArticle, appUrl);
+        }).catch((err) => console.error("Article publish notification error:", err));
+      }
     } catch (error) {
       console.error("Error toggling news article status:", error);
       res.status(500).json({ message: "Failed to toggle news article status" });
@@ -1230,6 +1250,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryIdsArray,
       );
       res.json(episode);
+
+      // Notify subscribers if published immediately
+      if (episode.status === "published") {
+        const appUrl = process.env.APP_URL || "https://thedigitalledger.org";
+        storage.getActiveSubscribers().then((subs) => {
+          if (subs.length > 0) sendPodcastNotification(subs, episode, appUrl);
+        }).catch((err) => console.error("Podcast notification error:", err));
+      }
     } catch (error) {
       console.error("Error creating podcast episode:", error);
       res.status(500).json({ message: "Failed to create podcast episode" });
@@ -1334,6 +1362,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: "Podcast episode not found" });
         }
         res.json(updatedEpisode);
+
+        // Notify subscribers when a podcast is published (not when moved back to draft)
+        if (status === "published") {
+          const appUrl = process.env.APP_URL || "https://thedigitalledger.org";
+          storage.getActiveSubscribers().then((subs) => {
+            if (subs.length > 0) sendPodcastNotification(subs, updatedEpisode, appUrl);
+          }).catch((err) => console.error("Podcast publish notification error:", err));
+        }
       } catch (error) {
         console.error("Error toggling podcast episode status:", error);
         res
