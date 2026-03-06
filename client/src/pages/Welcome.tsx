@@ -14,7 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 export default function Welcome() {
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState<"alerts" | "complete">("alerts");
+  const [step, setStep] = useState<"alerts" | "complete">("complete");
   const [subscribed, setSubscribed] = useState(false);
 
   const { data: user } = useQuery<any>({ queryKey: ["/api/auth/user"] });
