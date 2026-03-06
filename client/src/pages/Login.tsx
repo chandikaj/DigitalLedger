@@ -255,7 +255,7 @@ export default function Login() {
             <CardDescription className="text-center">
               {activeTab === "login"
                 ? "Sign in to access your account"
-                : "One curated article and one podcast each week — concise insights for busy finance professionals."}
+                : "One curated article and one podcast each week — concise insights for busy finance professionals.It takes less than 30 seconds."}
             </CardDescription>
           </CardHeader>
 
