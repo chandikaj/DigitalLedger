@@ -66,7 +66,7 @@ export default {
         "dark-card": "var(--dark-card)",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "Inter", "sans-serif"],
+        sans: ["var(--font-sans)", "Trebuchet MS", "sans-serif"],
         serif: ["var(--font-serif)", "Georgia", "serif"],
         mono: ["var(--font-mono)", "Menlo", "monospace"],
         inter: ["Inter", "sans-serif"],
