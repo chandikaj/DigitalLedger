@@ -76,7 +76,7 @@ export function setupGoogleAuth(storage: IStorage) {
                   email: newUser.email!,
                   categories: [],
                   frequency: "weekly",
-                  isActive: false,
+                  isActive: true,
                 });
                 subscriberId = sub.id;
               } catch (e) {

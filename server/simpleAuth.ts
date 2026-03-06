@@ -90,7 +90,7 @@ export function setupAuth(app: Express, storage: IStorage) {
               email: user.email!,
               categories: [],
               frequency: "weekly",
-              isActive: false,
+              isActive: true,
             });
             subscriberId = sub.id;
           } catch (e) {
