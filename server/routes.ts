@@ -841,6 +841,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/news/:id/notify", isEditorOrAdmin, async (req: any, res) => {
+    try {
+      const article = await storage.getNewsArticle(req.params.id);
+      if (!article) return res.status(404).json({ message: "Article not found" });
+      const appUrl = process.env.APP_URL || "https://thedigitalledger.org";
+      const subs = await storage.getActiveSubscribers();
+      if (subs.length > 0) await sendArticleNotification(subs, article, appUrl);
+      res.json({ sent: subs.length });
+    } catch (error) {
+      console.error("Error sending article notification:", error);
+      res.status(500).json({ message: "Failed to send notification" });
+    }
+  });
+
   app.patch(
     "/api/news/:id/featured",
     isEditorOrAdmin,
@@ -1378,6 +1392,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  app.post("/api/podcasts/:id/notify", isEditorOrAdmin, async (req: any, res) => {
+    try {
+      const episode = await storage.getPodcastEpisode(req.params.id);
+      if (!episode) return res.status(404).json({ message: "Episode not found" });
+      const appUrl = process.env.APP_URL || "https://thedigitalledger.org";
+      const subs = await storage.getActiveSubscribers();
+      if (subs.length > 0) await sendPodcastNotification(subs, episode, appUrl);
+      res.json({ sent: subs.length });
+    } catch (error) {
+      console.error("Error sending podcast notification:", error);
+      res.status(500).json({ message: "Failed to send notification" });
+    }
+  });
 
   app.patch(
     "/api/podcasts/:id/featured",

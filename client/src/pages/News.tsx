@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share, Search, PlusCircle, CheckCircle, XCircle, Pencil, Archive, ArchiveRestore } from "lucide-react";
+import { Heart, MessageCircle, Share, Search, PlusCircle, CheckCircle, XCircle, Pencil, Archive, ArchiveRestore, Mail } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -96,6 +96,25 @@ export default function News() {
       toast({
         title: "Error",
         description: "Failed to archive/unarchive article.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async (articleId: string) => {
+      return await apiRequest(`/api/news/${articleId}/notify`, 'POST', {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Email sent",
+        description: `Notification sent to ${data.sent} subscriber${data.sent === 1 ? '' : 's'}.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send email notification.",
         variant: "destructive",
       });
     },
@@ -476,6 +495,20 @@ export default function News() {
 
                   {isEditorOrAdmin && (
                     <div className="flex gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          sendEmailMutation.mutate(article.id);
+                        }}
+                        disabled={sendEmailMutation.isPending}
+                        data-testid={`send-email-${article.id}`}
+                        className="flex items-center gap-1"
+                      >
+                        <Mail className="h-4 w-4" />
+                        {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
+                      </Button>
                       <Button
                         size="sm"
                         variant={article.status === 'published' ? 'outline' : 'default'}

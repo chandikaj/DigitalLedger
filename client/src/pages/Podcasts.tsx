@@ -20,7 +20,8 @@ import {
   XCircle,
   ExternalLink,
   Archive,
-  ArchiveRestore
+  ArchiveRestore,
+  Mail
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -105,6 +106,25 @@ export default function Podcasts() {
       toast({
         title: "Error",
         description: "Failed to archive/unarchive podcast.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async (episodeId: string) => {
+      return await apiRequest(`/api/podcasts/${episodeId}/notify`, 'POST', {});
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Email sent",
+        description: `Notification sent to ${data.sent} subscriber${data.sent === 1 ? '' : 's'}.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send email notification.",
         variant: "destructive",
       });
     },
@@ -478,6 +498,20 @@ export default function Podcasts() {
 
                   {isEditorOrAdmin && (
                     <div className="flex gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          sendEmailMutation.mutate(episode.id);
+                        }}
+                        disabled={sendEmailMutation.isPending}
+                        data-testid={`send-email-${episode.id}`}
+                        className="flex items-center gap-1"
+                      >
+                        <Mail className="h-4 w-4" />
+                        {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
+                      </Button>
                       <Button
                         size="sm"
                         variant={episode.status === 'published' ? 'outline' : 'default'}
