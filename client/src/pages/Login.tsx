@@ -38,7 +38,13 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+
+  // Read `?tab=register` from the URL to pre-select the register tab
+  const initialTab = (new URLSearchParams(window.location.search).get("tab") === "register"
+    ? "register"
+    : "login") as "login" | "register";
+
+  const [activeTab, setActiveTab] = useState<"login" | "register">(initialTab);
   const [registrationStep, setRegistrationStep] =
     useState<RegistrationStep>("form");
 

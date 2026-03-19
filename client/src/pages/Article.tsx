@@ -1,6 +1,6 @@
 import { useParams, Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Calendar, ExternalLink, Heart, MessageCircle, Share2, Edit, Trash2, Archive, ArchiveRestore, Upload, X } from "lucide-react";
+import { ArrowLeft, Calendar, ExternalLink, Heart, MessageCircle, Share2, Edit, Trash2, Archive, ArchiveRestore, Upload, X, UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { insertNewsArticleSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -107,6 +107,8 @@ export default function Article() {
   const [commentContent, setCommentContent] = useState("");
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState("");
+  const [showExitPopup, setShowExitPopup] = useState(false);
+  const exitPopupShown = useRef(false);
 
   const articleFormSchema = z.object({
     title: z.string().min(1, "Title is required"),
@@ -154,6 +156,23 @@ export default function Article() {
       document.title = 'The Digital Ledger | Corporate Finance & Accounting Community';
     };
   }, [article]);
+
+  // Exit-intent detection for non-logged-in users
+  useEffect(() => {
+    if (user) return;
+
+    const handleMouseLeave = (e: MouseEvent) => {
+      if (e.clientY <= 5 && !exitPopupShown.current) {
+        exitPopupShown.current = true;
+        setShowExitPopup(true);
+      }
+    };
+
+    document.addEventListener("mouseleave", handleMouseLeave);
+    return () => {
+      document.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, [user]);
 
   const { data: newsCategories = [] } = useQuery<any[]>({
     queryKey: ['/api/news-categories'],
@@ -445,6 +464,63 @@ export default function Article() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white dark:from-gray-900 dark:to-gray-800">
+
+      {/* Floating "Become Member" button – only for guests */}
+      {!user && (
+        <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-center">
+          <Link href="/login?tab=register">
+            <button
+              className="flex flex-col items-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg px-3 py-4 transition-all duration-200 hover:scale-105 group"
+              title="Become a Member"
+            >
+              <UserPlus className="h-5 w-5" />
+              <span
+                className="text-xs font-semibold tracking-wide"
+                style={{ writingMode: "vertical-rl", textOrientation: "mixed", transform: "rotate(180deg)" }}
+              >
+                Become a Member
+              </span>
+            </button>
+          </Link>
+        </div>
+      )}
+
+      {/* Exit-intent popup – only for guests */}
+      {!user && (
+        <Dialog open={showExitPopup} onOpenChange={setShowExitPopup}>
+          <DialogContent className="sm:max-w-md text-center">
+            <DialogHeader>
+              <div className="flex justify-center mb-3">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <UserPlus className="h-8 w-8 text-primary" />
+                </div>
+              </div>
+              <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+                You're not a Member yet
+              </DialogTitle>
+              <DialogDescription className="text-base text-gray-600 dark:text-gray-300 mt-2">
+                Join our community of finance and accounting professionals. Get full access to all articles, discussions, podcasts, and more — for free.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-3 mt-4">
+              <Link href="/login?tab=register">
+                <Button className="w-full text-base py-5" size="lg" onClick={() => setShowExitPopup(false)}>
+                  <UserPlus className="h-5 w-5 mr-2" />
+                  Become a Member
+                </Button>
+              </Link>
+              <Button
+                variant="ghost"
+                className="w-full text-gray-500"
+                onClick={() => setShowExitPopup(false)}
+              >
+                Continue reading
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-6">
