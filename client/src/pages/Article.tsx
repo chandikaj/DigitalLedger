@@ -470,7 +470,7 @@ export default function Article() {
         <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-center">
           <Link href="/login?tab=register">
             <button
-              className="flex flex-col items-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg px-3 py-4 transition-all duration-200 hover:scale-105 group"
+              className="animate-wiggle-loop hover:animate-none flex flex-col items-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg px-3 py-4 transition-transform duration-200 hover:scale-105 group"
               title="Become a Member"
             >
               <UserPlus className="h-5 w-5" />

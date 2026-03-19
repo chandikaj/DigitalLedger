@@ -204,6 +204,22 @@
   animation: fade-in 0.5s ease-out;
 }
 
+@keyframes wiggle {
+  0%         { transform: rotate(0deg); }
+  2%         { transform: rotate(-9deg); }
+  4%         { transform: rotate(9deg); }
+  6%         { transform: rotate(-7deg); }
+  8%         { transform: rotate(7deg); }
+  10%        { transform: rotate(-4deg); }
+  12%        { transform: rotate(4deg); }
+  14%, 100%  { transform: rotate(0deg); }
+}
+
+.animate-wiggle-loop {
+  animation: wiggle 5s ease-in-out 2s infinite;
+  transform-origin: center bottom;
+}
+
 /* Focus styles for accessibility */
 .focus-visible:focus {
   @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
