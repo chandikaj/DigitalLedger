@@ -493,10 +493,14 @@ export default function Article() {
                 </div>
               </div>
               <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                You're not a Member yet
+                You're not done.
               </DialogTitle>
-              <DialogDescription className="text-base text-gray-600 dark:text-gray-300 mt-2">
-                Join our community of finance and accounting professionals. Get full access to all articles, discussions, podcasts, and more — for free.
+              <DialogDescription asChild>
+                <div className="mt-3 space-y-1 text-base text-gray-600 dark:text-gray-300">
+                  <p>You just paused.</p>
+                  <p>Step inside.</p>
+                  <p>See how top finance teams actually operate.</p>
+                </div>
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-3 mt-4">
