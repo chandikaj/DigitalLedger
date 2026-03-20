@@ -492,11 +492,11 @@ export default function Article() {
                   <UserPlus className="h-8 w-8 text-primary" />
                 </div>
               </div>
-              <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white text-center">
                 You're not done.
               </DialogTitle>
               <DialogDescription asChild>
-                <div className="mt-3 space-y-1 text-base text-gray-600 dark:text-gray-300">
+                <div className="mt-3 space-y-1 text-base text-gray-600 dark:text-gray-300 text-center">
                   <p>You just paused.</p>
                   <p>Step inside.</p>
                   <p>See how top finance teams actually operate.</p>
