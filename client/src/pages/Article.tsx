@@ -465,20 +465,17 @@ export default function Article() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white dark:from-gray-900 dark:to-gray-800">
 
-      {/* Floating "Become Member" button – only for guests */}
+      {/* Floating "Join Free" button – only for guests */}
       {!user && (
         <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-center">
           <Link href="/login?tab=register">
             <button
-              className="animate-wiggle-loop hover:animate-none flex flex-col items-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg px-3 py-4 transition-transform duration-200 hover:scale-105 group"
-              title="Become a Member"
+              className="animate-wiggle-loop hover:animate-none flex flex-row items-center gap-3 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg px-5 py-3 transition-transform duration-200 hover:scale-105"
+              title="Join Free"
             >
-              <UserPlus className="h-5 w-5" />
-              <span
-                className="text-xs font-semibold tracking-wide"
-                style={{ writingMode: "vertical-rl", textOrientation: "mixed", transform: "rotate(180deg)" }}
-              >
-                Become a Member
+              <UserPlus className="h-6 w-6 flex-shrink-0" />
+              <span className="text-sm font-bold tracking-wide whitespace-nowrap">
+                Join Free
               </span>
             </button>
           </Link>
@@ -506,7 +503,7 @@ export default function Article() {
               <Link href="/login?tab=register">
                 <Button className="w-full text-base py-5" size="lg" onClick={() => setShowExitPopup(false)}>
                   <UserPlus className="h-5 w-5 mr-2" />
-                  Become a Member
+                  Join Free
                 </Button>
               </Link>
               <Button
