@@ -233,9 +233,8 @@
 }
 
 /* Article Table Styles */
-/* Applied both in editor and in published article view */
-.prose table.article-table,
-.article-content table {
+/* Applied in both the editor (via .prose) and the published article view */
+.prose table.article-table {
   width: 100%;
   border-collapse: collapse;
   margin: 1.5rem 0;
@@ -245,8 +244,7 @@
   overflow: hidden;
 }
 
-.prose table.article-table th,
-.article-content table th {
+.prose table.article-table th {
   background-color: hsl(210, 20%, 97%);
   padding: 0.75rem 1rem;
   text-align: left;
@@ -256,15 +254,13 @@
   color: hsl(210, 25%, 20%);
 }
 
-.dark .prose table.article-table th,
-.dark .article-content table th {
+.dark .prose table.article-table th {
   background-color: hsl(220, 18%, 18%);
   border-color: hsl(210, 10%, 25%);
   color: hsl(200, 10%, 80%);
 }
 
-.prose table.article-table td,
-.article-content table td {
+.prose table.article-table td {
   padding: 0.75rem 1rem;
   border: 1px solid hsl(201, 30%, 85%);
   vertical-align: top;
@@ -272,32 +268,27 @@
   color: hsl(210, 15%, 30%);
 }
 
-.dark .prose table.article-table td,
-.dark .article-content table td {
+.dark .prose table.article-table td {
   border-color: hsl(210, 10%, 25%);
   color: hsl(200, 10%, 75%);
 }
 
-.prose table.article-table td:first-child,
-.article-content table td:first-child {
+.prose table.article-table td:first-child {
   font-weight: 700;
   color: hsl(210, 25%, 15%);
   background-color: hsl(210, 20%, 99%);
 }
 
-.dark .prose table.article-table td:first-child,
-.dark .article-content table td:first-child {
+.dark .prose table.article-table td:first-child {
   color: hsl(200, 10%, 88%);
   background-color: hsl(220, 18%, 15%);
 }
 
-.prose table.article-table tr:hover td,
-.article-content table tr:hover td {
+.prose table.article-table tr:hover td {
   background-color: hsl(210, 40%, 98%);
 }
 
-.dark .prose table.article-table tr:hover td,
-.dark .article-content table tr:hover td {
+.dark .prose table.article-table tr:hover td {
   background-color: hsl(220, 18%, 16%);
 }
 
