@@ -21,6 +21,7 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { z } from "zod";
 import DOMPurify from 'dompurify';
+import { convertPipeTablesToHTML } from '@/lib/tableUtils';
 
 // Helper to update document meta tags dynamically for SEO
 function updateMetaTags(article: any) {
@@ -660,7 +661,7 @@ export default function Article() {
               <div className="prose prose-lg max-w-none dark:prose-invert mb-8" data-testid="article-content">
                 {article.content ? (
                   <div dangerouslySetInnerHTML={{ 
-                    __html: DOMPurify.sanitize(article.content, { 
+                    __html: DOMPurify.sanitize(convertPipeTablesToHTML(article.content), { 
                       ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'span', 'div', 'a', 'img', 'blockquote', 'code', 'pre', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'colgroup', 'col'],
                       ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel', 'src', 'alt', 'title', 'colspan', 'rowspan', 'scope'],
                       ALLOW_DATA_ATTR: false
