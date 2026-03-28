@@ -1,10 +1,15 @@
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Extension } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { FontFamily } from '@tiptap/extension-font-family';
 import { Underline } from '@tiptap/extension-underline';
 import { TextAlign } from '@tiptap/extension-text-align';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -22,6 +27,7 @@ import {
   Undo,
   Redo,
   Type,
+  Table as TableIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -53,6 +59,64 @@ const TEXT_COLORS = [
   { value: '#808080', label: 'Gray' },
 ];
 
+function isPipeTable(text: string): boolean {
+  const lines = text.trim().split('\n').filter(l => l.trim().length > 0);
+  if (lines.length < 2) return false;
+  return lines.filter(l => l.includes('|')).length >= 2;
+}
+
+function parsePipeTable(text: string): string[][] {
+  const lines = text.trim().split('\n').filter(l => l.trim().length > 0);
+  return lines.map(line => {
+    const parts = line.split('|').map(cell => cell.trim());
+    if (parts[0] === '') parts.shift();
+    if (parts[parts.length - 1] === '') parts.pop();
+    return parts;
+  });
+}
+
+function buildTableHTML(rows: string[][]): string {
+  if (rows.length === 0) return '';
+  const [headerRow, ...bodyRows] = rows;
+
+  const headerCells = headerRow.map(cell => `<th>${cell}</th>`).join('');
+
+  const bodyRowsHTML = bodyRows
+    .map(row => {
+      const cells = row
+        .map((cell, i) => (i === 0 ? `<td><strong>${cell}</strong></td>` : `<td>${cell}</td>`))
+        .join('');
+      return `<tr>${cells}</tr>`;
+    })
+    .join('');
+
+  return `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRowsHTML}</tbody></table>`;
+}
+
+const PipeTablePaste = Extension.create({
+  name: 'pipeTablePaste',
+  addProseMirrorPlugins() {
+    const editor = this.editor;
+    return [
+      new Plugin({
+        key: new PluginKey('pipeTablePaste'),
+        props: {
+          handlePaste(_view, event) {
+            const text = event.clipboardData?.getData('text/plain') ?? '';
+            if (!isPipeTable(text)) return false;
+            event.preventDefault();
+            const rows = parsePipeTable(text);
+            if (rows.length === 0) return true;
+            const html = buildTableHTML(rows);
+            editor.chain().focus().insertContent(html).run();
+            return true;
+          },
+        },
+      }),
+    ];
+  },
+});
+
 export function RichTextEditor({
   content,
   onChange,
@@ -62,19 +126,21 @@ export function RichTextEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3],
-        },
+        heading: { levels: [1, 2, 3] },
       }),
       TextStyle,
       Color,
-      FontFamily.configure({
-        types: ['textStyle'],
-      }),
+      FontFamily.configure({ types: ['textStyle'] }),
       Underline,
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Table.configure({
+        resizable: false,
+        HTMLAttributes: { class: 'article-table' },
       }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      PipeTablePaste,
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -87,9 +153,7 @@ export function RichTextEditor({
     },
   });
 
-  if (!editor) {
-    return null;
-  }
+  if (!editor) return null;
 
   const ToolbarButton = ({
     onClick,
@@ -162,13 +226,9 @@ export function RichTextEditor({
             {TEXT_COLORS.map((color) => (
               <SelectItem key={color.value} value={color.value} data-testid={`color-${color.label.toLowerCase()}`}>
                 <div className="flex items-center gap-2">
-                  {color.value !== 'default' && (
-                    <div
-                      className="w-4 h-4 rounded border"
-                      style={{ backgroundColor: color.value }}
-                    />
-                  )}
-                  {color.value === 'default' && (
+                  {color.value !== 'default' ? (
+                    <div className="w-4 h-4 rounded border" style={{ backgroundColor: color.value }} />
+                  ) : (
                     <div className="w-4 h-4 rounded border bg-gradient-to-r from-gray-300 to-gray-500" />
                   )}
                   {color.label}
@@ -181,123 +241,80 @@ export function RichTextEditor({
         <div className="w-px h-8 bg-border" />
 
         {/* Text Formatting */}
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          isActive={editor.isActive('bold')}
-          title="Bold"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} isActive={editor.isActive('bold')} title="Bold">
           <Bold className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          isActive={editor.isActive('italic')}
-          title="Italic"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} isActive={editor.isActive('italic')} title="Italic">
           <Italic className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          isActive={editor.isActive('underline')}
-          title="Underline"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} isActive={editor.isActive('underline')} title="Underline">
           <UnderlineIcon className="h-4 w-4" />
         </ToolbarButton>
 
         <div className="w-px h-8 bg-border" />
 
-        {/* Headings (different text sizes) */}
-        <ToolbarButton
-          onClick={() => editor.chain().focus().setParagraph().run()}
-          isActive={editor.isActive('paragraph')}
-          title="Normal Text"
-        >
+        {/* Headings */}
+        <ToolbarButton onClick={() => editor.chain().focus().setParagraph().run()} isActive={editor.isActive('paragraph')} title="Normal Text">
           <Type className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          isActive={editor.isActive('heading', { level: 1 })}
-          title="Large Heading"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} isActive={editor.isActive('heading', { level: 1 })} title="Large Heading">
           <Heading1 className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          isActive={editor.isActive('heading', { level: 2 })}
-          title="Medium Heading"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} isActive={editor.isActive('heading', { level: 2 })} title="Medium Heading">
           <Heading2 className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          isActive={editor.isActive('heading', { level: 3 })}
-          title="Small Heading"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} isActive={editor.isActive('heading', { level: 3 })} title="Small Heading">
           <Heading3 className="h-4 w-4" />
         </ToolbarButton>
 
         <div className="w-px h-8 bg-border" />
 
         {/* Lists */}
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          isActive={editor.isActive('bulletList')}
-          title="Bullet List"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} isActive={editor.isActive('bulletList')} title="Bullet List">
           <List className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          isActive={editor.isActive('orderedList')}
-          title="Numbered List"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} isActive={editor.isActive('orderedList')} title="Numbered List">
           <ListOrdered className="h-4 w-4" />
         </ToolbarButton>
 
         <div className="w-px h-8 bg-border" />
 
         {/* Alignment */}
-        <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('left').run()}
-          isActive={editor.isActive({ textAlign: 'left' })}
-          title="Align Left"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('left').run()} isActive={editor.isActive({ textAlign: 'left' })} title="Align Left">
           <AlignLeft className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('center').run()}
-          isActive={editor.isActive({ textAlign: 'center' })}
-          title="Align Center"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('center').run()} isActive={editor.isActive({ textAlign: 'center' })} title="Align Center">
           <AlignCenter className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('right').run()}
-          isActive={editor.isActive({ textAlign: 'right' })}
-          title="Align Right"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('right').run()} isActive={editor.isActive({ textAlign: 'right' })} title="Align Right">
           <AlignRight className="h-4 w-4" />
         </ToolbarButton>
 
         <div className="w-px h-8 bg-border" />
 
-        {/* Undo/Redo */}
+        {/* Table */}
         <ToolbarButton
-          onClick={() => editor.chain().focus().undo().run()}
-          title="Undo"
+          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+          isActive={editor.isActive('table')}
+          title="Insert Table"
         >
+          <TableIcon className="h-4 w-4" />
+        </ToolbarButton>
+
+        <div className="w-px h-8 bg-border" />
+
+        {/* Undo/Redo */}
+        <ToolbarButton onClick={() => editor.chain().focus().undo().run()} title="Undo">
           <Undo className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().redo().run()}
-          title="Redo"
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().redo().run()} title="Redo">
           <Redo className="h-4 w-4" />
         </ToolbarButton>
       </div>
 
       {/* Editor Content */}
-      <EditorContent 
-        editor={editor} 
+      <EditorContent
+        editor={editor}
         className="bg-background dark:bg-background"
         data-testid="editor-content"
       />

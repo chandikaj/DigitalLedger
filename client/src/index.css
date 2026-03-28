@@ -232,6 +232,94 @@
   }
 }
 
+/* Article Table Styles */
+/* Applied both in editor and in published article view */
+.prose table.article-table,
+.article-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.95em;
+  border: 1px solid hsl(201, 30%, 85%);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.prose table.article-table th,
+.article-content table th {
+  background-color: hsl(210, 20%, 97%);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.875em;
+  border: 1px solid hsl(201, 30%, 85%);
+  color: hsl(210, 25%, 20%);
+}
+
+.dark .prose table.article-table th,
+.dark .article-content table th {
+  background-color: hsl(220, 18%, 18%);
+  border-color: hsl(210, 10%, 25%);
+  color: hsl(200, 10%, 80%);
+}
+
+.prose table.article-table td,
+.article-content table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid hsl(201, 30%, 85%);
+  vertical-align: top;
+  line-height: 1.55;
+  color: hsl(210, 15%, 30%);
+}
+
+.dark .prose table.article-table td,
+.dark .article-content table td {
+  border-color: hsl(210, 10%, 25%);
+  color: hsl(200, 10%, 75%);
+}
+
+.prose table.article-table td:first-child,
+.article-content table td:first-child {
+  font-weight: 700;
+  color: hsl(210, 25%, 15%);
+  background-color: hsl(210, 20%, 99%);
+}
+
+.dark .prose table.article-table td:first-child,
+.dark .article-content table td:first-child {
+  color: hsl(200, 10%, 88%);
+  background-color: hsl(220, 18%, 15%);
+}
+
+.prose table.article-table tr:hover td,
+.article-content table tr:hover td {
+  background-color: hsl(210, 40%, 98%);
+}
+
+.dark .prose table.article-table tr:hover td,
+.dark .article-content table tr:hover td {
+  background-color: hsl(220, 18%, 16%);
+}
+
+/* Tiptap table selected cell highlight */
+.prose table.article-table td,
+.prose table.article-table th {
+  position: relative;
+}
+
+.selectedCell:after {
+  background: hsl(217, 91%, 90%);
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+  opacity: 0.3;
+}
+
 /* Rich Text Editor Content Styles */
 /* Override Tailwind prose to preserve rich text editor formatting */
 
