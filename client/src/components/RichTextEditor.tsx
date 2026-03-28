@@ -1,4 +1,4 @@
-import { useEditor, EditorContent, Extension } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
@@ -9,7 +9,6 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -62,11 +61,11 @@ const TEXT_COLORS = [
 function isPipeTable(text: string): boolean {
   const lines = text.trim().split('\n').filter(l => l.trim().length > 0);
   if (lines.length < 2) return false;
-  return lines.filter(l => l.includes('|')).length >= 2;
+  return lines.every(l => l.includes('|'));
 }
 
 function parsePipeTable(text: string): string[][] {
-  const lines = text.trim().split('\n').filter(l => l.trim().length > 0);
+  const lines = text.trim().split('\n').filter(l => l.trim().length > 0 && l.includes('|'));
   return lines.map(line => {
     const parts = line.split('|').map(cell => cell.trim());
     if (parts[0] === '') parts.shift();
@@ -106,30 +105,6 @@ function buildTableHTML(rows: string[][]): string {
   return `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRowsHTML}</tbody></table>`;
 }
 
-const PipeTablePaste = Extension.create({
-  name: 'pipeTablePaste',
-  addProseMirrorPlugins() {
-    const editor = this.editor;
-    return [
-      new Plugin({
-        key: new PluginKey('pipeTablePaste'),
-        props: {
-          handlePaste(_view, event) {
-            const text = event.clipboardData?.getData('text/plain') ?? '';
-            if (!isPipeTable(text)) return false;
-            event.preventDefault();
-            const rows = parsePipeTable(text);
-            if (rows.length === 0) return true;
-            const html = buildTableHTML(rows);
-            editor.chain().focus().insertContent(html).run();
-            return true;
-          },
-        },
-      }),
-    ];
-  },
-});
-
 export function RichTextEditor({
   content,
   onChange,
@@ -153,7 +128,6 @@ export function RichTextEditor({
       TableRow,
       TableHeader,
       TableCell,
-      PipeTablePaste,
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -167,6 +141,20 @@ export function RichTextEditor({
   });
 
   if (!editor) return null;
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const text = e.clipboardData.getData('text/plain');
+    if (!isPipeTable(text)) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rows = parsePipeTable(text);
+    if (rows.length === 0) return;
+
+    const html = buildTableHTML(rows);
+    editor.chain().focus().insertContent(html).run();
+  };
 
   const ToolbarButton = ({
     onClick,
@@ -193,7 +181,11 @@ export function RichTextEditor({
   );
 
   return (
-    <div className={cn('border rounded-lg overflow-hidden', className)} data-testid="rich-text-editor">
+    <div
+      className={cn('border rounded-lg overflow-hidden', className)}
+      data-testid="rich-text-editor"
+      onPaste={handlePaste}
+    >
       {/* Toolbar */}
       <div className="border-b bg-muted/50 p-2 flex flex-wrap gap-2 items-center">
         {/* Font Family */}
