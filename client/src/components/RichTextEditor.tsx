@@ -58,22 +58,6 @@ const TEXT_COLORS = [
   { value: '#808080', label: 'Gray' },
 ];
 
-function isPipeTable(text: string): boolean {
-  const lines = text.trim().split('\n').filter(l => l.trim().length > 0);
-  if (lines.length < 2) return false;
-  return lines.every(l => l.includes('|'));
-}
-
-function parsePipeTable(text: string): string[][] {
-  const lines = text.trim().split('\n').filter(l => l.trim().length > 0 && l.includes('|'));
-  return lines.map(line => {
-    const parts = line.split('|').map(cell => cell.trim());
-    if (parts[0] === '') parts.shift();
-    if (parts[parts.length - 1] === '') parts.pop();
-    return parts;
-  });
-}
-
 function escapeHTML(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -83,12 +67,17 @@ function escapeHTML(text: string): string {
     .replace(/'/g, '&#39;');
 }
 
+function parseTableRow(line: string): string[] {
+  const parts = line.split('|').map(cell => cell.trim());
+  if (parts[0] === '') parts.shift();
+  if (parts[parts.length - 1] === '') parts.pop();
+  return parts;
+}
+
 function buildTableHTML(rows: string[][]): string {
   if (rows.length === 0) return '';
   const [headerRow, ...bodyRows] = rows;
-
   const headerCells = headerRow.map(cell => `<th>${escapeHTML(cell)}</th>`).join('');
-
   const bodyRowsHTML = bodyRows
     .map(row => {
       const cells = row
@@ -101,8 +90,55 @@ function buildTableHTML(rows: string[][]): string {
       return `<tr>${cells}</tr>`;
     })
     .join('');
-
   return `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRowsHTML}</tbody></table>`;
+}
+
+function hasPipeTableContent(text: string): boolean {
+  const lines = text.trim().split('\n').filter(l => l.trim().length > 0);
+  if (lines.length < 2) return false;
+  let consecutive = 0;
+  for (const line of lines) {
+    if (line.includes('|')) {
+      consecutive++;
+      if (consecutive >= 2) return true;
+    } else {
+      consecutive = 0;
+    }
+  }
+  return false;
+}
+
+function buildMixedHTML(text: string): string {
+  const lines = text.split('\n');
+  let html = '';
+  let tableLines: string[] = [];
+
+  const flushTable = () => {
+    if (tableLines.length >= 2) {
+      const rows = tableLines.map(parseTableRow);
+      html += buildTableHTML(rows);
+    } else if (tableLines.length === 1) {
+      html += `<p>${escapeHTML(tableLines[0])}</p>`;
+    }
+    tableLines = [];
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed === '') {
+      flushTable();
+      continue;
+    }
+    if (trimmed.includes('|')) {
+      tableLines.push(trimmed);
+    } else {
+      flushTable();
+      html += `<p>${escapeHTML(trimmed)}</p>`;
+    }
+  }
+  flushTable();
+
+  return html;
 }
 
 export function RichTextEditor({
@@ -144,15 +180,14 @@ export function RichTextEditor({
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     const text = e.clipboardData.getData('text/plain');
-    if (!isPipeTable(text)) return;
+    if (!hasPipeTableContent(text)) return;
 
     e.preventDefault();
     e.stopPropagation();
 
-    const rows = parsePipeTable(text);
-    if (rows.length === 0) return;
+    const html = buildMixedHTML(text);
+    if (!html) return;
 
-    const html = buildTableHTML(rows);
     editor.chain().focus().insertContent(html).run();
   };
 
