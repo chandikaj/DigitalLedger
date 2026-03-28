@@ -1,4 +1,5 @@
 import { useEditor, EditorContent } from '@tiptap/react';
+import { useEffect } from 'react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
@@ -94,20 +95,24 @@ export function RichTextEditor({
     },
   });
 
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom;
+    const onPaste = (e: ClipboardEvent) => {
+      const text = e.clipboardData?.getData('text/plain') ?? '';
+      if (!hasPipeTableContent(text)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const html = buildMixedHTML(text);
+      if (html) {
+        editor.commands.insertContent(html);
+      }
+    };
+    dom.addEventListener('paste', onPaste, true);
+    return () => dom.removeEventListener('paste', onPaste, true);
+  }, [editor]);
+
   if (!editor) return null;
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
-    const text = e.clipboardData.getData('text/plain');
-    if (!hasPipeTableContent(text)) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    const html = buildMixedHTML(text);
-    if (!html) return;
-
-    editor.chain().focus().insertContent(html).run();
-  };
 
   const ToolbarButton = ({
     onClick,
@@ -137,7 +142,6 @@ export function RichTextEditor({
     <div
       className={cn('border rounded-lg overflow-hidden', className)}
       data-testid="rich-text-editor"
-      onPaste={handlePaste}
     >
       {/* Toolbar */}
       <div className="border-b bg-muted/50 p-2 flex flex-wrap gap-2 items-center">
