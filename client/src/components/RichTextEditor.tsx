@@ -75,16 +75,29 @@ function parsePipeTable(text: string): string[][] {
   });
 }
 
+function escapeHTML(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function buildTableHTML(rows: string[][]): string {
   if (rows.length === 0) return '';
   const [headerRow, ...bodyRows] = rows;
 
-  const headerCells = headerRow.map(cell => `<th>${cell}</th>`).join('');
+  const headerCells = headerRow.map(cell => `<th>${escapeHTML(cell)}</th>`).join('');
 
   const bodyRowsHTML = bodyRows
     .map(row => {
       const cells = row
-        .map((cell, i) => (i === 0 ? `<td><strong>${cell}</strong></td>` : `<td>${cell}</td>`))
+        .map((cell, i) =>
+          i === 0
+            ? `<td><strong>${escapeHTML(cell)}</strong></td>`
+            : `<td>${escapeHTML(cell)}</td>`
+        )
         .join('');
       return `<tr>${cells}</tr>`;
     })

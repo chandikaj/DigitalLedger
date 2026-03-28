@@ -661,8 +661,8 @@ export default function Article() {
                 {article.content ? (
                   <div dangerouslySetInnerHTML={{ 
                     __html: DOMPurify.sanitize(article.content, { 
-                      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'span', 'div', 'a', 'img', 'blockquote', 'code', 'pre'],
-                      ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel', 'src', 'alt', 'title'],
+                      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'span', 'div', 'a', 'img', 'blockquote', 'code', 'pre', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'colgroup', 'col'],
+                      ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel', 'src', 'alt', 'title', 'colspan', 'rowspan', 'scope'],
                       ALLOW_DATA_ATTR: false
                     }) 
                   }} />
