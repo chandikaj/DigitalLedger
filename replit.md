@@ -34,12 +34,14 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Express sessions with PostgreSQL storage
 - **Security**: HTTP-only cookies, CSRF protection
 - **User Profiles**: Rich profiles with expertise tags, points, badges
-- **Welcome Email**: Automatic welcome email sent via SendGrid when new users sign up
+- **Welcome Email**: Automatic welcome email sent via custom SMTP server when new users sign up
 
 ### Email Services
-- **Provider**: SendGrid (via Replit connector integration)
+- **Provider**: Custom SMTP server (Oracle Cloud) via nodemailer
 - **Email Service**: server/emailService.ts
-- **Features**: Welcome email on user registration with HTML template
+- **Templates**: Stored as separate HTML files in `server/email-templates/` (welcome.html, article.html, podcast.html) using Handlebars syntax; loaded from disk at send time
+- **Credentials**: Read from environment variables — `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SENDER_EMAIL`, `SENDER_NAME`
+- **Features**: Welcome email on user registration, article notifications, podcast notifications
 
 ### User Settings & Preferences
 - **Settings Page**: Accessible at /settings for authenticated users
