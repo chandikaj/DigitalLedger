@@ -37,8 +37,13 @@ function createTransporter(): Transporter {
 }
 
 function getSenderAddress(): string {
-  const email = process.env.SENDER_EMAIL || "info@thedigitalledger.org";
-  const name = process.env.SENDER_NAME || "The Digital Ledger";
+  const email = process.env.SENDER_EMAIL;
+  const name = process.env.SENDER_NAME;
+  if (!email || !name) {
+    throw new Error(
+      "Sender not configured. Set SENDER_EMAIL and SENDER_NAME environment variables.",
+    );
+  }
   return `"${name}" <${email}>`;
 }
 
