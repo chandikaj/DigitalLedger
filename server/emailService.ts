@@ -2,11 +2,22 @@ import nodemailer, { type Transporter, type SendMailOptions } from "nodemailer";
 import Handlebars from "handlebars";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 import type { Subscriber } from "@shared/schema";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TEMPLATES_DIR = path.join(__dirname, "email-templates");
+const TEMPLATES_DIR = path.join(process.cwd(), "server", "email-templates");
+
+const REQUIRED_TEMPLATES = ["welcome", "article", "podcast"] as const;
+
+function validateTemplatesExist(): void {
+  for (const name of REQUIRED_TEMPLATES) {
+    const filePath = path.join(TEMPLATES_DIR, `${name}.html`);
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Email template not found: ${filePath}`);
+    }
+  }
+}
+
+validateTemplatesExist();
 
 function createTransporter(): Transporter {
   const host = process.env.SMTP_HOST;
