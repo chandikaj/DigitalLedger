@@ -10,6 +10,7 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
+import { Link } from '@tiptap/extension-link';
 import { Button } from '@/components/ui/button';
 import { hasPipeTableContent, buildMixedHTML } from '@/lib/tableUtils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -83,6 +84,14 @@ export function RichTextEditor({
       TableRow,
       TableHeader,
       TableCell,
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        HTMLAttributes: {
+          rel: 'noopener noreferrer',
+          target: '_blank',
+        },
+      }),
     ],
     content: hasPipeTableContent(content) ? buildMixedHTML(content) : content,
     onUpdate: ({ editor }) => {
