@@ -34,6 +34,8 @@ import {
   Table as TableIcon,
   Link as LinkIcon,
   Unlink,
+  ExternalLink,
+  Pencil,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -74,6 +76,15 @@ export function RichTextEditor({
   const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const linkInputRef = useRef<HTMLInputElement>(null);
+
+  const [hoverTooltip, setHoverTooltip] = useState<{
+    href: string;
+    x: number;
+    y: number;
+    anchor: HTMLAnchorElement;
+  } | null>(null);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -150,6 +161,45 @@ export function RichTextEditor({
       setTimeout(() => linkInputRef.current?.focus(), 50);
     }
   }, [linkPopoverOpen]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom;
+
+    const onMouseOver = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a') as HTMLAnchorElement | null;
+      if (!anchor) return;
+      const href = anchor.getAttribute('href') || '';
+      if (!href) return;
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = setTimeout(() => {
+        const rect = anchor.getBoundingClientRect();
+        const tooltipWidth = 340;
+        const tooltipHeight = 36;
+        const x = Math.min(rect.left, window.innerWidth - tooltipWidth - 8);
+        const y = rect.bottom + 6 + tooltipHeight > window.innerHeight
+          ? rect.top - tooltipHeight - 6
+          : rect.bottom + 6;
+        setHoverTooltip({ href, x: Math.max(8, x), y, anchor });
+      }, 150);
+    };
+
+    const onMouseOut = (e: MouseEvent) => {
+      const related = e.relatedTarget as HTMLElement | null;
+      if (related && tooltipRef.current?.contains(related)) return;
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = setTimeout(() => setHoverTooltip(null), 100);
+    };
+
+    dom.addEventListener('mouseover', onMouseOver);
+    dom.addEventListener('mouseout', onMouseOut);
+    return () => {
+      dom.removeEventListener('mouseover', onMouseOver);
+      dom.removeEventListener('mouseout', onMouseOut);
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    };
+  }, [editor]);
 
   if (!editor) return null;
 
@@ -412,6 +462,62 @@ export function RichTextEditor({
         className="bg-background dark:bg-background"
         data-testid="editor-content"
       />
+
+      {/* Link hover tooltip */}
+      {hoverTooltip && (
+        <div
+          ref={tooltipRef}
+          data-testid="link-hover-tooltip"
+          className="fixed z-50 flex items-center gap-1.5 rounded-md border bg-popover text-popover-foreground shadow-md px-2.5 py-1.5 text-sm"
+          style={{ left: hoverTooltip.x, top: hoverTooltip.y }}
+          onMouseEnter={() => {
+            if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+          }}
+          onMouseLeave={() => {
+            hoverTimeoutRef.current = setTimeout(() => setHoverTooltip(null), 100);
+          }}
+        >
+          <LinkIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <span
+            className="max-w-[220px] truncate text-muted-foreground"
+            title={hoverTooltip.href}
+          >
+            {hoverTooltip.href}
+          </span>
+          <div className="w-px h-4 bg-border mx-0.5" />
+          <button
+            type="button"
+            title="Open link"
+            className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            onClick={() => {
+              window.open(hoverTooltip.href, '_blank', 'noopener,noreferrer');
+            }}
+          >
+            <ExternalLink className="h-3 w-3" />
+            Open
+          </button>
+          <button
+            type="button"
+            title="Edit link"
+            className="flex items-center gap-1 text-xs font-medium hover:underline"
+            onClick={() => {
+              const { anchor, href } = hoverTooltip;
+              setHoverTooltip(null);
+              try {
+                const pos = editor.view.posAtDOM(anchor.firstChild ?? anchor, 0);
+                editor.chain().focus().setTextSelection(pos).extendMarkRange('link').run();
+              } catch {
+                editor.commands.focus();
+              }
+              setLinkUrl(href);
+              setLinkPopoverOpen(true);
+            }}
+          >
+            <Pencil className="h-3 w-3" />
+            Edit
+          </button>
+        </div>
+      )}
     </div>
   );
 }
