@@ -85,3 +85,100 @@ export function convertPipeTablesToHTML(content: string): string {
   if (!hasPipeTableContent(content)) return content;
   return buildMixedHTML(content);
 }
+
+const URL_REGEX = /(?:https?:\/\/|www\.)[^\s<>"'`]+/gi;
+const TRAILING_PUNCT = /[.,;:!?)\]>}'"]+$/;
+
+export function linkifyHTML(html: string): string {
+  if (!html || typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+    return html;
+  }
+
+  try {
+    const doc = new DOMParser().parseFromString(
+      `<div id="__linkify_root__">${html}</div>`,
+      'text/html'
+    );
+    const root = doc.getElementById('__linkify_root__');
+    if (!root) return html;
+
+    const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const textNodes: Text[] = [];
+    let current: Node | null = walker.nextNode();
+    while (current) {
+      let parent: HTMLElement | null = (current as Text).parentElement;
+      let skip = false;
+      while (parent && parent !== root) {
+        const tag = parent.tagName;
+        if (tag === 'A' || tag === 'CODE' || tag === 'PRE' || tag === 'SCRIPT' || tag === 'STYLE') {
+          skip = true;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      const value = current.nodeValue || '';
+      URL_REGEX.lastIndex = 0;
+      if (!skip && URL_REGEX.test(value)) {
+        textNodes.push(current as Text);
+      }
+      current = walker.nextNode();
+    }
+
+    for (const node of textNodes) {
+      const text = node.nodeValue || '';
+      const fragment = doc.createDocumentFragment();
+      let lastIndex = 0;
+      let match: RegExpExecArray | null;
+      URL_REGEX.lastIndex = 0;
+
+      while ((match = URL_REGEX.exec(text)) !== null) {
+        const start = match.index;
+        let raw = match[0];
+
+        let trailing = '';
+        const trailMatch = raw.match(TRAILING_PUNCT);
+        if (trailMatch) {
+          trailing = trailMatch[0];
+          raw = raw.slice(0, raw.length - trailing.length);
+        }
+
+        if (raw.length === 0) {
+          if (start > lastIndex) {
+            fragment.appendChild(doc.createTextNode(text.slice(lastIndex, start)));
+          }
+          fragment.appendChild(doc.createTextNode(match[0]));
+          lastIndex = start + match[0].length;
+          continue;
+        }
+
+        if (start > lastIndex) {
+          fragment.appendChild(doc.createTextNode(text.slice(lastIndex, start)));
+        }
+
+        const href = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+        const anchor = doc.createElement('a');
+        anchor.setAttribute('href', href);
+        anchor.setAttribute('target', '_blank');
+        anchor.setAttribute('rel', 'noopener noreferrer');
+        anchor.textContent = raw;
+        fragment.appendChild(anchor);
+
+        if (trailing) {
+          fragment.appendChild(doc.createTextNode(trailing));
+        }
+
+        lastIndex = start + match[0].length;
+      }
+
+      if (lastIndex < text.length) {
+        fragment.appendChild(doc.createTextNode(text.slice(lastIndex)));
+      }
+
+      node.parentNode?.replaceChild(fragment, node);
+    }
+
+    return root.innerHTML;
+  } catch {
+    return html;
+  }
+}

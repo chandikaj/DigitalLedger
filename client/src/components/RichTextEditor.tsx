@@ -14,7 +14,7 @@ import { Link } from '@tiptap/extension-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { hasPipeTableContent, buildMixedHTML } from '@/lib/tableUtils';
+import { hasPipeTableContent, buildMixedHTML, linkifyHTML } from '@/lib/tableUtils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Bold,
@@ -106,6 +106,7 @@ export function RichTextEditor({
       Link.configure({
         openOnClick: false,
         autolink: true,
+        linkOnPaste: true,
         HTMLAttributes: {
           rel: 'noopener noreferrer',
           target: '_blank',
@@ -120,6 +121,9 @@ export function RichTextEditor({
       attributes: {
         class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none min-h-[300px] max-w-none p-4',
       },
+      transformPastedHTML(html) {
+        return linkifyHTML(html);
+      },
     },
   });
 
@@ -133,7 +137,7 @@ export function RichTextEditor({
       e.stopPropagation();
       const html = buildMixedHTML(text);
       if (html) {
-        editor.commands.insertContent(html);
+        editor.commands.insertContent(linkifyHTML(html));
       }
     };
     dom.addEventListener('paste', onPaste, true);
