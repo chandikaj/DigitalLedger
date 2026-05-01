@@ -33,16 +33,21 @@ function buildTableHTML(rows: string[][]): string {
   return `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRowsHTML}</tbody></table>`;
 }
 
+function isSeparatorLine(line: string): boolean {
+  const t = line.trim();
+  if (!t.includes('-') || !t.includes('|')) return false;
+  return /^[\s\-:|]+$/.test(t);
+}
+
 export function hasPipeTableContent(text: string): boolean {
-  const lines = text.trim().split('\n').filter(l => l.trim().length > 0);
-  if (lines.length < 2) return false;
-  let consecutive = 0;
-  for (const line of lines) {
-    if (line.includes('|')) {
-      consecutive++;
-      if (consecutive >= 2) return true;
-    } else {
-      consecutive = 0;
+  const lines = text.split('\n');
+  for (let i = 1; i < lines.length; i++) {
+    if (
+      isSeparatorLine(lines[i]) &&
+      lines[i - 1].includes('|') &&
+      !isSeparatorLine(lines[i - 1])
+    ) {
+      return true;
     }
   }
   return false;
@@ -51,32 +56,45 @@ export function hasPipeTableContent(text: string): boolean {
 export function buildMixedHTML(text: string): string {
   const lines = text.split('\n');
   let html = '';
-  let tableLines: string[] = [];
+  let i = 0;
 
-  const flushTable = () => {
-    if (tableLines.length >= 2) {
-      const rows = tableLines.map(parseTableRow);
-      html += buildTableHTML(rows);
-    } else if (tableLines.length === 1) {
-      html += `<p>${escapeHTML(tableLines[0])}</p>`;
-    }
-    tableLines = [];
-  };
+  while (i < lines.length) {
+    const trimmed = lines[i].trim();
+    const nextTrimmed = i + 1 < lines.length ? lines[i + 1].trim() : '';
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed === '') {
-      flushTable();
+    // Detect start of a real markdown pipe table: header row + separator row
+    if (
+      trimmed.includes('|') &&
+      !isSeparatorLine(trimmed) &&
+      nextTrimmed &&
+      isSeparatorLine(nextTrimmed)
+    ) {
+      const headerRow = parseTableRow(trimmed);
+      const bodyRows: string[][] = [];
+      let j = i + 2;
+      while (j < lines.length) {
+        const l = lines[j].trim();
+        if (l === '' || !l.includes('|')) break;
+        if (isSeparatorLine(l)) {
+          j++;
+          continue;
+        }
+        bodyRows.push(parseTableRow(l));
+        j++;
+      }
+      html += buildTableHTML([headerRow, ...bodyRows]);
+      i = j;
       continue;
     }
-    if (trimmed.includes('|')) {
-      tableLines.push(trimmed);
-    } else {
-      flushTable();
-      html += `<p>${escapeHTML(trimmed)}</p>`;
+
+    if (trimmed === '') {
+      i++;
+      continue;
     }
+
+    html += `<p>${escapeHTML(trimmed)}</p>`;
+    i++;
   }
-  flushTable();
 
   return html;
 }
