@@ -1,5 +1,5 @@
 import { useEditor, EditorContent } from '@tiptap/react';
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
@@ -12,6 +12,8 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { Link } from '@tiptap/extension-link';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { hasPipeTableContent, buildMixedHTML } from '@/lib/tableUtils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -30,6 +32,8 @@ import {
   Redo,
   Type,
   Table as TableIcon,
+  Link as LinkIcon,
+  Unlink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -67,6 +71,10 @@ export function RichTextEditor({
   placeholder = 'Start writing...',
   className,
 }: RichTextEditorProps) {
+  const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const linkInputRef = useRef<HTMLInputElement>(null);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -121,7 +129,57 @@ export function RichTextEditor({
     return () => dom.removeEventListener('paste', onPaste, true);
   }, [editor]);
 
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom;
+    const onClickLink = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a');
+      if (!anchor) return;
+      e.preventDefault();
+      const href = anchor.getAttribute('href') || '';
+      setLinkUrl(href);
+      setLinkPopoverOpen(true);
+    };
+    dom.addEventListener('click', onClickLink);
+    return () => dom.removeEventListener('click', onClickLink);
+  }, [editor]);
+
+  useEffect(() => {
+    if (linkPopoverOpen && linkInputRef.current) {
+      setTimeout(() => linkInputRef.current?.focus(), 50);
+    }
+  }, [linkPopoverOpen]);
+
   if (!editor) return null;
+
+  const isLinkActive = editor.isActive('link');
+
+  const openLinkPopover = () => {
+    const existingHref = editor.getAttributes('link').href || '';
+    setLinkUrl(existingHref);
+    setLinkPopoverOpen(true);
+  };
+
+  const applyLink = () => {
+    if (!linkUrl.trim()) {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+    } else {
+      let url = linkUrl.trim();
+      if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url;
+      }
+      editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    }
+    setLinkPopoverOpen(false);
+    setLinkUrl('');
+  };
+
+  const removeLink = () => {
+    editor.chain().focus().extendMarkRange('link').unsetLink().run();
+    setLinkPopoverOpen(false);
+    setLinkUrl('');
+  };
 
   const ToolbarButton = ({
     onClick,
@@ -260,6 +318,71 @@ export function RichTextEditor({
         <ToolbarButton onClick={() => editor.chain().focus().setTextAlign('right').run()} isActive={editor.isActive({ textAlign: 'right' })} title="Align Right">
           <AlignRight className="h-4 w-4" />
         </ToolbarButton>
+
+        <div className="w-px h-8 bg-border" />
+
+        {/* Link */}
+        <Popover open={linkPopoverOpen} onOpenChange={setLinkPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              onClick={openLinkPopover}
+              variant={isLinkActive ? 'default' : 'ghost'}
+              size="sm"
+              className={cn('h-8 w-8 p-0', isLinkActive && 'bg-primary text-primary-foreground')}
+              title="Insert Link"
+              data-testid="toolbar-insert-link"
+            >
+              <LinkIcon className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-3" align="start" data-testid="link-popover">
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">{isLinkActive ? 'Edit Link' : 'Insert Link'}</p>
+              <div className="flex gap-2">
+                <Input
+                  ref={linkInputRef}
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className="h-8 text-sm"
+                  data-testid="link-url-input"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      applyLink();
+                    }
+                    if (e.key === 'Escape') {
+                      setLinkPopoverOpen(false);
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 px-3"
+                  onClick={applyLink}
+                  data-testid="link-apply-button"
+                >
+                  Apply
+                </Button>
+              </div>
+              {isLinkActive && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-full text-destructive hover:text-destructive"
+                  onClick={removeLink}
+                  data-testid="link-remove-button"
+                >
+                  <Unlink className="h-3.5 w-3.5 mr-1.5" />
+                  Remove Link
+                </Button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
 
         <div className="w-px h-8 bg-border" />
 
