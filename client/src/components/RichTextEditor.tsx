@@ -516,6 +516,25 @@ export function RichTextEditor({
             <Pencil className="h-3 w-3" />
             Edit
           </button>
+          <div className="w-px h-4 bg-border mx-0.5" />
+          <button
+            type="button"
+            title="Remove link"
+            className="flex items-center gap-1 text-xs font-medium text-destructive hover:underline"
+            onClick={() => {
+              const { anchor } = hoverTooltip;
+              setHoverTooltip(null);
+              try {
+                const pos = editor.view.posAtDOM(anchor.firstChild ?? anchor, 0);
+                editor.chain().focus().setTextSelection(pos).extendMarkRange('link').unsetLink().run();
+              } catch {
+                editor.chain().focus().unsetLink().run();
+              }
+            }}
+          >
+            <Unlink className="h-3 w-3" />
+            Remove
+          </button>
         </div>
       )}
     </div>
