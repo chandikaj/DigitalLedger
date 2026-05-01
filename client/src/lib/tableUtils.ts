@@ -107,6 +107,24 @@ export function convertPipeTablesToHTML(content: string): string {
 const URL_REGEX = /(?:https?:\/\/|www\.)[^\s<>"'`]+/gi;
 const TRAILING_PUNCT = /[.,;:!?)\]>}'"]+$/;
 
+function unwrapRedirectUrl(href: string): string {
+  if (!href) return href;
+  try {
+    const u = new URL(href, 'https://placeholder.local');
+    // Google Docs / Search redirect: https://www.google.com/url?q=REAL_URL&...
+    if (
+      (u.hostname === 'www.google.com' || u.hostname === 'google.com') &&
+      u.pathname === '/url'
+    ) {
+      const real = u.searchParams.get('q') || u.searchParams.get('url');
+      if (real && /^https?:\/\//i.test(real)) return real;
+    }
+  } catch {
+    // ignore malformed URLs
+  }
+  return href;
+}
+
 export function linkifyHTML(html: string): string {
   if (!html || typeof window === 'undefined' || typeof DOMParser === 'undefined') {
     return html;
@@ -119,6 +137,14 @@ export function linkifyHTML(html: string): string {
     );
     const root = doc.getElementById('__linkify_root__');
     if (!root) return html;
+
+    // Unwrap redirect URLs on existing anchors (e.g. Google Docs)
+    const anchors = root.querySelectorAll('a[href]');
+    anchors.forEach((a) => {
+      const href = a.getAttribute('href') || '';
+      const real = unwrapRedirectUrl(href);
+      if (real !== href) a.setAttribute('href', real);
+    });
 
     const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     const textNodes: Text[] = [];
