@@ -1398,14 +1398,20 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  // One-time backfill: mark accounts that existed BEFORE the email
-  // verification feature was deployed (2026-05-15) as already verified
-  // so legacy users aren't forced through the new flow. The hard cutoff
-  // ensures this can never auto-verify accounts created after deploy,
-  // even if the server restarts.
+  // One-time backfill: mark all accounts that existed at the moment the
+  // email verification feature shipped as already verified, so legacy
+  // users aren't forced through the new flow. We use a marker row in a
+  // tiny `app_migrations` table so this runs exactly once and can never
+  // auto-verify accounts created after the migration.
   try {
     const { sql } = await import("drizzle-orm");
-    await db.execute(sql`UPDATE users SET email_verified = true WHERE email_verified = false AND created_at < TIMESTAMP '2026-05-15 00:00:00'`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS app_migrations (id text PRIMARY KEY, applied_at timestamp NOT NULL DEFAULT NOW())`);
+    const inserted = await db.execute(sql`INSERT INTO app_migrations (id) VALUES ('email_verified_backfill_v1') ON CONFLICT (id) DO NOTHING RETURNING id`);
+    const rowCount = (inserted as { rowCount?: number }).rowCount ?? 0;
+    if (rowCount > 0) {
+      await db.execute(sql`UPDATE users SET email_verified = true WHERE email_verified = false`);
+      log("✓ One-time emailVerified backfill applied for legacy users");
+    }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     log(`Warning: emailVerified backfill failed: ${errorMsg}`);

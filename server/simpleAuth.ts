@@ -287,7 +287,7 @@ export function setupAuth(app: Express, storage: IStorage) {
             console.error("Session save error:", saveErr);
             return res.status(500).json({ message: "Internal server error" });
           }
-          const { passwordHash: _, ...userResponse } = user as any;
+          const { passwordHash: _passwordHash, ...userResponse } = user;
           res.json({ verified: true, user: { ...userResponse, emailVerified: true } });
         });
       });
