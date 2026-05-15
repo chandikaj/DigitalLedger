@@ -32,6 +32,8 @@ import Settings from "@/pages/Settings";
 import Toolbox from "@/pages/Toolbox";
 import Welcome from "@/pages/Welcome";
 import VerifyEmail from "@/pages/VerifyEmail";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import Unsubscribe from "@/pages/Unsubscribe";
 
 function Router() {
@@ -68,6 +70,8 @@ function Router() {
       <Route path="/about" component={About} />
       <Route path="/login" component={Login} />
       <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/logout" component={Logout} />
       <Route path="/welcome" component={Welcome} />
       <Route path="/unsubscribe" component={Unsubscribe} />

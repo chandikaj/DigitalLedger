@@ -58,6 +58,17 @@ export const emailVerificationCodes = pgTable("email_verification_codes", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Password reset codes for forgot-password flow
+export const passwordResetCodes = pgTable("password_reset_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  codeHash: varchar("code_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  attemptCount: integer("attempt_count").default(0).notNull(),
+  lastSentAt: timestamp("last_sent_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // User invitations for email-based user management
 export const userInvitations = pgTable("user_invitations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -593,6 +604,21 @@ export const resendVerificationSchema = z.object({
   email: z.string().email("Invalid email format"),
 });
 export type ResendVerificationRequest = z.infer<typeof resendVerificationSchema>;
+
+export type PasswordResetCode = typeof passwordResetCodes.$inferSelect;
+export type InsertPasswordResetCode = typeof passwordResetCodes.$inferInsert;
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email format"),
+});
+export type ForgotPasswordRequest = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  code: z.string().regex(/^\d{6}$/, "Code must be 6 digits"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
+export type ResetPasswordRequest = z.infer<typeof resetPasswordSchema>;
 
 export type Subscriber = typeof subscribers.$inferSelect;
 export type InsertSubscriber = z.infer<typeof insertSubscriberSchema>;

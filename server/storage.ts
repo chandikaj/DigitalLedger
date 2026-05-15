@@ -1,6 +1,7 @@
 import {
   users,
   emailVerificationCodes,
+  passwordResetCodes,
   newsCategories,
   newsArticles,
   newsComments,
@@ -53,6 +54,8 @@ import {
   type UpdateMenuSetting,
   type EmailVerificationCode,
   type InsertEmailVerificationCode,
+  type PasswordResetCode,
+  type InsertPasswordResetCode,
   type Subscriber,
   type InsertSubscriber,
   type UpdateSubscriber,
@@ -90,6 +93,10 @@ export interface IStorage {
   getActiveVerificationCode(userId: string): Promise<EmailVerificationCode | undefined>;
   deleteVerificationCodesForUser(userId: string): Promise<void>;
   incrementVerificationAttempt(codeId: string): Promise<number>;
+  createPasswordResetCode(code: InsertPasswordResetCode): Promise<PasswordResetCode>;
+  getActivePasswordResetCode(userId: string): Promise<PasswordResetCode | undefined>;
+  deletePasswordResetCodesForUser(userId: string): Promise<void>;
+  incrementPasswordResetAttempt(codeId: string): Promise<number>;
 
   // News category operations
   getNewsCategories(activeOnly?: boolean): Promise<NewsCategory[]>;
@@ -379,6 +386,34 @@ export class DatabaseStorage implements IStorage {
       .update(emailVerificationCodes)
       .set({ attemptCount: sql`${emailVerificationCodes.attemptCount} + 1` })
       .where(eq(emailVerificationCodes.id, codeId))
+      .returning();
+    return updated?.attemptCount ?? 0;
+  }
+
+  async createPasswordResetCode(code: InsertPasswordResetCode): Promise<PasswordResetCode> {
+    const [created] = await db.insert(passwordResetCodes).values(code).returning();
+    return created;
+  }
+
+  async getActivePasswordResetCode(userId: string): Promise<PasswordResetCode | undefined> {
+    const [code] = await db
+      .select()
+      .from(passwordResetCodes)
+      .where(eq(passwordResetCodes.userId, userId))
+      .orderBy(desc(passwordResetCodes.createdAt))
+      .limit(1);
+    return code;
+  }
+
+  async deletePasswordResetCodesForUser(userId: string): Promise<void> {
+    await db.delete(passwordResetCodes).where(eq(passwordResetCodes.userId, userId));
+  }
+
+  async incrementPasswordResetAttempt(codeId: string): Promise<number> {
+    const [updated] = await db
+      .update(passwordResetCodes)
+      .set({ attemptCount: sql`${passwordResetCodes.attemptCount} + 1` })
+      .where(eq(passwordResetCodes.id, codeId))
       .returning();
     return updated?.attemptCount ?? 0;
   }

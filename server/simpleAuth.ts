@@ -6,10 +6,12 @@ import {
   registerSchema,
   verifyEmailSchema,
   resendVerificationSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
   User,
 } from "@shared/schema";
 import { IStorage } from "./storage";
-import { sendWelcomeEmail, sendVerificationEmail } from "./emailService";
+import { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail } from "./emailService";
 
 // Extend session type to include userId
 declare module "express-session" {
@@ -332,6 +334,132 @@ export function setupAuth(app: Express, storage: IStorage) {
       res.json({ message: "Verification code sent" });
     } catch (error) {
       console.error("Resend verification error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Forgot password — issue a 6-digit reset code
+  app.post("/api/auth/forgot-password", async (req: Request, res: Response) => {
+    try {
+      const result = forgotPasswordSchema.safeParse(req.body);
+      if (!result.success) {
+        return res
+          .status(400)
+          .json({ message: "Invalid input", errors: result.error.errors });
+      }
+
+      const email = result.data.email.toLowerCase();
+      // Always respond success-shaped to prevent email enumeration
+      const successResponse = {
+        message: "If an account exists for that email, a reset code has been sent.",
+      };
+
+      const user = await storage.getUserByEmail(email);
+      // Only issue codes for local-auth users with a passwordHash
+      if (!user || !user.passwordHash) {
+        return res.json(successResponse);
+      }
+
+      // Reuse 60s cooldown so this can't be used to spam
+      const existing = await storage.getActivePasswordResetCode(user.id);
+      if (existing) {
+        const elapsed = Date.now() - existing.lastSentAt.getTime();
+        if (elapsed < RESEND_COOLDOWN_MS) {
+          // Silent cooldown — still return success-shaped to avoid leaking state
+          return res.json(successResponse);
+        }
+      }
+
+      const code = generateCode();
+      const codeHash = await bcrypt.hash(code, SALT_ROUNDS);
+      await storage.deletePasswordResetCodesForUser(user.id);
+      await storage.createPasswordResetCode({
+        userId: user.id,
+        codeHash,
+        expiresAt: new Date(Date.now() + CODE_TTL_MS),
+        attemptCount: 0,
+        lastSentAt: new Date(),
+      });
+
+      sendPasswordResetEmail(user.email!, user.firstName || "there", code).catch((err) => {
+        console.error("Failed to send password reset email:", err);
+      });
+
+      res.json(successResponse);
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Reset password — validate code and set new password
+  app.post("/api/auth/reset-password", async (req: Request, res: Response) => {
+    try {
+      const result = resetPasswordSchema.safeParse(req.body);
+      if (!result.success) {
+        return res
+          .status(400)
+          .json({ message: "Invalid input", errors: result.error.errors });
+      }
+
+      const { email, code, newPassword } = result.data;
+      const invalidMsg = { message: "Invalid or expired code" };
+
+      // Per-email rolling 15-min rate limit (shared with verify flow)
+      const gate = recordAndCheckVerifyAttempt(`pwreset:${email}`);
+      if (!gate.allowed) {
+        return res.status(429).json({
+          message: `Too many attempts. Try again in ${gate.retryAfter}s.`,
+          retryAfter: gate.retryAfter,
+        });
+      }
+
+      const user = await storage.getUserByEmail(email.toLowerCase());
+      if (!user || !user.passwordHash) {
+        return res.status(400).json(invalidMsg);
+      }
+
+      const stored = await storage.getActivePasswordResetCode(user.id);
+      if (!stored) {
+        return res.status(400).json(invalidMsg);
+      }
+
+      if (stored.expiresAt.getTime() < Date.now()) {
+        await storage.deletePasswordResetCodesForUser(user.id);
+        return res.status(400).json(invalidMsg);
+      }
+
+      if (stored.attemptCount >= MAX_VERIFY_ATTEMPTS) {
+        return res.status(429).json({
+          message: "Too many attempts. Please request a new code.",
+        });
+      }
+
+      const ok = await bcrypt.compare(code, stored.codeHash);
+      if (!ok) {
+        await storage.incrementPasswordResetAttempt(stored.id);
+        return res.status(400).json(invalidMsg);
+      }
+
+      const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+      await storage.updateUser(user.id, { passwordHash: newHash });
+      await storage.deletePasswordResetCodesForUser(user.id);
+
+      // Invalidate all existing sessions for this user so any attacker
+      // already holding a session cookie is logged out by the reset.
+      try {
+        const { sql: dsql } = await import("drizzle-orm");
+        const { db: database } = await import("./db");
+        await database.execute(
+          dsql`DELETE FROM sessions WHERE sess->>'userId' = ${user.id}`,
+        );
+      } catch (err) {
+        console.error("Failed to invalidate sessions after password reset:", err);
+      }
+
+      res.json({ success: true, message: "Password updated. Please sign in." });
+    } catch (error) {
+      console.error("Reset password error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import {
   Card,
   CardContent,
@@ -250,7 +250,16 @@ export default function Login() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Password</FormLabel>
+                          <div className="flex items-center justify-between">
+                            <FormLabel>Password</FormLabel>
+                            <Link
+                              href="/forgot-password"
+                              className="text-xs text-muted-foreground hover:text-foreground"
+                              data-testid="link-forgot-password"
+                            >
+                              Forgot password?
+                            </Link>
+                          </div>
                           <FormControl>
                             <Input
                               type="password"
