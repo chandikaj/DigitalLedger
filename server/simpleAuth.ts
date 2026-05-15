@@ -1,5 +1,6 @@
 import { Express, Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
+import { randomInt } from "crypto";
 import {
   loginSchema,
   registerSchema,
@@ -63,7 +64,7 @@ setInterval(() => {
 }, 60 * 1000).unref?.();
 
 function generateCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(0, 1_000_000).toString().padStart(6, "0");
 }
 
 async function issueVerificationCode(
