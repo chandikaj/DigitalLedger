@@ -100,6 +100,7 @@ async function upsertUser(
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
     role: role,
+    emailVerified: true,
   });
 }
 

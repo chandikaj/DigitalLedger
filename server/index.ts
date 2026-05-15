@@ -1398,6 +1398,16 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Backfill emailVerified for pre-existing users so they aren't forced
+  // through verification after this feature was deployed.
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`UPDATE users SET email_verified = true WHERE email_verified = false AND created_at < NOW() - INTERVAL '1 minute'`);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    log(`Warning: emailVerified backfill failed: ${errorMsg}`);
+  }
+
   // Initialize menu settings
   try {
     await storage.initializeMenuSettings();

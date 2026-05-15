@@ -30,6 +30,37 @@ const SALT_ROUNDS = 12;
 const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
 const MAX_VERIFY_ATTEMPTS = 5;
+const VERIFY_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_VERIFY_ATTEMPTS_PER_WINDOW = 5;
+
+// Per-email rolling window of verify attempt timestamps. This survives
+// code rotation (resend) so brute-force is bounded across the window.
+const verifyAttemptLog = new Map<string, number[]>();
+
+function recordAndCheckVerifyAttempt(email: string): { allowed: boolean; retryAfter: number } {
+  const key = email.toLowerCase();
+  const now = Date.now();
+  const cutoff = now - VERIFY_WINDOW_MS;
+  const arr = (verifyAttemptLog.get(key) || []).filter((t) => t > cutoff);
+  arr.push(now);
+  verifyAttemptLog.set(key, arr);
+  if (arr.length > MAX_VERIFY_ATTEMPTS_PER_WINDOW) {
+    const oldest = arr[arr.length - MAX_VERIFY_ATTEMPTS_PER_WINDOW - 1] || arr[0];
+    const retryAfter = Math.max(1, Math.ceil((oldest + VERIFY_WINDOW_MS - now) / 1000));
+    return { allowed: false, retryAfter };
+  }
+  return { allowed: true, retryAfter: 0 };
+}
+
+// Periodic cleanup so the map doesn't grow unbounded.
+setInterval(() => {
+  const cutoff = Date.now() - VERIFY_WINDOW_MS;
+  for (const [k, arr] of verifyAttemptLog.entries()) {
+    const kept = arr.filter((t) => t > cutoff);
+    if (kept.length === 0) verifyAttemptLog.delete(k);
+    else verifyAttemptLog.set(k, kept);
+  }
+}, 60 * 1000).unref?.();
 
 function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -170,9 +201,18 @@ export function setupAuth(app: Express, storage: IStorage) {
       }
 
       const { email, code } = result.data;
-      const user = await storage.getUserByEmail(email.toLowerCase());
       const invalidMsg = { message: "Invalid or expired code" };
 
+      // Per-email rolling 15-min rate limit (independent of code rotation)
+      const gate = recordAndCheckVerifyAttempt(email);
+      if (!gate.allowed) {
+        return res.status(429).json({
+          message: `Too many attempts. Try again in ${gate.retryAfter}s.`,
+          retryAfter: gate.retryAfter,
+        });
+      }
+
+      const user = await storage.getUserByEmail(email.toLowerCase());
       if (!user) {
         return res.status(400).json(invalidMsg);
       }
