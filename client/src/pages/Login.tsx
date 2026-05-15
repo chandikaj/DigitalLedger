@@ -114,7 +114,7 @@ export default function Login() {
     mutationFn: async (data: RegisterRequest) => {
       return await apiRequest("/api/auth/register", "POST", data);
     },
-    onSuccess: (response: any, variables) => {
+    onSuccess: (response: { verificationRequired?: boolean } | undefined, variables) => {
       if (response?.verificationRequired) {
         toast({
           title: "Check your email",
