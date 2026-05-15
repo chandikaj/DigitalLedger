@@ -1,5 +1,6 @@
 import {
   users,
+  emailVerificationCodes,
   newsCategories,
   newsArticles,
   newsComments,
@@ -50,6 +51,8 @@ import {
   type MenuSetting,
   type InsertMenuSetting,
   type UpdateMenuSetting,
+  type EmailVerificationCode,
+  type InsertEmailVerificationCode,
   type Subscriber,
   type InsertSubscriber,
   type UpdateSubscriber,
@@ -82,6 +85,12 @@ export interface IStorage {
   findInvitationByEmail(email: string): Promise<UserInvitation | undefined>;
   markInvitationAccepted(id: string): Promise<void>;
   
+  // Email verification code operations
+  createVerificationCode(code: InsertEmailVerificationCode): Promise<EmailVerificationCode>;
+  getActiveVerificationCode(userId: string): Promise<EmailVerificationCode | undefined>;
+  deleteVerificationCodesForUser(userId: string): Promise<void>;
+  incrementVerificationAttempt(codeId: string): Promise<number>;
+
   // News category operations
   getNewsCategories(activeOnly?: boolean): Promise<NewsCategory[]>;
   getNewsCategory(id: string): Promise<NewsCategory | undefined>;
@@ -344,6 +353,34 @@ export class DatabaseStorage implements IStorage {
       .update(userInvitations)
       .set({ acceptedAt: new Date() })
       .where(eq(userInvitations.id, id));
+  }
+
+  async createVerificationCode(code: InsertEmailVerificationCode): Promise<EmailVerificationCode> {
+    const [created] = await db.insert(emailVerificationCodes).values(code).returning();
+    return created;
+  }
+
+  async getActiveVerificationCode(userId: string): Promise<EmailVerificationCode | undefined> {
+    const [code] = await db
+      .select()
+      .from(emailVerificationCodes)
+      .where(eq(emailVerificationCodes.userId, userId))
+      .orderBy(desc(emailVerificationCodes.createdAt))
+      .limit(1);
+    return code;
+  }
+
+  async deleteVerificationCodesForUser(userId: string): Promise<void> {
+    await db.delete(emailVerificationCodes).where(eq(emailVerificationCodes.userId, userId));
+  }
+
+  async incrementVerificationAttempt(codeId: string): Promise<number> {
+    const [updated] = await db
+      .update(emailVerificationCodes)
+      .set({ attemptCount: sql`${emailVerificationCodes.attemptCount} + 1` })
+      .where(eq(emailVerificationCodes.id, codeId))
+      .returning();
+    return updated?.attemptCount ?? 0;
   }
 
   // News category methods

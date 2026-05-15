@@ -6,7 +6,7 @@ import type { Subscriber } from "@shared/schema";
 
 const TEMPLATES_DIR = path.join(process.cwd(), "server", "email-templates");
 
-const REQUIRED_TEMPLATES = ["welcome", "article", "podcast"] as const;
+const REQUIRED_TEMPLATES = ["welcome", "article", "podcast", "verify-email"] as const;
 
 function validateTemplatesExist(): void {
   for (const name of REQUIRED_TEMPLATES) {
@@ -109,6 +109,32 @@ export async function sendWelcomeEmail(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Error sending welcome email to ${userEmail}:`, message);
+    return false;
+  }
+}
+
+export async function sendVerificationEmail(
+  userEmail: string,
+  firstName: string,
+  code: string,
+): Promise<boolean> {
+  try {
+    const transporter = createTransporter();
+    const from = getSenderAddress();
+    const template = loadTemplate("verify-email");
+    const html = template({ firstName: firstName || "there", code });
+
+    await transporter.sendMail({
+      from,
+      to: userEmail,
+      subject: `Your verification code: ${code}`,
+      html,
+    });
+    console.log(`Verification email sent to ${userEmail}`);
+    return true;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error sending verification email to ${userEmail}:`, message);
     return false;
   }
 }

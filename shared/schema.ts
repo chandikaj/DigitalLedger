@@ -42,8 +42,20 @@ export const users = pgTable("users", {
   badges: text("badges").array(),
   role: varchar("role").default("subscriber"), // subscriber, contributor, editor, admin
   isActive: boolean("is_active").default(true),
+  emailVerified: boolean("email_verified").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Email verification codes for signup flow
+export const emailVerificationCodes = pgTable("email_verification_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  codeHash: varchar("code_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  attemptCount: integer("attempt_count").default(0).notNull(),
+  lastSentAt: timestamp("last_sent_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // User invitations for email-based user management
@@ -568,6 +580,20 @@ export type PodcastCategory = typeof podcastCategories.$inferSelect;
 export type InsertPodcastCategory = z.infer<typeof insertPodcastCategorySchema>;
 export type DiscussionNewsCategory = typeof discussionNewsCategories.$inferSelect;
 export type InsertDiscussionNewsCategory = z.infer<typeof insertDiscussionNewsCategorySchema>;
+export type EmailVerificationCode = typeof emailVerificationCodes.$inferSelect;
+export type InsertEmailVerificationCode = typeof emailVerificationCodes.$inferInsert;
+
+export const verifyEmailSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  code: z.string().regex(/^\d{6}$/, "Code must be 6 digits"),
+});
+export type VerifyEmailRequest = z.infer<typeof verifyEmailSchema>;
+
+export const resendVerificationSchema = z.object({
+  email: z.string().email("Invalid email format"),
+});
+export type ResendVerificationRequest = z.infer<typeof resendVerificationSchema>;
+
 export type Subscriber = typeof subscribers.$inferSelect;
 export type InsertSubscriber = z.infer<typeof insertSubscriberSchema>;
 export type UpdateSubscriber = z.infer<typeof updateSubscriberSchema>;

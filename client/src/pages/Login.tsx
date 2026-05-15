@@ -68,9 +68,32 @@ export default function Login() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginRequest) => {
-      return await apiRequest("/api/auth/login", "POST", data);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      const body = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, body, email: data.email };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (!result.ok) {
+        if (result.status === 403 && result.body?.verificationRequired) {
+          toast({
+            title: "Verify your email",
+            description: "We sent a code to your inbox.",
+          });
+          setLocation(`/verify-email?email=${encodeURIComponent(result.email)}`);
+          return;
+        }
+        toast({
+          title: "Login Failed",
+          description: result.body?.message || "Invalid credentials",
+          variant: "destructive",
+        });
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "Login Successful",
@@ -91,7 +114,15 @@ export default function Login() {
     mutationFn: async (data: RegisterRequest) => {
       return await apiRequest("/api/auth/register", "POST", data);
     },
-    onSuccess: () => {
+    onSuccess: (response: any, variables) => {
+      if (response?.verificationRequired) {
+        toast({
+          title: "Check your email",
+          description: "We sent a 6-digit code to verify your address.",
+        });
+        setLocation(`/verify-email?email=${encodeURIComponent(variables.email)}`);
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setRegistrationStep("complete");
     },

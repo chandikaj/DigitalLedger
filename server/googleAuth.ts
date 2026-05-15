@@ -63,6 +63,7 @@ export function setupGoogleAuth(storage: IStorage) {
             passwordHash: null,
             role: "subscriber",
             isActive: true,
+            emailVerified: true,
           });
 
           // Look up or create a subscriber record so the welcome email unsubscribe link works

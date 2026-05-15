@@ -3,12 +3,12 @@ import bcrypt from "bcrypt";
 import {
   loginSchema,
   registerSchema,
-  LoginRequest,
-  RegisterRequest,
+  verifyEmailSchema,
+  resendVerificationSchema,
   User,
 } from "@shared/schema";
 import { IStorage } from "./storage";
-import { sendWelcomeEmail } from "./emailService";
+import { sendWelcomeEmail, sendVerificationEmail } from "./emailService";
 
 // Extend session type to include userId
 declare module "express-session" {
@@ -27,6 +27,66 @@ declare global {
 }
 
 const SALT_ROUNDS = 12;
+const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
+const MAX_VERIFY_ATTEMPTS = 5;
+
+function generateCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function issueVerificationCode(
+  storage: IStorage,
+  userId: string,
+  email: string,
+  firstName: string | null | undefined,
+): Promise<void> {
+  const code = generateCode();
+  const codeHash = await bcrypt.hash(code, SALT_ROUNDS);
+
+  await storage.deleteVerificationCodesForUser(userId);
+  await storage.createVerificationCode({
+    userId,
+    codeHash,
+    expiresAt: new Date(Date.now() + CODE_TTL_MS),
+    attemptCount: 0,
+    lastSentAt: new Date(),
+  });
+
+  sendVerificationEmail(email, firstName || "there", code).catch((err) => {
+    console.error("Failed to send verification email:", err);
+  });
+}
+
+async function ensureWelcomeSubscriberAndSend(
+  storage: IStorage,
+  email: string,
+  firstName: string | null | undefined,
+): Promise<void> {
+  try {
+    const existing = await storage.getSubscriberByEmail(email);
+    let subscriberId: string | undefined = existing?.id;
+    if (!existing) {
+      try {
+        const sub = await storage.createSubscriber({
+          email,
+          categories: [],
+          frequency: "weekly",
+          isActive: true,
+        });
+        subscriberId = sub.id;
+      } catch (e) {
+        console.error("Failed to create subscriber for welcome email:", e);
+      }
+    }
+    sendWelcomeEmail(email, firstName || "there", subscriberId).catch((err) => {
+      console.error("Failed to send welcome email:", err);
+    });
+  } catch (err) {
+    console.error("Failed to look up subscriber for welcome email:", err);
+    sendWelcomeEmail(email, firstName || "there").catch(() => {});
+  }
+}
 
 export function setupAuth(app: Express, storage: IStorage) {
   // Register endpoint
@@ -40,84 +100,175 @@ export function setupAuth(app: Express, storage: IStorage) {
       }
 
       const { email, password, firstName, lastName } = result.data;
+      const normalizedEmail = email.toLowerCase();
 
       // Check if user already exists
-      const existingUser = await storage.getUserByEmail(email.toLowerCase());
+      const existingUser = await storage.getUserByEmail(normalizedEmail);
       if (existingUser) {
+        // Allow re-issuing a code for an unverified existing account
+        if (existingUser.emailVerified === false) {
+          await issueVerificationCode(
+            storage,
+            existingUser.id,
+            existingUser.email!,
+            existingUser.firstName,
+          );
+          return res.status(200).json({
+            verificationRequired: true,
+            email: normalizedEmail,
+            message: "Verification code re-sent to your email",
+          });
+        }
         return res
           .status(409)
           .json({ message: "User already exists with this email" });
       }
 
-      // Check for invitation
       const invitations = await storage.listInvitations();
       const invitation = invitations.find(
         (inv: any) =>
-          inv.email.toLowerCase() === email.toLowerCase() && !inv.revokedAt,
+          inv.email.toLowerCase() === normalizedEmail && !inv.revokedAt,
       );
 
-      // Hash password
       const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-      // Create user
-      const userData = {
-        email: email.toLowerCase(),
+      const user = await storage.createUser({
+        email: normalizedEmail,
         passwordHash,
         firstName,
         lastName,
         role: invitation?.role || "member",
         isActive: true,
-      };
+        emailVerified: false,
+      });
 
-      const user = await storage.createUser(userData);
-
-      // Mark invitation as accepted if exists
       if (invitation) {
         await storage.markInvitationAccepted(invitation.id);
       }
 
-      // Set session
-      req.session.userId = user.id;
+      await issueVerificationCode(storage, user.id, user.email!, user.firstName);
 
-      // Look up or create a subscriber record so the welcome email unsubscribe link works
-      storage.getSubscriberByEmail(user.email!).then(async (existing) => {
-        let subscriberId: string | undefined;
-        if (existing) {
-          subscriberId = existing.id;
-        } else {
-          try {
-            const sub = await storage.createSubscriber({
-              email: user.email!,
-              categories: [],
-              frequency: "weekly",
-              isActive: true,
-            });
-            subscriberId = sub.id;
-          } catch (e) {
-            console.error("Failed to create subscriber record for welcome email:", e);
-          }
-        }
-        sendWelcomeEmail(user.email!, user.firstName || "there", subscriberId).catch((err) => {
-          console.error("Failed to send welcome email:", err);
-        });
-      }).catch((err) => {
-        console.error("Failed to look up subscriber for welcome email:", err);
-        sendWelcomeEmail(user.email!, user.firstName || "there").catch(() => {});
-      });
-
-      // Save session explicitly
-      req.session.save((err) => {
-        if (err) {
-          console.error("Session save error:", err);
-          return res.status(500).json({ message: "Internal server error" });
-        }
-
-        // Return user without password
-        const { passwordHash: _, ...userResponse } = user;
-        res.status(201).json(userResponse);
+      return res.status(201).json({
+        verificationRequired: true,
+        email: normalizedEmail,
+        message: "Verification code sent to your email",
       });
     } catch (error) {
       console.error("Register error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Verify email endpoint
+  app.post("/api/auth/verify-email", async (req: Request, res: Response) => {
+    try {
+      const result = verifyEmailSchema.safeParse(req.body);
+      if (!result.success) {
+        return res
+          .status(400)
+          .json({ message: "Invalid input", errors: result.error.errors });
+      }
+
+      const { email, code } = result.data;
+      const user = await storage.getUserByEmail(email.toLowerCase());
+      const invalidMsg = { message: "Invalid or expired code" };
+
+      if (!user) {
+        return res.status(400).json(invalidMsg);
+      }
+
+      // Already verified accounts must sign in via the login endpoint;
+      // never issue a session here without validating a code.
+      if (user.emailVerified) {
+        return res.status(400).json({
+          message: "Email already verified. Please sign in.",
+          alreadyVerified: true,
+        });
+      }
+
+      const stored = await storage.getActiveVerificationCode(user.id);
+      if (!stored) {
+        return res.status(400).json(invalidMsg);
+      }
+
+      if (stored.expiresAt.getTime() < Date.now()) {
+        await storage.deleteVerificationCodesForUser(user.id);
+        return res.status(400).json(invalidMsg);
+      }
+
+      if (stored.attemptCount >= MAX_VERIFY_ATTEMPTS) {
+        return res.status(429).json({
+          message: "Too many attempts. Please request a new code.",
+        });
+      }
+
+      const ok = await bcrypt.compare(code, stored.codeHash);
+      if (!ok) {
+        await storage.incrementVerificationAttempt(stored.id);
+        return res.status(400).json(invalidMsg);
+      }
+
+      // Mark verified, delete codes, send welcome, create session
+      await storage.updateUser(user.id, { emailVerified: true });
+      await storage.deleteVerificationCodesForUser(user.id);
+
+      ensureWelcomeSubscriberAndSend(storage, user.email!, user.firstName);
+
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ message: "Internal server error" });
+        }
+        req.session.userId = user.id;
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.status(500).json({ message: "Internal server error" });
+          }
+          const { passwordHash: _, ...userResponse } = user as any;
+          res.json({ verified: true, user: { ...userResponse, emailVerified: true } });
+        });
+      });
+    } catch (error) {
+      console.error("Verify email error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Resend verification code
+  app.post("/api/auth/resend-verification", async (req: Request, res: Response) => {
+    try {
+      const result = resendVerificationSchema.safeParse(req.body);
+      if (!result.success) {
+        return res
+          .status(400)
+          .json({ message: "Invalid input", errors: result.error.errors });
+      }
+
+      const email = result.data.email.toLowerCase();
+      const user = await storage.getUserByEmail(email);
+
+      // Always respond success-shaped to avoid email enumeration
+      if (!user || user.emailVerified) {
+        return res.json({ message: "If an account needs verification, a new code has been sent." });
+      }
+
+      const existing = await storage.getActiveVerificationCode(user.id);
+      if (existing) {
+        const elapsed = Date.now() - existing.lastSentAt.getTime();
+        if (elapsed < RESEND_COOLDOWN_MS) {
+          const retryAfter = Math.ceil((RESEND_COOLDOWN_MS - elapsed) / 1000);
+          return res.status(429).json({
+            message: `Please wait ${retryAfter}s before requesting another code.`,
+            retryAfter,
+          });
+        }
+      }
+
+      await issueVerificationCode(storage, user.id, user.email!, user.firstName);
+      res.json({ message: "Verification code sent" });
+    } catch (error) {
+      console.error("Resend verification error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -134,41 +285,49 @@ export function setupAuth(app: Express, storage: IStorage) {
 
       const { email, password } = result.data;
 
-      // Get user by email
       const user = await storage.getUserByEmail(email.toLowerCase());
       if (!user || !user.passwordHash) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // Check if user is active
       if (!user.isActive) {
         return res.status(401).json({ message: "Account is inactive" });
       }
 
-      // Verify password
       const isValidPassword = await bcrypt.compare(password, user.passwordHash);
       if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // Regenerate session for security
+      // Block unverified email users
+      if (!user.emailVerified) {
+        // Re-issue code if no active one (or expired)
+        const existing = await storage.getActiveVerificationCode(user.id);
+        const expired = !existing || existing.expiresAt.getTime() < Date.now();
+        if (expired) {
+          await issueVerificationCode(storage, user.id, user.email!, user.firstName);
+        }
+        return res.status(403).json({
+          verificationRequired: true,
+          email: user.email,
+          message: "Please verify your email to continue",
+        });
+      }
+
       req.session.regenerate((err) => {
         if (err) {
           console.error("Session regeneration error:", err);
           return res.status(500).json({ message: "Internal server error" });
         }
 
-        // Set session
         req.session.userId = user.id;
 
-        // Save session explicitly
         req.session.save((saveErr) => {
           if (saveErr) {
             console.error("Session save error:", saveErr);
             return res.status(500).json({ message: "Internal server error" });
           }
 
-          // Return user without password
           const { passwordHash: _, ...userResponse } = user;
           res.json(userResponse);
         });
@@ -249,7 +408,6 @@ export function setupAuth(app: Express, storage: IStorage) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      // Return user without password
       const { passwordHash: _, ...userResponse } = user as any;
       res.json(userResponse);
     } catch (error) {
@@ -289,7 +447,6 @@ export async function isAuthenticated(
 // Middleware to check if user is admin
 export async function isAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user) {
-    // First run authentication middleware
     return isAuthenticated(req, res, () => {
       if ((req.user as any)?.role !== "admin") {
         return res.status(403).json({ message: "Admin access required" });
@@ -312,7 +469,6 @@ export async function isEditorOrAdmin(
   next: NextFunction,
 ) {
   if (!req.user) {
-    // First run authentication middleware
     return isAuthenticated(req, res, () => {
       const userRole = (req.user as any)?.role;
       if (userRole !== "editor" && userRole !== "admin") {
