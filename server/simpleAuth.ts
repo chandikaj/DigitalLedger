@@ -71,7 +71,18 @@ async function issueVerificationCode(
   userId: string,
   email: string,
   firstName: string | null | undefined,
-): Promise<void> {
+  options: { enforceCooldown?: boolean } = {},
+): Promise<{ ok: true } | { ok: false; retryAfter: number }> {
+  if (options.enforceCooldown) {
+    const existing = await storage.getActiveVerificationCode(userId);
+    if (existing) {
+      const elapsed = Date.now() - existing.lastSentAt.getTime();
+      if (elapsed < RESEND_COOLDOWN_MS) {
+        return { ok: false, retryAfter: Math.ceil((RESEND_COOLDOWN_MS - elapsed) / 1000) };
+      }
+    }
+  }
+
   const code = generateCode();
   const codeHash = await bcrypt.hash(code, SALT_ROUNDS);
 
@@ -87,6 +98,7 @@ async function issueVerificationCode(
   sendVerificationEmail(email, firstName || "there", code).catch((err) => {
     console.error("Failed to send verification email:", err);
   });
+  return { ok: true };
 }
 
 async function ensureWelcomeSubscriberAndSend(
@@ -136,14 +148,24 @@ export function setupAuth(app: Express, storage: IStorage) {
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(normalizedEmail);
       if (existingUser) {
-        // Allow re-issuing a code for an unverified existing account
+        // Allow re-issuing a code for an unverified existing account, but
+        // honor the resend cooldown so register can't be used to spam.
         if (existingUser.emailVerified === false) {
-          await issueVerificationCode(
+          const result = await issueVerificationCode(
             storage,
             existingUser.id,
             existingUser.email!,
             existingUser.firstName,
+            { enforceCooldown: true },
           );
+          if (!result.ok) {
+            return res.status(429).json({
+              verificationRequired: true,
+              email: normalizedEmail,
+              retryAfter: result.retryAfter,
+              message: `Please wait ${result.retryAfter}s before requesting another code.`,
+            });
+          }
           return res.status(200).json({
             verificationRequired: true,
             email: normalizedEmail,

@@ -1398,11 +1398,14 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  // Backfill emailVerified for pre-existing users so they aren't forced
-  // through verification after this feature was deployed.
+  // One-time backfill: mark accounts that existed BEFORE the email
+  // verification feature was deployed (2026-05-15) as already verified
+  // so legacy users aren't forced through the new flow. The hard cutoff
+  // ensures this can never auto-verify accounts created after deploy,
+  // even if the server restarts.
   try {
     const { sql } = await import("drizzle-orm");
-    await db.execute(sql`UPDATE users SET email_verified = true WHERE email_verified = false AND created_at < NOW() - INTERVAL '1 minute'`);
+    await db.execute(sql`UPDATE users SET email_verified = true WHERE email_verified = false AND created_at < TIMESTAMP '2026-05-15 00:00:00'`);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     log(`Warning: emailVerified backfill failed: ${errorMsg}`);
