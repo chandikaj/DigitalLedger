@@ -380,6 +380,12 @@
   color: #60a5fa !important;
 }
 
+/* Table cells: neutralize dark inline colors authored in light mode */
+.dark .prose table.article-table td[style*="color"],
+.dark .prose table.article-table th[style*="color"] {
+  color: hsl(0, 0%, 85%) !important;
+}
+
 .prose span[style*="font-family"],
 .prose p[style*="font-family"],
 .prose strong[style*="font-family"],
