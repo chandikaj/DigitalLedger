@@ -1,0 +1,1 @@
+- [Dependency audit residuals](dependency-audit-residuals.md) — which audit CVEs are intentionally left unfixed here and why; don't churn re-fixing them.
