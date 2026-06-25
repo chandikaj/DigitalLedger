@@ -1620,8 +1620,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CORS preflight for the public counts endpoint (allows browser dashboards)
+  app.options("/api/public/counts", (_req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "x-api-key, Content-Type");
+    return res.sendStatus(204);
+  });
+
   // Public counts for external dashboards — protected by an API key
   app.get("/api/public/counts", async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
     const expectedKey = process.env.PUBLIC_API_KEY;
     if (!expectedKey) {
       return res
@@ -1639,7 +1648,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const counts = await storage.getPublicCounts();
-      res.set("Access-Control-Allow-Origin", "*");
       return res.json(counts);
     } catch (error) {
       console.error("Error fetching public counts:", error);
