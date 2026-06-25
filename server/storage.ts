@@ -192,6 +192,7 @@ export interface IStorage {
   updateSubscriber(id: string, updates: UpdateSubscriber): Promise<Subscriber | undefined>;
   deleteSubscriber(id: string): Promise<boolean>;
   getActiveSubscribers(): Promise<Subscriber[]>;
+  getPublicCounts(): Promise<{ users: number; subscribers: number }>;
   
   // Toolbox app operations
   getToolboxApps(activeOnly?: boolean): Promise<ToolboxApp[]>;
@@ -1658,6 +1659,22 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(subscribers)
       .where(eq(subscribers.isActive, true));
+  }
+
+  async getPublicCounts(): Promise<{ users: number; subscribers: number }> {
+    const [userCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users);
+
+    const [subscriberCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(subscribers)
+      .where(eq(subscribers.isActive, true));
+
+    return {
+      users: userCount.count,
+      subscribers: subscriberCount.count,
+    };
   }
 
   // Toolbox app operations

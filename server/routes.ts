@@ -1620,6 +1620,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public counts for external dashboards — protected by an API key
+  app.get("/api/public/counts", async (req, res) => {
+    const expectedKey = process.env.PUBLIC_API_KEY;
+    if (!expectedKey) {
+      return res
+        .status(503)
+        .json({ message: "Public API is not configured" });
+    }
+
+    const providedKey =
+      (req.headers["x-api-key"] as string | undefined) ||
+      (typeof req.query.key === "string" ? req.query.key : undefined);
+
+    if (providedKey !== expectedKey) {
+      return res.status(401).json({ message: "Invalid or missing API key" });
+    }
+
+    try {
+      const counts = await storage.getPublicCounts();
+      res.set("Access-Control-Allow-Origin", "*");
+      return res.json(counts);
+    } catch (error) {
+      console.error("Error fetching public counts:", error);
+      return res.status(500).json({ message: "Failed to fetch counts" });
+    }
+  });
+
   // Public unsubscribe via link in email — redirect to frontend page
   app.get("/api/unsubscribe", (req, res) => {
     const { id } = req.query as { id?: string };
