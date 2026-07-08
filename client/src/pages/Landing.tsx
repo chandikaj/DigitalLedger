@@ -227,6 +227,12 @@ export default function Landing() {
               </p>
               <p>Two articles and one podcast episode, every Wednesday morning.</p>
             </div>
+            <p
+              className="text-xl md:text-2xl text-blue-100 mb-4"
+              data-testid="text-no-spam"
+            >
+              Thanks for being here.
+            </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
                 size="lg"
@@ -238,15 +244,9 @@ export default function Landing() {
                 onClick={() => setLocation("/login")}
                 data-testid="button-join-community"
               >
-                Become a Member
+                Get it Wednesday
               </Button>
             </div>
-            <p
-              className="text-xl md:text-2xl text-blue-100 mt-4"
-              data-testid="text-no-spam"
-            >
-              Thanks for being here.
-            </p>
           </div>
         </div>
       </section>
