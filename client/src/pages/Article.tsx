@@ -138,12 +138,22 @@ function splitOffTrailingSources(html: string): [string, string] | null {
   const linkItems = items.filter((li) => li.querySelector('a[href]'));
   // Only treat it as a sources list if most items are links
   if (linkItems.length / items.length < 0.7) return null;
+  // Include a preceding "Sources" label (heading or short paragraph) with the list
+  let start = i;
+  let j = i - 1;
+  while (j >= 0 && isEmptyNode(nodes[j])) j--;
+  if (j >= 0 && nodes[j].nodeType === Node.ELEMENT_NODE) {
+    const label = (nodes[j] as Element).textContent?.trim() ?? '';
+    if (label.length <= 40 && /^sources?\b[:.]?$/i.test(label.replace(/[:.\s]+$/, ''))) {
+      start = j;
+    }
+  }
   const serialize = (list: ChildNode[]) => {
     const container = document.createElement('div');
     list.forEach((n) => container.appendChild(n.cloneNode(true)));
     return container.innerHTML;
   };
-  return [serialize(nodes.slice(0, i)), serialize(nodes.slice(i))];
+  return [serialize(nodes.slice(0, start)), serialize(nodes.slice(start))];
 }
 
 function GetItWednesdayButton({ size = "default", className = "", onClick }: { size?: "default" | "sm" | "lg"; className?: string; onClick?: () => void }) {
