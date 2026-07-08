@@ -1,1 +1,2 @@
 - [Dependency audit residuals](dependency-audit-residuals.md) — which audit CVEs are intentionally left unfixed here and why; don't churn re-fixing them.
+- [beehiiv embed protocol](beehiiv-embed-protocol.md) — success message arrives as a parent-page postMessage toast, not inside the iframe; headless submits are bot-blocked.
