@@ -27,6 +27,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { VideoPlayerDialog, getYouTubeVideoId } from "@/components/VideoPlayerDialog";
 
 interface NewsCategory {
   id: string;
@@ -43,6 +44,8 @@ export default function Podcasts() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"active" | "archive">("active");
+  const [playerOpen, setPlayerOpen] = useState(false);
+  const [playingVideo, setPlayingVideo] = useState<{ videoId: string; title: string } | null>(null);
   const { user } = useAuth();
   const userRole = (user as any)?.role;
   const { toast } = useToast();
@@ -254,6 +257,17 @@ export default function Podcasts() {
     incrementPlayCountMutation.mutate(podcastId);
   };
 
+  const handleWatch = (episode: any) => {
+    handlePlayCountIncrement(episode.id);
+    const videoId = getYouTubeVideoId(episode.audioUrl);
+    if (videoId) {
+      setPlayingVideo({ videoId, title: episode.title });
+      setPlayerOpen(true);
+    } else {
+      window.open(episode.audioUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -316,6 +330,13 @@ export default function Podcasts() {
           <PodcastsContent />
         )}
       </div>
+
+      <VideoPlayerDialog
+        open={playerOpen}
+        onOpenChange={setPlayerOpen}
+        videoId={playingVideo?.videoId || null}
+        title={playingVideo?.title}
+      />
     </Layout>
   );
 
@@ -471,16 +492,11 @@ export default function Podcasts() {
                         data-testid={`watch-youtube-${episode.id}`}
                         onClick={(e) => {
                           e.preventDefault();
-                          handlePlayCountIncrement(episode.id);
-                          // Open link after a short delay to ensure API call completes
-                          setTimeout(() => {
-                            window.open(episode.audioUrl!, '_blank', 'noopener,noreferrer');
-                          }, 100);
+                          handleWatch(episode);
                         }}
                       >
                         <PlayCircle className="h-4 w-4" />
                         <span>Listen Now</span>
-                        <ExternalLink className="h-3 w-3" />
                       </Button>
                     ) : (
                       <Button 

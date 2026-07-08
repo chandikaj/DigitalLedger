@@ -1,6 +1,8 @@
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "wouter";
+import { useState } from "react";
+import { VideoPlayerDialog, getYouTubeVideoId } from "@/components/VideoPlayerDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -34,6 +36,18 @@ interface MenuSetting {
 export default function Landing() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [playerOpen, setPlayerOpen] = useState(false);
+  const [playingVideo, setPlayingVideo] = useState<{ videoId: string; title: string } | null>(null);
+
+  const handleWatch = (podcast: any) => {
+    const videoId = getYouTubeVideoId(podcast.audioUrl);
+    if (videoId) {
+      setPlayingVideo({ videoId, title: podcast.title });
+      setPlayerOpen(true);
+    } else {
+      window.open(podcast.audioUrl, "_blank", "noopener,noreferrer");
+    }
+  };
 
   // Fetch menu settings to control section visibility
   const { data: menuSettings = [] } = useQuery<MenuSetting[]>({
@@ -466,20 +480,12 @@ export default function Landing() {
                       {podcast.audioUrl && (
                         <div className="mb-4">
                           <Button
-                            asChild
-                            className="w-full bg-red-600 hover:bg-red-700 text-white"
+                            className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center space-x-2"
                             data-testid={`button-listen-now-${index}`}
+                            onClick={() => handleWatch(podcast)}
                           >
-                            <a
-                              href={podcast.audioUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-center space-x-2"
-                            >
-                              <PlayCircle className="h-5 w-5" />
-                              <span>Listen Now</span>
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
+                            <PlayCircle className="h-5 w-5" />
+                            <span>Listen Now</span>
                           </Button>
                         </div>
                       )}
@@ -615,6 +621,13 @@ export default function Landing() {
           </Button>
         </div>
       </section>
+
+      <VideoPlayerDialog
+        open={playerOpen}
+        onOpenChange={setPlayerOpen}
+        videoId={playingVideo?.videoId || null}
+        title={playingVideo?.title}
+      />
     </Layout>
   );
 }
