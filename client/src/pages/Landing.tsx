@@ -211,7 +211,6 @@ export default function Landing() {
               className="text-4xl md:text-6xl font-bold mb-6"
               data-testid="hero-title"
             >
-              Welcome to{" "}
               <span className="text-yellow-300">The Digital Ledger</span>
             </h1>
             <div
@@ -219,15 +218,14 @@ export default function Landing() {
               data-testid="hero-subtitle"
             >
               <p className="font-bold mb-3">
-                The Digital Ledger Weekly delivers one curated article and one
-                podcast every week with practical insights on Accounting,
-                finance transformation, and modern corporate finance and AI in
-                Finance and accounting.
+                The finance industry is loud. It's also, quietly, changing
+                shape.
               </p>
-              <p>
-                Stay informed, save time, and get actionable ideas — all in one
-                place, curated for busy finance and accounting professionals.
+              <p className="mb-3">
+                This is a weekly brief for the CFOs, controllers, FP&A leads,
+                and accounting firm partners who can already feel it.
               </p>
+              <p>Two articles and one podcast episode, every Wednesday morning.</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
@@ -247,8 +245,7 @@ export default function Landing() {
               className="text-xl md:text-2xl text-blue-100 mt-4"
               data-testid="text-no-spam"
             >
-              No spam. No fluff. Just insights that matter, delivered straight
-              to your inbox.
+              Thanks for being here.
             </p>
           </div>
         </div>
