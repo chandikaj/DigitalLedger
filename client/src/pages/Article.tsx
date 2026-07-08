@@ -116,6 +116,36 @@ function splitContentInHalf(html: string): [string, string] | null {
   return [serialize(nodes.slice(0, splitAt)), serialize(nodes.slice(splitAt))];
 }
 
+// Splits off a trailing sources list (a final <ul>/<ol> made of links) from the
+// article HTML so the end-of-article CTA can be placed before it.
+function splitOffTrailingSources(html: string): [string, string] | null {
+  if (typeof window === 'undefined' || !html) return null;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const nodes = Array.from(doc.body.childNodes);
+  // Walk backwards past empty/whitespace-only nodes
+  let i = nodes.length - 1;
+  const isEmptyNode = (n: ChildNode) =>
+    (n.nodeType === Node.TEXT_NODE && !n.textContent?.trim()) ||
+    (n.nodeType === Node.ELEMENT_NODE && !(n as Element).textContent?.trim() && !(n as Element).querySelector('img'));
+  while (i >= 0 && isEmptyNode(nodes[i])) i--;
+  if (i < 0) return null;
+  const last = nodes[i];
+  if (last.nodeType !== Node.ELEMENT_NODE) return null;
+  const el = last as Element;
+  if (el.tagName !== 'UL' && el.tagName !== 'OL') return null;
+  const items = Array.from(el.querySelectorAll(':scope > li'));
+  if (items.length === 0) return null;
+  const linkItems = items.filter((li) => li.querySelector('a[href]'));
+  // Only treat it as a sources list if most items are links
+  if (linkItems.length / items.length < 0.7) return null;
+  const serialize = (list: ChildNode[]) => {
+    const container = document.createElement('div');
+    list.forEach((n) => container.appendChild(n.cloneNode(true)));
+    return container.innerHTML;
+  };
+  return [serialize(nodes.slice(0, i)), serialize(nodes.slice(i))];
+}
+
 function GetItWednesdayButton({ size = "default", className = "", onClick }: { size?: "default" | "sm" | "lg"; className?: string; onClick?: () => void }) {
   return (
     <Button size={size} className={className} onClick={onClick} data-testid="button-get-it-wednesday">
@@ -503,7 +533,10 @@ export default function Article() {
   const sanitizedContent = article.content
     ? DOMPurify.sanitize(convertPipeTablesToHTML(article.content), SANITIZE_OPTIONS)
     : "";
-  const contentHalves = !user ? splitContentInHalf(sanitizedContent) : null;
+  const sourcesSplit = !user ? splitOffTrailingSources(sanitizedContent) : null;
+  const mainContent = sourcesSplit ? sourcesSplit[0] : sanitizedContent;
+  const sourcesContent = sourcesSplit ? sourcesSplit[1] : null;
+  const contentHalves = !user ? splitContentInHalf(mainContent) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white dark:from-gray-900 dark:to-gray-800">
@@ -733,7 +766,7 @@ export default function Article() {
                       <div dangerouslySetInnerHTML={{ __html: contentHalves[1] }} />
                     </>
                   ) : (
-                    <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
+                    <div dangerouslySetInnerHTML={{ __html: mainContent }} />
                   )
                 ) : (
                   <p className="text-gray-600 dark:text-gray-300">
@@ -742,7 +775,7 @@ export default function Article() {
                 )}
               </div>
 
-              {/* End-of-article CTA – only for guests */}
+              {/* End-of-article CTA – only for guests, placed before the sources list */}
               {!user && (
                 <div className="mb-8 rounded-md border border-[#EAE5DB] bg-[#F1EDE4] dark:border-[#3A352C] dark:bg-[#26231E] px-6 py-8 text-center" data-testid="banner-end-newsletter">
                   <p className="text-xl font-medium text-gray-900 dark:text-white mb-2">
@@ -753,6 +786,15 @@ export default function Article() {
                   </p>
                   <GetItWednesdayButton className="rounded-md bg-[#0004E3] hover:bg-[#0003B4] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
                 </div>
+              )}
+
+              {/* Trailing sources list from the article content, shown after the CTA */}
+              {sourcesContent && (
+                <div
+                  className="prose prose-lg max-w-none dark:prose-invert mb-8"
+                  data-testid="article-sources-list"
+                  dangerouslySetInnerHTML={{ __html: sourcesContent }}
+                />
               )}
 
               {article.sourceName && article.sourceUrl && (
