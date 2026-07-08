@@ -516,7 +516,7 @@ export default function Article() {
         <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-center">
           <button
             onClick={() => setShowSubscribe(true)}
-            className="animate-wiggle-loop hover:animate-none flex flex-row items-center gap-3 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg px-5 py-3 transition-transform duration-200 hover:scale-105"
+            className="animate-wiggle-loop hover:animate-none flex flex-row items-center gap-3 bg-[#0004E3] hover:bg-[#0003B4] text-white rounded-full shadow-lg px-5 py-3 transition-transform duration-200 hover:scale-105"
             title="Get it Wednesday"
             data-testid="button-floating-get-it-wednesday"
           >
@@ -549,7 +549,7 @@ export default function Article() {
             </DialogHeader>
             <div className="flex flex-col gap-3 mt-4">
               <Button
-                className="w-full text-base py-5"
+                className="w-full text-base py-5 bg-[#0004E3] hover:bg-[#0003B4] text-white"
                 size="lg"
                 onClick={() => {
                   setShowExitPopup(false);
@@ -658,7 +658,7 @@ export default function Article() {
               <p className="text-lg font-medium text-gray-800 dark:text-gray-100 text-center sm:text-left leading-relaxed">
                 <span className="font-semibold">The Digital Ledger</span> is a weekly brief for finance leaders. Two articles like this one, plus a podcast - every Wednesday morning.
               </p>
-              <GetItWednesdayButton className="flex-shrink-0 rounded-md bg-[#24405E] hover:bg-[#1B3049] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
+              <GetItWednesdayButton className="flex-shrink-0 rounded-md bg-[#0004E3] hover:bg-[#0003B4] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
             </div>
           )}
 
@@ -728,7 +728,7 @@ export default function Article() {
                         <p className="text-lg font-medium text-gray-800 dark:text-gray-100 text-center sm:text-left leading-relaxed">
                           Once a week. Two articles like this one, plus a podcast. That's <span className="font-semibold">The Digital Ledger</span>.
                         </p>
-                        <GetItWednesdayButton className="flex-shrink-0 rounded-md bg-[#24405E] hover:bg-[#1B3049] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
+                        <GetItWednesdayButton className="flex-shrink-0 rounded-md bg-[#0004E3] hover:bg-[#0003B4] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
                       </div>
                       <div dangerouslySetInnerHTML={{ __html: contentHalves[1] }} />
                     </>
@@ -751,7 +751,7 @@ export default function Article() {
                   <p className="text-lg font-medium text-gray-800 dark:text-gray-100 mb-5 max-w-2xl mx-auto leading-relaxed">
                     <span className="font-semibold">The Digital Ledger</span> is a free weekly brief for finance leaders. Two articles and one podcast, every Wednesday morning, on what's actually shifting underneath the headlines.
                   </p>
-                  <GetItWednesdayButton className="rounded-md bg-[#24405E] hover:bg-[#1B3049] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
+                  <GetItWednesdayButton className="rounded-md bg-[#0004E3] hover:bg-[#0003B4] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
                 </div>
               )}
 
