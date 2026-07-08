@@ -654,7 +654,7 @@ export default function Article() {
 
           {/* Top-of-article banner – only for guests */}
           {!user && (
-            <div className="mb-4 rounded-md border border-[#EAE5DB] bg-[#F8F6F2] dark:border-[#3A352C] dark:bg-[#26231E] px-6 py-7 flex flex-col sm:flex-row items-center gap-5 sm:justify-between" data-testid="banner-top-newsletter">
+            <div className="mb-4 rounded-md border border-[#EAE5DB] bg-[#F1EDE4] dark:border-[#3A352C] dark:bg-[#26231E] px-6 py-7 flex flex-col sm:flex-row items-center gap-5 sm:justify-between" data-testid="banner-top-newsletter">
               <p className="text-lg font-medium text-gray-800 dark:text-gray-100 text-center sm:text-left leading-relaxed">
                 <span className="font-semibold">The Digital Ledger</span> is a weekly brief for finance leaders. Two articles like this one, plus a podcast - every Wednesday morning.
               </p>
@@ -724,7 +724,7 @@ export default function Article() {
                     <>
                       <div dangerouslySetInnerHTML={{ __html: contentHalves[0] }} />
                       {/* Mid-article inline CTA – only for guests */}
-                      <div className="not-prose my-10 rounded-md border border-[#EAE5DB] bg-[#F8F6F2] dark:border-[#3A352C] dark:bg-[#26231E] px-6 py-7 flex flex-col sm:flex-row items-center gap-5 sm:justify-between" data-testid="banner-mid-newsletter">
+                      <div className="not-prose my-10 rounded-md border border-[#EAE5DB] bg-[#F1EDE4] dark:border-[#3A352C] dark:bg-[#26231E] px-6 py-7 flex flex-col sm:flex-row items-center gap-5 sm:justify-between" data-testid="banner-mid-newsletter">
                         <p className="text-lg font-medium text-gray-800 dark:text-gray-100 text-center sm:text-left leading-relaxed">
                           Once a week. Two articles like this one, plus a podcast. That's <span className="font-semibold">The Digital Ledger</span>.
                         </p>
@@ -744,7 +744,7 @@ export default function Article() {
 
               {/* End-of-article CTA – only for guests */}
               {!user && (
-                <div className="mb-8 rounded-md border border-[#EAE5DB] bg-[#F8F6F2] dark:border-[#3A352C] dark:bg-[#26231E] px-6 py-8 text-center" data-testid="banner-end-newsletter">
+                <div className="mb-8 rounded-md border border-[#EAE5DB] bg-[#F1EDE4] dark:border-[#3A352C] dark:bg-[#26231E] px-6 py-8 text-center" data-testid="banner-end-newsletter">
                   <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                     If this is the kind of read you want in your week:
                   </p>
