@@ -724,11 +724,11 @@ export default function Article() {
                     <>
                       <div dangerouslySetInnerHTML={{ __html: contentHalves[0] }} />
                       {/* Mid-article inline CTA – only for guests */}
-                      <div className="not-prose my-8 rounded-lg border border-primary/20 bg-primary/5 dark:bg-primary/10 p-4 flex flex-col sm:flex-row items-center gap-4 sm:justify-between" data-testid="banner-mid-newsletter">
-                        <p className="text-sm text-gray-700 dark:text-gray-200 text-center sm:text-left">
+                      <div className="not-prose my-10 rounded-md border border-[#EAE5DB] bg-[#F8F6F2] dark:border-[#3A352C] dark:bg-[#26231E] px-6 py-7 flex flex-col sm:flex-row items-center gap-5 sm:justify-between" data-testid="banner-mid-newsletter">
+                        <p className="text-lg font-medium text-gray-800 dark:text-gray-100 text-center sm:text-left leading-relaxed">
                           Once a week. Two articles like this one, plus a podcast. That's <span className="font-semibold">The Digital Ledger</span>.
                         </p>
-                        <GetItWednesdayButton size="sm" className="flex-shrink-0" onClick={() => setShowSubscribe(true)} />
+                        <GetItWednesdayButton className="flex-shrink-0 rounded-md bg-[#24405E] hover:bg-[#1B3049] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
                       </div>
                       <div dangerouslySetInnerHTML={{ __html: contentHalves[1] }} />
                     </>
@@ -744,14 +744,14 @@ export default function Article() {
 
               {/* End-of-article CTA – only for guests */}
               {!user && (
-                <div className="mb-8 rounded-lg border border-primary/20 bg-primary/5 dark:bg-primary/10 p-6 text-center" data-testid="banner-end-newsletter">
-                  <p className="text-base font-medium text-gray-900 dark:text-white mb-2">
+                <div className="mb-8 rounded-md border border-[#EAE5DB] bg-[#F8F6F2] dark:border-[#3A352C] dark:bg-[#26231E] px-6 py-8 text-center" data-testid="banner-end-newsletter">
+                  <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                     If this is the kind of read you want in your week:
                   </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-200 mb-4 max-w-2xl mx-auto">
+                  <p className="text-lg font-medium text-gray-800 dark:text-gray-100 mb-5 max-w-2xl mx-auto leading-relaxed">
                     <span className="font-semibold">The Digital Ledger</span> is a free weekly brief for finance leaders. Two articles and one podcast, every Wednesday morning, on what's actually shifting underneath the headlines.
                   </p>
-                  <GetItWednesdayButton onClick={() => setShowSubscribe(true)} />
+                  <GetItWednesdayButton className="rounded-md bg-[#24405E] hover:bg-[#1B3049] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
                 </div>
               )}
 
