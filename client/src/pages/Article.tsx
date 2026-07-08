@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Calendar, ExternalLink, Heart, MessageCircle, Share2, Edit, Trash2, Archive, ArchiveRestore, Upload, X, UserPlus } from "lucide-react";
+import { ArrowLeft, Calendar, ExternalLink, Heart, MessageCircle, Share2, Edit, Trash2, Archive, ArchiveRestore, Upload, X, UserPlus, Mail } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { insertNewsArticleSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -87,6 +87,43 @@ function updateMetaTags(article: any) {
     document.head.appendChild(canonical);
   }
   canonical.href = articleUrl;
+}
+
+const SANITIZE_OPTIONS = {
+  ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'span', 'div', 'a', 'img', 'blockquote', 'code', 'pre', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'colgroup', 'col'],
+  ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel', 'src', 'alt', 'title', 'colspan', 'rowspan', 'scope'],
+  ALLOW_DATA_ATTR: false,
+};
+
+// Splits sanitized article HTML into two halves at a top-level node boundary,
+// so both halves are always complete, valid HTML trees.
+function splitContentInHalf(html: string): [string, string] | null {
+  if (typeof window === 'undefined' || !html) return null;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const nodes = Array.from(doc.body.childNodes);
+  const elementIndexes = nodes
+    .map((n, i) => (n.nodeType === Node.ELEMENT_NODE ? i : -1))
+    .filter((i) => i !== -1);
+  if (elementIndexes.length < 4) return null;
+  // Split after the middle top-level element
+  const splitAt = elementIndexes[Math.ceil(elementIndexes.length / 2) - 1] + 1;
+  const serialize = (list: ChildNode[]) => {
+    const container = document.createElement('div');
+    list.forEach((n) => container.appendChild(n.cloneNode(true)));
+    return container.innerHTML;
+  };
+  return [serialize(nodes.slice(0, splitAt)), serialize(nodes.slice(splitAt))];
+}
+
+function GetItWednesdayButton({ size = "default", className = "", onClick }: { size?: "default" | "sm" | "lg"; className?: string; onClick?: () => void }) {
+  return (
+    <Link href="/login?tab=register">
+      <Button size={size} className={className} onClick={onClick} data-testid="button-get-it-wednesday">
+        <Mail className="h-4 w-4 mr-2" />
+        Get it Wednesday
+      </Button>
+    </Link>
+  );
 }
 
 type ArticleFormData = {
@@ -463,20 +500,26 @@ export default function Article() {
     );
   }
 
+  const sanitizedContent = article.content
+    ? DOMPurify.sanitize(convertPipeTablesToHTML(article.content), SANITIZE_OPTIONS)
+    : "";
+  const contentHalves = !user ? splitContentInHalf(sanitizedContent) : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white dark:from-gray-900 dark:to-gray-800">
 
-      {/* Floating "Join Free" button – only for guests */}
+      {/* Floating "Get it Wednesday" button – only for guests */}
       {!user && (
         <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-center">
           <Link href="/login?tab=register">
             <button
               className="animate-wiggle-loop hover:animate-none flex flex-row items-center gap-3 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg px-5 py-3 transition-transform duration-200 hover:scale-105"
-              title="Join Free"
+              title="Get it Wednesday"
+              data-testid="button-floating-get-it-wednesday"
             >
-              <UserPlus className="h-6 w-6 flex-shrink-0" />
+              <Mail className="h-6 w-6 flex-shrink-0" />
               <span className="text-sm font-bold tracking-wide whitespace-nowrap">
-                Join Free
+                Get it Wednesday
               </span>
             </button>
           </Link>
@@ -490,33 +533,32 @@ export default function Article() {
             <DialogHeader>
               <div className="flex justify-center mb-3">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <UserPlus className="h-8 w-8 text-primary" />
+                  <Mail className="h-8 w-8 text-primary" />
                 </div>
               </div>
               <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white text-center">
-                You're not done.
+                Thanks for spending part of your day here.
               </DialogTitle>
               <DialogDescription asChild>
                 <div className="mt-3 space-y-1 text-base text-gray-600 dark:text-gray-300 text-center">
-                  <p>You just paused.</p>
-                  <p>Step inside.</p>
-                  <p>See how top finance teams actually operate.</p>
+                  <p>If you'd like to stay with us, our weekly brief lands every Wednesday morning.</p>
                 </div>
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-3 mt-4">
               <Link href="/login?tab=register">
-                <Button className="w-full text-base py-5" size="lg" onClick={() => setShowExitPopup(false)}>
-                  <UserPlus className="h-5 w-5 mr-2" />
-                  Join Free
+                <Button className="w-full text-base py-5" size="lg" onClick={() => setShowExitPopup(false)} data-testid="button-exit-popup-subscribe">
+                  <Mail className="h-5 w-5 mr-2" />
+                  Get it Wednesday
                 </Button>
               </Link>
               <Button
                 variant="ghost"
                 className="w-full text-gray-500"
                 onClick={() => setShowExitPopup(false)}
+                data-testid="button-exit-popup-keep-reading"
               >
-                Continue reading
+                Keep reading
               </Button>
             </div>
           </DialogContent>
@@ -601,7 +643,17 @@ export default function Article() {
               </div>
             )}
           </div>
-          
+
+          {/* Top-of-article banner – only for guests */}
+          {!user && (
+            <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 dark:bg-primary/10 p-4 flex flex-col sm:flex-row items-center gap-4 sm:justify-between" data-testid="banner-top-newsletter">
+              <p className="text-sm text-gray-700 dark:text-gray-200 text-center sm:text-left">
+                <span className="font-semibold">The Digital Ledger</span> is a weekly brief for finance leaders. Two articles like this one, plus a podcast - every Wednesday morning.
+              </p>
+              <GetItWednesdayButton size="sm" className="flex-shrink-0" />
+            </div>
+          )}
+
           <Card>
             <CardContent className="p-8">
               <div className="mb-6">
@@ -660,19 +712,40 @@ export default function Article() {
 
               <div className="prose prose-lg max-w-none dark:prose-invert mb-8" data-testid="article-content">
                 {article.content ? (
-                  <div dangerouslySetInnerHTML={{ 
-                    __html: DOMPurify.sanitize(convertPipeTablesToHTML(article.content), { 
-                      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'span', 'div', 'a', 'img', 'blockquote', 'code', 'pre', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'colgroup', 'col'],
-                      ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel', 'src', 'alt', 'title', 'colspan', 'rowspan', 'scope'],
-                      ALLOW_DATA_ATTR: false
-                    }) 
-                  }} />
+                  contentHalves ? (
+                    <>
+                      <div dangerouslySetInnerHTML={{ __html: contentHalves[0] }} />
+                      {/* Mid-article inline CTA – only for guests */}
+                      <div className="not-prose my-8 rounded-lg border border-primary/20 bg-primary/5 dark:bg-primary/10 p-4 flex flex-col sm:flex-row items-center gap-4 sm:justify-between" data-testid="banner-mid-newsletter">
+                        <p className="text-sm text-gray-700 dark:text-gray-200 text-center sm:text-left">
+                          Once a week. Two articles like this one, plus a podcast. That's <span className="font-semibold">The Digital Ledger</span>.
+                        </p>
+                        <GetItWednesdayButton size="sm" className="flex-shrink-0" />
+                      </div>
+                      <div dangerouslySetInnerHTML={{ __html: contentHalves[1] }} />
+                    </>
+                  ) : (
+                    <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
+                  )
                 ) : (
                   <p className="text-gray-600 dark:text-gray-300">
                     No content available for this article.
                   </p>
                 )}
               </div>
+
+              {/* End-of-article CTA – only for guests */}
+              {!user && (
+                <div className="mb-8 rounded-lg border border-primary/20 bg-primary/5 dark:bg-primary/10 p-6 text-center" data-testid="banner-end-newsletter">
+                  <p className="text-base font-medium text-gray-900 dark:text-white mb-2">
+                    If this is the kind of read you want in your week:
+                  </p>
+                  <p className="text-sm text-gray-700 dark:text-gray-200 mb-4 max-w-2xl mx-auto">
+                    <span className="font-semibold">The Digital Ledger</span> is a free weekly brief for finance leaders. Two articles and one podcast, every Wednesday morning, on what's actually shifting underneath the headlines.
+                  </p>
+                  <GetItWednesdayButton />
+                </div>
+              )}
 
               {article.sourceName && article.sourceUrl && (
                 <div className="border-t pt-6 mb-6">
