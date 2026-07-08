@@ -654,11 +654,11 @@ export default function Article() {
 
           {/* Top-of-article banner – only for guests */}
           {!user && (
-            <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 dark:bg-primary/10 p-4 flex flex-col sm:flex-row items-center gap-4 sm:justify-between" data-testid="banner-top-newsletter">
-              <p className="text-sm text-gray-700 dark:text-gray-200 text-center sm:text-left">
+            <div className="mb-4 rounded-md border border-[#EAE5DB] bg-[#F8F6F2] dark:border-[#3A352C] dark:bg-[#26231E] px-6 py-7 flex flex-col sm:flex-row items-center gap-5 sm:justify-between" data-testid="banner-top-newsletter">
+              <p className="text-lg font-medium text-gray-800 dark:text-gray-100 text-center sm:text-left leading-relaxed">
                 <span className="font-semibold">The Digital Ledger</span> is a weekly brief for finance leaders. Two articles like this one, plus a podcast - every Wednesday morning.
               </p>
-              <GetItWednesdayButton size="sm" className="flex-shrink-0" onClick={() => setShowSubscribe(true)} />
+              <GetItWednesdayButton className="flex-shrink-0 rounded-md bg-[#24405E] hover:bg-[#1B3049] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
             </div>
           )}
 
