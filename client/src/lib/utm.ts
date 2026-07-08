@@ -35,7 +35,7 @@ export function getUtmSearch(): string {
       const value = current.get(key);
       if (value) params.set(key, value);
     }
-    if ([...params.keys()].length === 0) {
+    if (Array.from(params.keys()).length === 0) {
       const stored = sessionStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as Record<string, string>;
@@ -49,8 +49,4 @@ export function getUtmSearch(): string {
   }
   const search = params.toString();
   return search ? `?${search}` : "";
-}
-
-export function subscribeHref(): string {
-  return `/subscribe${getUtmSearch()}`;
 }

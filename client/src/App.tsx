@@ -35,7 +35,6 @@ import VerifyEmail from "@/pages/VerifyEmail";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import Unsubscribe from "@/pages/Unsubscribe";
-import Subscribe from "@/pages/Subscribe";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -76,7 +75,6 @@ function Router() {
       <Route path="/logout" component={Logout} />
       <Route path="/welcome" component={Welcome} />
       <Route path="/unsubscribe" component={Unsubscribe} />
-      <Route path="/subscribe" component={Subscribe} />
       
       {/* Article detail route must come AFTER /news/add to avoid matching "add" as an id */}
       <Route path="/news/:id" component={Article} />

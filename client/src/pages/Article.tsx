@@ -13,7 +13,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Calendar, ExternalLink, Heart, MessageCircle, Share2, Edit, Trash2, Archive, ArchiveRestore, Upload, X, UserPlus, Mail } from "lucide-react";
-import { subscribeHref } from "@/lib/utm";
+import { SubscribeDialog } from "@/components/SubscribeDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { insertNewsArticleSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -118,12 +118,10 @@ function splitContentInHalf(html: string): [string, string] | null {
 
 function GetItWednesdayButton({ size = "default", className = "", onClick }: { size?: "default" | "sm" | "lg"; className?: string; onClick?: () => void }) {
   return (
-    <Link href={subscribeHref()}>
-      <Button size={size} className={className} onClick={onClick} data-testid="button-get-it-wednesday">
-        <Mail className="h-4 w-4 mr-2" />
-        Get it Wednesday
-      </Button>
-    </Link>
+    <Button size={size} className={className} onClick={onClick} data-testid="button-get-it-wednesday">
+      <Mail className="h-4 w-4 mr-2" />
+      Get it Wednesday
+    </Button>
   );
 }
 
@@ -147,6 +145,7 @@ export default function Article() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState("");
   const [showExitPopup, setShowExitPopup] = useState(false);
+  const [showSubscribe, setShowSubscribe] = useState(false);
   const exitPopupShown = useRef(false);
 
   const articleFormSchema = z.object({
@@ -509,21 +508,23 @@ export default function Article() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white dark:from-gray-900 dark:to-gray-800">
 
+      {/* Subscribe popup with beehiiv form */}
+      <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} />
+
       {/* Floating "Get it Wednesday" button – only for guests */}
       {!user && (
         <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-center">
-          <Link href={subscribeHref()}>
-            <button
-              className="animate-wiggle-loop hover:animate-none flex flex-row items-center gap-3 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg px-5 py-3 transition-transform duration-200 hover:scale-105"
-              title="Get it Wednesday"
-              data-testid="button-floating-get-it-wednesday"
-            >
-              <Mail className="h-6 w-6 flex-shrink-0" />
-              <span className="text-sm font-bold tracking-wide whitespace-nowrap">
-                Get it Wednesday
-              </span>
-            </button>
-          </Link>
+          <button
+            onClick={() => setShowSubscribe(true)}
+            className="animate-wiggle-loop hover:animate-none flex flex-row items-center gap-3 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg px-5 py-3 transition-transform duration-200 hover:scale-105"
+            title="Get it Wednesday"
+            data-testid="button-floating-get-it-wednesday"
+          >
+            <Mail className="h-6 w-6 flex-shrink-0" />
+            <span className="text-sm font-bold tracking-wide whitespace-nowrap">
+              Get it Wednesday
+            </span>
+          </button>
         </div>
       )}
 
@@ -547,12 +548,18 @@ export default function Article() {
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-3 mt-4">
-              <Link href={subscribeHref()}>
-                <Button className="w-full text-base py-5" size="lg" onClick={() => setShowExitPopup(false)} data-testid="button-exit-popup-subscribe">
-                  <Mail className="h-5 w-5 mr-2" />
-                  Get it Wednesday
-                </Button>
-              </Link>
+              <Button
+                className="w-full text-base py-5"
+                size="lg"
+                onClick={() => {
+                  setShowExitPopup(false);
+                  setShowSubscribe(true);
+                }}
+                data-testid="button-exit-popup-subscribe"
+              >
+                <Mail className="h-5 w-5 mr-2" />
+                Get it Wednesday
+              </Button>
               <Button
                 variant="ghost"
                 className="w-full text-gray-500"
@@ -651,7 +658,7 @@ export default function Article() {
               <p className="text-sm text-gray-700 dark:text-gray-200 text-center sm:text-left">
                 <span className="font-semibold">The Digital Ledger</span> is a weekly brief for finance leaders. Two articles like this one, plus a podcast - every Wednesday morning.
               </p>
-              <GetItWednesdayButton size="sm" className="flex-shrink-0" />
+              <GetItWednesdayButton size="sm" className="flex-shrink-0" onClick={() => setShowSubscribe(true)} />
             </div>
           )}
 
@@ -721,7 +728,7 @@ export default function Article() {
                         <p className="text-sm text-gray-700 dark:text-gray-200 text-center sm:text-left">
                           Once a week. Two articles like this one, plus a podcast. That's <span className="font-semibold">The Digital Ledger</span>.
                         </p>
-                        <GetItWednesdayButton size="sm" className="flex-shrink-0" />
+                        <GetItWednesdayButton size="sm" className="flex-shrink-0" onClick={() => setShowSubscribe(true)} />
                       </div>
                       <div dangerouslySetInnerHTML={{ __html: contentHalves[1] }} />
                     </>
@@ -744,7 +751,7 @@ export default function Article() {
                   <p className="text-sm text-gray-700 dark:text-gray-200 mb-4 max-w-2xl mx-auto">
                     <span className="font-semibold">The Digital Ledger</span> is a free weekly brief for finance leaders. Two articles and one podcast, every Wednesday morning, on what's actually shifting underneath the headlines.
                   </p>
-                  <GetItWednesdayButton />
+                  <GetItWednesdayButton onClick={() => setShowSubscribe(true)} />
                 </div>
               )}
 

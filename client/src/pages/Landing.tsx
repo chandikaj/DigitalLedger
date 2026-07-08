@@ -1,6 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { subscribeHref } from "@/lib/utm";
+import { SubscribeDialog } from "@/components/SubscribeDialog";
 import { useLocation, Link } from "wouter";
 import { useState } from "react";
 import { VideoPlayerDialog, getYouTubeVideoId } from "@/components/VideoPlayerDialog";
@@ -39,6 +39,7 @@ export default function Landing() {
   const { toast } = useToast();
   const [playerOpen, setPlayerOpen] = useState(false);
   const [playingVideo, setPlayingVideo] = useState<{ videoId: string; title: string } | null>(null);
+  const [showSubscribe, setShowSubscribe] = useState(false);
 
   const handleWatch = (podcast: any) => {
     const videoId = getYouTubeVideoId(podcast.audioUrl);
@@ -215,6 +216,7 @@ export default function Landing() {
 
   return (
     <Layout>
+      <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} />
       {/* Hero Section */}
       <section
         className="hero-gradient py-16 text-white"
@@ -256,7 +258,7 @@ export default function Landing() {
                   fontFamily: "'Trebuchet MS', sans-serif",
                   fontSize: "1.2rem",
                 }}
-                onClick={() => setLocation(subscribeHref())}
+                onClick={() => setShowSubscribe(true)}
                 data-testid="button-join-community"
               >
                 Get it Wednesday
