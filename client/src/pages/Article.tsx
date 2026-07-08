@@ -13,6 +13,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Calendar, ExternalLink, Heart, MessageCircle, Share2, Edit, Trash2, Archive, ArchiveRestore, Upload, X, UserPlus, Mail } from "lucide-react";
+import { subscribeHref } from "@/lib/utm";
 import { useAuth } from "@/hooks/useAuth";
 import { insertNewsArticleSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -117,7 +118,7 @@ function splitContentInHalf(html: string): [string, string] | null {
 
 function GetItWednesdayButton({ size = "default", className = "", onClick }: { size?: "default" | "sm" | "lg"; className?: string; onClick?: () => void }) {
   return (
-    <Link href="/login?tab=register">
+    <Link href={subscribeHref()}>
       <Button size={size} className={className} onClick={onClick} data-testid="button-get-it-wednesday">
         <Mail className="h-4 w-4 mr-2" />
         Get it Wednesday
@@ -511,7 +512,7 @@ export default function Article() {
       {/* Floating "Get it Wednesday" button – only for guests */}
       {!user && (
         <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-center">
-          <Link href="/login?tab=register">
+          <Link href={subscribeHref()}>
             <button
               className="animate-wiggle-loop hover:animate-none flex flex-row items-center gap-3 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg px-5 py-3 transition-transform duration-200 hover:scale-105"
               title="Get it Wednesday"
@@ -546,7 +547,7 @@ export default function Article() {
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-3 mt-4">
-              <Link href="/login?tab=register">
+              <Link href={subscribeHref()}>
                 <Button className="w-full text-base py-5" size="lg" onClick={() => setShowExitPopup(false)} data-testid="button-exit-popup-subscribe">
                   <Mail className="h-5 w-5 mr-2" />
                   Get it Wednesday

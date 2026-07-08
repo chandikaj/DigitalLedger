@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
+import { subscribeHref } from "@/lib/utm";
 import { useLocation, Link } from "wouter";
 import { useState } from "react";
 import { VideoPlayerDialog, getYouTubeVideoId } from "@/components/VideoPlayerDialog";
@@ -255,7 +256,7 @@ export default function Landing() {
                   fontFamily: "'Trebuchet MS', sans-serif",
                   fontSize: "1.2rem",
                 }}
-                onClick={() => setLocation("/login")}
+                onClick={() => setLocation(subscribeHref())}
                 data-testid="button-join-community"
               >
                 Get it Wednesday
