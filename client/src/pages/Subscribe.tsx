@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Layout } from "@/components/Layout";
 import { getUtmSearch } from "@/lib/utm";
 
-const BEEHIIV_FORM_ID = "ea4001cb-f185-4574-9a62-05674a5dd1bc";
+const BEEHIIV_FORM_ID = import.meta.env.VITE_BEEHIIV_FORM_ID;
 
 export default function Subscribe() {
   const containerRef = useRef<HTMLDivElement>(null);

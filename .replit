@@ -44,3 +44,8 @@ integrations = ["javascript_database:1.0.0", "javascript_object_storage:1.0.0", 
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+VITE_BEEHIIV_FORM_ID = "ea4001cb-f185-4574-9a62-05674a5dd1bc"
