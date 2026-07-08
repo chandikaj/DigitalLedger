@@ -83,7 +83,7 @@ export function SubscribeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-white dark:bg-white border-white dark:border-white [&>button]:text-neutral-700 [&>button]:dark:text-neutral-700 [&>button]:opacity-100 [&>button]:bg-white/90 [&>button]:rounded-full [&>button]:p-1 [&>button:hover]:bg-neutral-100">
         <DialogTitle className="sr-only">Subscribe to The Digital Ledger Newsletter</DialogTitle>
         <DialogDescription className="sr-only">
           Newsletter signup form
