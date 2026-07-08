@@ -1,7 +1,6 @@
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
@@ -20,15 +19,11 @@ export function SubscribeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center">
-            Get it Wednesday
-          </DialogTitle>
-          <DialogDescription className="text-center">
-            Two articles and one podcast episode, every Wednesday morning.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-xl p-0 overflow-hidden">
+        <DialogTitle className="sr-only">Subscribe to The Digital Ledger Newsletter</DialogTitle>
+        <DialogDescription className="sr-only">
+          Newsletter signup form
+        </DialogDescription>
         {open && !BEEHIIV_FORM_ID && (
           <p className="text-center text-sm text-muted-foreground py-8">
             The signup form isn't configured yet. Please try again later.
@@ -38,8 +33,8 @@ export function SubscribeDialog({
           <iframe
             src={formSrc}
             title="The Digital Ledger Newsletter"
-            className="beehiiv-embed w-full border-0"
-            style={{ height: 320 }}
+            className="beehiiv-embed w-full border-0 block"
+            style={{ height: 360 }}
             scrolling="no"
             data-testid="beehiiv-form-iframe"
           />
