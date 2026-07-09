@@ -253,7 +253,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
                 size="lg"
-                className="bg-[#0004E3] hover:bg-[#0003B4] text-white"
+                className="bg-[#1E3A5F] hover:bg-[#162C49] text-white"
                 style={{
                   fontFamily: "'Trebuchet MS', sans-serif",
                   fontSize: "1.2rem",
