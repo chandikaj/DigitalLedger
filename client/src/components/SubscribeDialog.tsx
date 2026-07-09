@@ -72,6 +72,7 @@ export function SubscribeDialog({
         if (msg.payload?.height) {
           setHeight(msg.payload.height);
           setSized(true);
+          requestAnimationFrame(() => setRevealed(true));
         }
         if (msg.payload?.width) setWidth(msg.payload.width);
         if (msg.type === "beehiiv:styles" && msg.payload?.borderRadius) {
@@ -88,7 +89,10 @@ export function SubscribeDialog({
     };
 
     window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
+    return () => {
+      clearTimeout(revealTimer);
+      window.removeEventListener("message", onMessage);
+    };
   }, [open, onOpenChange]);
 
   const formSrc = `${BEEHIIV_ORIGIN}/${BEEHIIV_FORM_ID}${getUtmSearch()}`;
@@ -109,22 +113,41 @@ export function SubscribeDialog({
           </p>
         )}
         {open && BEEHIIV_FORM_ID && (
-          <iframe
-            ref={iframeRef}
-            src={formSrc}
-            title="The Digital Ledger Newsletter"
-            className="beehiiv-embed border-0 block mx-auto"
-            style={{
-              height,
-              width: width ?? "min(36rem, 95vw)",
-              maxWidth: "95vw",
-              maxHeight: "80vh",
-              overflow: "auto",
-              transition: "height 150ms ease, width 150ms ease",
-            }}
-            scrolling={sized ? "no" : "auto"}
-            data-testid="beehiiv-form-iframe"
-          />
+          <div className="relative">
+            {!revealed && (
+              <div
+                className="flex items-center justify-center"
+                style={{ width: "min(24rem, 90vw)", height: 180 }}
+                data-testid="beehiiv-form-loading"
+              >
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-700" />
+              </div>
+            )}
+            <iframe
+              ref={iframeRef}
+              src={formSrc}
+              title="The Digital Ledger Newsletter"
+              className="beehiiv-embed border-0 block mx-auto"
+              style={{
+                height,
+                width: width ?? "min(36rem, 95vw)",
+                maxWidth: "95vw",
+                maxHeight: "80vh",
+                overflow: "auto",
+                ...(revealed
+                  ? { opacity: 1, transition: "opacity 200ms ease" }
+                  : {
+                      position: "absolute" as const,
+                      top: 0,
+                      left: 0,
+                      opacity: 0,
+                      pointerEvents: "none" as const,
+                    }),
+              }}
+              scrolling={sized ? "no" : "auto"}
+              data-testid="beehiiv-form-iframe"
+            />
+          </div>
         )}
       </DialogContent>
     </Dialog>
