@@ -45,6 +45,7 @@ export function SubscribeDialog({
   const [width, setWidth] = useState<string | number | undefined>(undefined);
   const [radius, setRadius] = useState<string | undefined>(undefined);
   const [sized, setSized] = useState(false);
+  const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -52,8 +53,11 @@ export function SubscribeDialog({
       setWidth(undefined);
       setRadius(undefined);
       setSized(false);
+      setRevealed(false);
       return;
     }
+
+    const revealTimer = setTimeout(() => setRevealed(true), 6000);
 
     const onMessage = (e: MessageEvent) => {
       const iframe = iframeRef.current;
