@@ -42,11 +42,15 @@ export function SubscribeDialog({
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState<string | number>(FALLBACK_HEIGHT);
+  const [width, setWidth] = useState<string | number | undefined>(undefined);
+  const [radius, setRadius] = useState<string | undefined>(undefined);
   const [sized, setSized] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setHeight(FALLBACK_HEIGHT);
+      setWidth(undefined);
+      setRadius(undefined);
       setSized(false);
       return;
     }
@@ -64,6 +68,10 @@ export function SubscribeDialog({
         if (msg.payload?.height) {
           setHeight(msg.payload.height);
           setSized(true);
+        }
+        if (msg.payload?.width) setWidth(msg.payload.width);
+        if (msg.type === "beehiiv:styles" && msg.payload?.borderRadius) {
+          setRadius(msg.payload.borderRadius);
         }
       } else if (msg.type === "beehiiv:challenge-resolved") {
         iframe.contentWindow?.postMessage({ type: "beehiiv:resize" }, BEEHIIV_ORIGIN);
@@ -83,13 +91,16 @@ export function SubscribeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-white dark:bg-white border-white dark:border-white [&>button]:text-neutral-700 [&>button]:dark:text-neutral-700 [&>button]:opacity-100 [&>button]:bg-white/90 [&>button]:rounded-full [&>button]:p-1 [&>button:hover]:bg-neutral-100">
+      <DialogContent
+        className="w-auto max-w-[95vw] p-0 overflow-hidden bg-white dark:bg-white border-white dark:border-white [&>button]:text-neutral-700 [&>button]:dark:text-neutral-700 [&>button]:opacity-100 [&>button]:bg-white/90 [&>button]:rounded-full [&>button]:p-1 [&>button:hover]:bg-neutral-100"
+        style={radius ? { borderRadius: radius } : undefined}
+      >
         <DialogTitle className="sr-only">Subscribe to The Digital Ledger Newsletter</DialogTitle>
         <DialogDescription className="sr-only">
           Newsletter signup form
         </DialogDescription>
         {open && !BEEHIIV_FORM_ID && (
-          <p className="text-center text-sm text-muted-foreground py-8">
+          <p className="text-center text-sm text-muted-foreground py-8 px-12">
             The signup form isn't configured yet. Please try again later.
           </p>
         )}
@@ -98,12 +109,14 @@ export function SubscribeDialog({
             ref={iframeRef}
             src={formSrc}
             title="The Digital Ledger Newsletter"
-            className="beehiiv-embed w-full border-0 block"
+            className="beehiiv-embed border-0 block mx-auto"
             style={{
               height,
+              width: width ?? "min(36rem, 95vw)",
+              maxWidth: "95vw",
               maxHeight: "80vh",
               overflow: "auto",
-              transition: "height 150ms ease",
+              transition: "height 150ms ease, width 150ms ease",
             }}
             scrolling={sized ? "no" : "auto"}
             data-testid="beehiiv-form-iframe"
