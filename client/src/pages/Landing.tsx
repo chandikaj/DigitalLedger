@@ -225,7 +225,7 @@ export default function Landing() {
               The Digital Ledger
             </h1>
             <div
-              className="text-xl md:text-2xl text-[#2A2A2A] max-w-3xl mx-auto mb-8"
+              className="text-xl md:text-2xl text-[#2A2A2A] max-w-3xl mx-auto mb-3"
               data-testid="hero-subtitle"
             >
               <p className="font-bold mb-3">
