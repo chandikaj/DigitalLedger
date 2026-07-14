@@ -220,7 +220,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="py-16 bg-[#F1EDE4]" data-testid="hero-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <div className="text-center">
             <h1
               className="text-4xl md:text-6xl font-bold mb-6 text-[#1F2A44]"
               data-testid="hero-title"
