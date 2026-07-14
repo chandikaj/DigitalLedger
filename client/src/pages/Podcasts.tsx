@@ -293,10 +293,10 @@ export default function Podcasts() {
         <div className="mb-8" data-testid="podcast-header">
           <div className="text-center mb-6">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              The Digital Ledger Podcast Hub
+              One episode a week. Conversations on what's actually moving in finance and accounting.
             </h1>
             <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto">
-              Listen to expert interviews, industry insights, and practical discussions about the future of Corporate Finance and Accounting
+              For the CFOs, controllers, FP&A leads, and accounting firm partners who can already feel it.
             </p>
           </div>
           {(userRole === 'editor' || userRole === 'admin') && (

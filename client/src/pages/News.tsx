@@ -264,10 +264,10 @@ export default function News() {
         <div className="mb-8" data-testid="news-header">
           <div className="text-center mb-6">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Latest Insights in Corporate Finance, FP&A, Accounting and AI-Driven Operations
+              Two articles a week, on what's actually shifting underneath the headlines in finance and accounting.
             </h1>
             <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto">
-              Stay up to date with concise, high-quality insights from trusted sources, academic research, and industry leaders. Perfect for busy finance professionals who want clarity without the noise.
+              For CFOs, controllers, FP&A leads, and accounting firm partners.
             </p>
           </div>
           {(userRole === 'editor' || userRole === 'admin') && (
