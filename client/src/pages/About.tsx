@@ -13,7 +13,6 @@ export default function About() {
         <div className="max-w-3xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
           <h1
             className="text-4xl md:text-5xl font-bold text-[#1F2A44] mb-8"
-            style={{ fontFamily: "'Rockwell', 'Roboto Slab', 'Courier New', serif" }}
             data-testid="text-about-title"
           >
             About
@@ -34,7 +33,6 @@ export default function About() {
         <section className="mb-12">
           <h2
             className="text-2xl md:text-3xl font-bold text-[#1F2A44] dark:text-white mb-4"
-            style={{ fontFamily: "'Rockwell', 'Roboto Slab', 'Courier New', serif" }}
             data-testid="text-who-we-are-title"
           >
             Who we are
@@ -49,7 +47,6 @@ export default function About() {
         <section className="mb-12">
           <h2
             className="text-2xl md:text-3xl font-bold text-[#1F2A44] dark:text-white mb-4"
-            style={{ fontFamily: "'Rockwell', 'Roboto Slab', 'Courier New', serif" }}
             data-testid="text-what-we-do-title"
           >
             What we're doing
@@ -68,7 +65,6 @@ export default function About() {
         <section className="mb-12">
           <h2
             className="text-2xl md:text-3xl font-bold text-[#1F2A44] dark:text-white mb-4"
-            style={{ fontFamily: "'Rockwell', 'Roboto Slab', 'Courier New', serif" }}
             data-testid="text-why-title"
           >
             Why
@@ -88,7 +84,6 @@ export default function About() {
         <section className="mb-12">
           <h2
             className="text-2xl md:text-3xl font-bold text-[#1F2A44] dark:text-white mb-4"
-            style={{ fontFamily: "'Rockwell', 'Roboto Slab', 'Courier New', serif" }}
             data-testid="text-who-its-for-title"
           >
             Who it's for
@@ -103,7 +98,6 @@ export default function About() {
         <section className="mb-12">
           <h2
             className="text-2xl md:text-3xl font-bold text-[#1F2A44] dark:text-white mb-4"
-            style={{ fontFamily: "'Rockwell', 'Roboto Slab', 'Courier New', serif" }}
             data-testid="text-editorial-standards-title"
           >
             Editorial standards
@@ -130,10 +124,6 @@ export default function About() {
           <Button
             size="lg"
             className="bg-[#1F2A44] hover:bg-[#162035] text-[#F7F4EC]"
-            style={{
-              fontFamily: "'Trebuchet MS', sans-serif",
-              fontSize: "1.2rem",
-            }}
             onClick={() => setShowSubscribe(true)}
             data-testid="button-about-get-it-wednesday"
           >

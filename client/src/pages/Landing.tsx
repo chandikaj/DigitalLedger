@@ -220,7 +220,6 @@ export default function Landing() {
           <div className="text-center mb-12">
             <h1
               className="text-4xl md:text-6xl font-bold mb-6 text-[#1F2A44]"
-              style={{ fontFamily: "'Rockwell', 'Roboto Slab', 'Courier New', serif" }}
               data-testid="hero-title"
             >
               The Digital Ledger
@@ -249,10 +248,6 @@ export default function Landing() {
               <Button
                 size="lg"
                 className="bg-[#1F2A44] hover:bg-[#162035] text-[#F7F4EC]"
-                style={{
-                  fontFamily: "'Trebuchet MS', sans-serif",
-                  fontSize: "1.2rem",
-                }}
                 onClick={() => setShowSubscribe(true)}
                 data-testid="button-join-community"
               >
@@ -604,10 +599,6 @@ export default function Landing() {
           <Button
             size="lg"
             className="bg-[#1F2A44] hover:bg-[#162035] text-[#F7F4EC]"
-            style={{
-              fontFamily: "'Trebuchet MS', sans-serif",
-              fontSize: "1.2rem",
-            }}
             onClick={() => setShowSubscribe(true)}
             data-testid="button-get-started"
           >
