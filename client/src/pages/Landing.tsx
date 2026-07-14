@@ -5,7 +5,6 @@ import { useLocation, Link } from "wouter";
 import { useState } from "react";
 import { VideoPlayerDialog, getYouTubeVideoId } from "@/components/VideoPlayerDialog";
 import { Card, CardContent } from "@/components/ui/card";
-import Prism from "@/components/Prism";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -214,25 +213,10 @@ export default function Landing() {
       <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} />
       {/* Hero Section */}
       <section
-        className="py-16 bg-[#F1EDE4] relative overflow-hidden"
+        className="py-16 bg-[#F1EDE4]"
         data-testid="hero-section"
       >
-        <div className="absolute inset-0 opacity-40 pointer-events-none">
-          <Prism
-            animationType="rotate"
-            timeScale={0.3}
-            height={3.5}
-            baseWidth={5.5}
-            scale={3.6}
-            hueShift={0.6}
-            colorFrequency={0.8}
-            noise={0}
-            glow={0.8}
-            bloom={0.8}
-            suspendWhenOffscreen={true}
-          />
-        </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h1
               className="text-4xl md:text-6xl font-bold mb-6 text-[#1F2A44]"
