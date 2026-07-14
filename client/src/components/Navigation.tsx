@@ -60,7 +60,7 @@ export function Navigation() {
     { key: "resources", name: "Resources", href: "/resources" },
     { key: "toolbox", name: "Toolbox", href: "/toolbox" },
     { key: "community", name: "Community", href: "/community" },
-    { key: "about", name: "About Us", href: "/about" },
+    { key: "about", name: "About", href: "/about" },
   ].filter(item => {
     // Filter based on menu settings visibility
     const setting = menuSettings.find(s => s.menuKey === item.key);
