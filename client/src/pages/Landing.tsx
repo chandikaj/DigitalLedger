@@ -3,7 +3,10 @@ import { Button } from "@/components/ui/button";
 import { SubscribeDialog } from "@/components/SubscribeDialog";
 import { useLocation, Link } from "wouter";
 import { useState } from "react";
-import { VideoPlayerDialog, getYouTubeVideoId } from "@/components/VideoPlayerDialog";
+import {
+  VideoPlayerDialog,
+  getYouTubeVideoId,
+} from "@/components/VideoPlayerDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -32,7 +35,10 @@ export default function Landing() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [playerOpen, setPlayerOpen] = useState(false);
-  const [playingVideo, setPlayingVideo] = useState<{ videoId: string; title: string } | null>(null);
+  const [playingVideo, setPlayingVideo] = useState<{
+    videoId: string;
+    title: string;
+  } | null>(null);
   const [showSubscribe, setShowSubscribe] = useState(false);
 
   const handleWatch = (podcast: any) => {
@@ -212,10 +218,7 @@ export default function Landing() {
     <Layout>
       <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} />
       {/* Hero Section */}
-      <section
-        className="py-16 bg-[#F1EDE4]"
-        data-testid="hero-section"
-      >
+      <section className="py-16 bg-[#F1EDE4]" data-testid="hero-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h1
@@ -236,10 +239,12 @@ export default function Landing() {
                 This is a weekly brief for the CFOs, controllers, FP&A leads,
                 and accounting firm partners who can already feel it.
               </p>
-              <p>Two articles and one podcast episode, every Wednesday morning.</p>
+              <p className="mb-3">
+                Two articles and one podcast episode, every Wednesday morning.
+              </p>
             </div>
             <p
-              className="text-xl md:text-2xl text-[#2A2A2A] mb-4"
+              className="text-xl md:text-2xl text-[#2A2A2A] mb-3"
               data-testid="text-no-spam"
             >
               Thanks for being here.
@@ -584,10 +589,7 @@ export default function Landing() {
       )}
 
       {/* CTA Section */}
-      <section
-        className="py-16 bg-[#F1EDE4]"
-        data-testid="cta-section"
-      >
+      <section className="py-16 bg-[#F1EDE4]" data-testid="cta-section">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <p
             className="text-xl md:text-2xl text-[#2A2A2A] mb-8"
