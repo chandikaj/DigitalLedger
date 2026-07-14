@@ -4,26 +4,20 @@ import { SubscribeDialog } from "@/components/SubscribeDialog";
 import { useLocation, Link } from "wouter";
 import { useState } from "react";
 import { VideoPlayerDialog, getYouTubeVideoId } from "@/components/VideoPlayerDialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Brain,
-  Users,
-  BookOpen,
   Podcast,
-  MessageSquare,
-  TrendingUp,
   Shield,
   Award,
-  Mic,
   PlayCircle,
   Heart,
   Share,
   MessageCircle,
-  ExternalLink,
 } from "lucide-react";
 
 interface MenuSetting {
@@ -219,19 +213,20 @@ export default function Landing() {
       <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} />
       {/* Hero Section */}
       <section
-        className="hero-gradient py-16 text-white"
+        className="py-16 bg-[#F1EDE4]"
         data-testid="hero-section"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h1
-              className="text-4xl md:text-6xl font-bold mb-6"
+              className="text-4xl md:text-6xl font-bold mb-6 text-[#1F2A44]"
+              style={{ fontFamily: "'Rockwell', 'Roboto Slab', 'Courier New', serif" }}
               data-testid="hero-title"
             >
-              <span className="text-yellow-300">The Digital Ledger</span>
+              The Digital Ledger
             </h1>
             <div
-              className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto mb-8"
+              className="text-xl md:text-2xl text-[#2A2A2A] max-w-3xl mx-auto mb-8"
               data-testid="hero-subtitle"
             >
               <p className="font-bold mb-3">
@@ -245,7 +240,7 @@ export default function Landing() {
               <p>Two articles and one podcast episode, every Wednesday morning.</p>
             </div>
             <p
-              className="text-xl md:text-2xl text-blue-100 mb-4"
+              className="text-xl md:text-2xl text-[#2A2A2A] mb-4"
               data-testid="text-no-spam"
             >
               Thanks for being here.
@@ -253,7 +248,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
                 size="lg"
-                className="bg-[#1E3A5F] hover:bg-[#162C49] text-white"
+                className="bg-[#1F2A44] hover:bg-[#162035] text-[#F7F4EC]"
                 style={{
                   fontFamily: "'Trebuchet MS', sans-serif",
                   fontSize: "1.2rem",
@@ -280,13 +275,11 @@ export default function Landing() {
                 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4"
                 data-testid="news-title"
               >
-                Latest Insights in Corporate Finance, FP&A, Accounting and
-                AI-Driven Operations
+                This Week's Articles
               </h2>
               <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto">
-                Stay up to date with concise, high-quality insights from trusted
-                sources, academic research, and industry leaders. Perfect for
-                busy finance professionals who want clarity without the noise.
+                Two articles a week, on what's actually shifting underneath the
+                headlines.
               </p>
             </div>
 
@@ -424,11 +417,11 @@ export default function Landing() {
                 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4"
                 data-testid="podcast-title"
               >
-                Digital Ledger Podcast Hub
+                The Podcast
               </h2>
               <p className="text-gray-600 dark:text-gray-300 text-lg max-w-3xl mx-auto">
-                Listen to expert interviews, industry insights, and practical
-                discussions about the future of Corporate Finance and Accounting
+                One podcast episode a week. Conversations on what's actually
+                moving in finance.
               </p>
             </div>
 
@@ -597,30 +590,28 @@ export default function Landing() {
 
       {/* CTA Section */}
       <section
-        className="py-16 cta-gradient text-white"
+        className="py-16 bg-[#F1EDE4]"
         data-testid="cta-section"
       >
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2
-            className="text-3xl md:text-4xl font-bold mb-6"
-            data-testid="cta-title"
-          >
-            Ready to Level Up Your Finance Leadership?
-          </h2>
           <p
-            className="text-xl text-blue-100 mb-8"
+            className="text-xl md:text-2xl text-[#2A2A2A] mb-8"
             data-testid="cta-description"
           >
-            Join thousands of finance professionals using AI and modern tools to
-            transform how finance operates.
+            If you'd like to stay with us, our weekly brief lands every
+            Wednesday morning.
           </p>
           <Button
             size="lg"
-            className="bg-white text-primary hover:bg-gray-100"
-            onClick={() => setLocation("/login")}
+            className="bg-[#1F2A44] hover:bg-[#162035] text-[#F7F4EC]"
+            style={{
+              fontFamily: "'Trebuchet MS', sans-serif",
+              fontSize: "1.2rem",
+            }}
+            onClick={() => setShowSubscribe(true)}
             data-testid="button-get-started"
           >
-            Get Started Today
+            Get it Wednesday
           </Button>
         </div>
       </section>
