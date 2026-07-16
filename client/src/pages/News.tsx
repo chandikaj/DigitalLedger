@@ -42,7 +42,7 @@ export default function News() {
 
   // Sync state with URL on mount
   useEffect(() => {
-    const params = new URLSearchParams(location.split('?')[1] || '');
+    const params = new URLSearchParams(window.location.search);
     const categoriesParam = params.get('categories');
     if (categoriesParam) {
       setSelectedCategories(categoriesParam.split(','));
@@ -354,11 +354,13 @@ export default function News() {
             ))}
             {selectedCategories.length > 0 && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => setSelectedCategories([])}
+                className="bg-red-100 text-red-700 border-red-300 hover:bg-red-200 hover:text-red-800 dark:bg-red-950 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900"
                 data-testid="filter-clear"
               >
+                <XCircle className="h-4 w-4 mr-1" />
                 Clear Filters
               </Button>
             )}
