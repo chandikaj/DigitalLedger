@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, Share, Search, PlusCircle, CheckCircle, XCircle, Pencil, Archive, ArchiveRestore, Mail } from "lucide-react";
+import { Heart, MessageCircle, Share, Search, PlusCircle, CheckCircle, XCircle, Pencil, Archive, ArchiveRestore, Mail, SlidersHorizontal } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,7 @@ interface NewsCategory {
 export default function News() {
   const [location, setLocation] = useLocation();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSignInDialog, setShowSignInDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<"active" | "archive">("active");
@@ -46,6 +47,7 @@ export default function News() {
     const categoriesParam = params.get('categories');
     if (categoriesParam) {
       setSelectedCategories(categoriesParam.split(','));
+      setShowFilters(true);
     }
   }, []);
 
@@ -340,8 +342,22 @@ export default function News() {
         {/* Filters and Search */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 space-y-4 lg:space-y-0">
           {/* Category Filters */}
-          <div className="flex flex-wrap gap-2" data-testid="category-filters">
-            {categoriesData.map((category: NewsCategory) => (
+          <div className="flex flex-wrap items-center gap-2" data-testid="category-filters">
+            <Button
+              variant={showFilters || selectedCategories.length > 0 ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowFilters(prev => !prev)}
+              data-testid="button-toggle-filters"
+            >
+              <SlidersHorizontal className="h-4 w-4 mr-1" />
+              Filter
+              {selectedCategories.length > 0 && (
+                <Badge variant="secondary" className="ml-2 px-1.5 py-0 text-xs">
+                  {selectedCategories.length}
+                </Badge>
+              )}
+            </Button>
+            {showFilters && categoriesData.map((category: NewsCategory) => (
               <Button
                 key={category.id}
                 variant={selectedCategories.includes(category.id) ? "default" : "outline"}
