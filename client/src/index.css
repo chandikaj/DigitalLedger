@@ -336,6 +336,7 @@
   color: #2563eb !important;
   text-decoration: underline !important;
   cursor: pointer !important;
+  position: relative !important;
 }
 .prose a:hover {
   color: #1d4ed8 !important;
@@ -345,6 +346,40 @@
 }
 .dark .prose a:hover {
   color: #93c5fd !important;
+}
+
+/* Link destination tooltip on hover */
+.prose a::after {
+  content: attr(href);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1e293b;
+  color: #f1f5f9;
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: 1.4;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: none !important;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 50;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.prose a:hover::after {
+  opacity: 1;
+}
+.dark .prose a::after {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 /* Preserve inline styles for color and font-family */
