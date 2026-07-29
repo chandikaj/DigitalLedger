@@ -338,10 +338,7 @@ export default function Podcasts() {
         onOpenChange={setPlayerOpen}
         videoId={playingVideo?.videoId || null}
         title={playingVideo?.title}
-        onSubscribe={() => {
-          setPlayerOpen(false);
-          setShowSubscribe(true);
-        }}
+        onSubscribe={() => setShowSubscribe(true)}
       />
       <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} />
     </Layout>
