@@ -28,6 +28,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { VideoPlayerDialog, getYouTubeVideoId } from "@/components/VideoPlayerDialog";
+import { SubscribeDialog } from "@/components/SubscribeDialog";
 
 interface NewsCategory {
   id: string;
@@ -46,6 +47,7 @@ export default function Podcasts() {
   const [activeTab, setActiveTab] = useState<"active" | "archive">("active");
   const [playerOpen, setPlayerOpen] = useState(false);
   const [playingVideo, setPlayingVideo] = useState<{ videoId: string; title: string } | null>(null);
+  const [showSubscribe, setShowSubscribe] = useState(false);
   const { user } = useAuth();
   const userRole = (user as any)?.role;
   const { toast } = useToast();
@@ -336,7 +338,12 @@ export default function Podcasts() {
         onOpenChange={setPlayerOpen}
         videoId={playingVideo?.videoId || null}
         title={playingVideo?.title}
+        onSubscribe={() => {
+          setPlayerOpen(false);
+          setShowSubscribe(true);
+        }}
       />
+      <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} />
     </Layout>
   );
 
