@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export function getYouTubeVideoId(url: string): string | null {
   if (!url) return null;
@@ -32,12 +32,10 @@ interface VideoPlayerDialogProps {
 export function VideoPlayerDialog({ open, onOpenChange, videoId, title }: VideoPlayerDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] p-0 overflow-hidden" data-testid="video-player-dialog">
-        <DialogHeader className="px-4 pt-4 pb-2 pr-10">
-          <DialogTitle className="line-clamp-1 text-base" data-testid="video-player-title">
-            {title || "Now Playing"}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-4xl w-[95vw] p-0 gap-0 border-0 overflow-hidden [&>button]:z-10 [&>button]:rounded-full [&>button]:bg-black/60 [&>button]:p-1.5 [&>button]:text-white [&>button]:opacity-100 [&>button:hover]:bg-black/80" data-testid="video-player-dialog">
+        <DialogTitle className="sr-only" data-testid="video-player-title">
+          {title || "Video player"}
+        </DialogTitle>
         <div className="aspect-video w-full bg-black">
           {open && videoId && (
             <iframe
