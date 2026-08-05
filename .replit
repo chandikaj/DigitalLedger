@@ -49,3 +49,6 @@ timeoutMs = 20000
 
 [userenv.shared]
 VITE_BEEHIIV_FORM_ID = "ea4001cb-f185-4574-9a62-05674a5dd1bc"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-cdbd6589-2132-4e82-b623-cf8543b24d8e"
