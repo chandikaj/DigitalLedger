@@ -1805,6 +1805,69 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
+  // --- Public read-only analytics aggregates (never expose identifiers) ---
+
+  async getEngagementSummary(params: {
+    contentType?: string;
+    from?: string;
+    to?: string;
+    limit: number;
+    offset: number;
+  }): Promise<any[]> {
+    const result = await db.execute(sql`
+      SELECT content_type AS "contentType",
+             content_id AS "contentId",
+             SUM(total_seconds)::int AS "totalSeconds",
+             COUNT(DISTINCT identity)::int AS "uniqueVisitors",
+             MIN(activity_date) AS "firstActivity",
+             MAX(activity_date) AS "lastActivity"
+      FROM content_engagement
+      WHERE (${params.contentType ?? null}::varchar IS NULL OR content_type = ${params.contentType ?? null})
+        AND (${params.from ?? null}::varchar IS NULL OR activity_date >= ${params.from ?? null})
+        AND (${params.to ?? null}::varchar IS NULL OR activity_date <= ${params.to ?? null})
+      GROUP BY content_type, content_id
+      ORDER BY SUM(total_seconds) DESC
+      LIMIT ${params.limit} OFFSET ${params.offset}
+    `);
+    return result.rows as any[];
+  }
+
+  async getEngagementDaily(params: {
+    contentType?: string;
+    from?: string;
+    to?: string;
+  }): Promise<any[]> {
+    const result = await db.execute(sql`
+      SELECT activity_date AS "date",
+             SUM(total_seconds)::int AS "totalSeconds",
+             COUNT(DISTINCT identity)::int AS "uniqueVisitors",
+             COUNT(DISTINCT content_id)::int AS "contentItems"
+      FROM content_engagement
+      WHERE (${params.contentType ?? null}::varchar IS NULL OR content_type = ${params.contentType ?? null})
+        AND (${params.from ?? null}::varchar IS NULL OR activity_date >= ${params.from ?? null})
+        AND (${params.to ?? null}::varchar IS NULL OR activity_date <= ${params.to ?? null})
+      GROUP BY activity_date
+      ORDER BY activity_date ASC
+      LIMIT 400
+    `);
+    return result.rows as any[];
+  }
+
+  async getPopupFunnel(params: { from?: string; to?: string }): Promise<any[]> {
+    const result = await db.execute(sql`
+      SELECT trigger,
+             COUNT(*)::int AS "opens",
+             COUNT(*) FILTER (WHERE email_entered)::int AS "emailEntered",
+             COUNT(*) FILTER (WHERE subscribed)::int AS "subscribed"
+      FROM popup_events
+      WHERE (${params.from ?? null}::varchar IS NULL OR created_at >= (${params.from ?? null})::timestamp)
+        AND (${params.to ?? null}::varchar IS NULL OR created_at < ((${params.to ?? null})::timestamp + interval '1 day'))
+      GROUP BY trigger
+      ORDER BY COUNT(*) DESC
+    `);
+    return result.rows as any[];
+  }
+
   async linkAnonToUser(anonId: string, userId: string): Promise<void> {
     // Merge anonymous engagement rows into the user's identity. Where a
     // user-identity row already exists for the same content+day, add the

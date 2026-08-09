@@ -1708,32 +1708,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CORS preflight for the public counts endpoint (allows browser dashboards)
-  app.options("/api/public/counts", (_req, res) => {
+  // --- Public read-only API (GET only, protected by PUBLIC_API_KEY) ---
+  const { timingSafeEqual } = await import("node:crypto");
+
+  const safeKeyCompare = (provided: string, expected: string): boolean => {
+    const a = Buffer.from(provided);
+    const b = Buffer.from(expected);
+    // Compare against self when lengths differ to keep timing constant
+    return a.length === b.length ? timingSafeEqual(a, b) : (timingSafeEqual(b, b), false);
+  };
+
+  // Simple in-memory rate limit for public endpoints (per IP, 60 req/min).
+  // Fixed-window counters: O(1) memory per IP regardless of request rate.
+  const publicApiBuckets = new Map<string, { windowStart: number; count: number }>();
+  const PUBLIC_API_LIMIT = 60;
+  const publicRateLimited = (bucket: string): boolean => {
+    const now = Date.now();
+    const entry = publicApiBuckets.get(bucket);
+    if (!entry || now - entry.windowStart >= 60_000) {
+      // New window; also evict expired buckets to keep the map bounded
+      if (publicApiBuckets.size > 1000) {
+        for (const [k, v] of publicApiBuckets) {
+          if (now - v.windowStart >= 60_000) publicApiBuckets.delete(k);
+        }
+      }
+      publicApiBuckets.set(bucket, { windowStart: now, count: 1 });
+      return false;
+    }
+    if (entry.count >= PUBLIC_API_LIMIT) return true; // don't grow state past limit
+    entry.count++;
+    return false;
+  };
+
+  const publicApiGuard = (allowQueryKey: boolean) => (req: any, res: any, next: any) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    const expectedKey = process.env.PUBLIC_API_KEY;
+    if (!expectedKey) {
+      return res.status(503).json({ message: "Public API is not configured" });
+    }
+    // Header preferred; query-string keys leak into logs (legacy counts endpoint only)
+    const providedKey =
+      (req.headers["x-api-key"] as string | undefined) ||
+      (allowQueryKey && typeof req.query.key === "string" ? req.query.key : undefined);
+    if (!providedKey || !safeKeyCompare(providedKey, expectedKey)) {
+      return res.status(401).json({ message: "Invalid or missing API key" });
+    }
+    if (publicRateLimited(req.ip || "unknown")) {
+      return res.status(429).json({ message: "Rate limit exceeded" });
+    }
+    next();
+  };
+
+  const publicApiPreflight = (_req: any, res: any) => {
     res.set("Access-Control-Allow-Origin", "*");
     res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.set("Access-Control-Allow-Headers", "x-api-key, Content-Type");
     return res.sendStatus(204);
+  };
+
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const isValidCalendarDate = (s: string): boolean => {
+    if (!DATE_RE.test(s)) return false;
+    const d = new Date(`${s}T00:00:00Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+  };
+  const parseCanonicalInt = (raw: unknown, fallback: number): number | null => {
+    if (raw === undefined) return fallback;
+    if (typeof raw !== "string" || !/^\d+$/.test(raw)) return null;
+    return parseInt(raw, 10);
+  };
+  const parseAnalyticsQuery = (
+    req: any,
+  ): { error?: string; contentType?: string; from?: string; to?: string; limit: number; offset: number } => {
+    const { contentType, from, to } = req.query as Record<string, string | undefined>;
+    if (contentType !== undefined && contentType !== "article" && contentType !== "podcast") {
+      return { error: "contentType must be 'article' or 'podcast'", limit: 0, offset: 0 };
+    }
+    if ((from !== undefined && !isValidCalendarDate(from)) || (to !== undefined && !isValidCalendarDate(to))) {
+      return { error: "from/to must be valid YYYY-MM-DD dates", limit: 0, offset: 0 };
+    }
+    if (from !== undefined && to !== undefined && from > to) {
+      return { error: "from must not be after to", limit: 0, offset: 0 };
+    }
+    const rawLimit = parseCanonicalInt(req.query.limit, 50);
+    const rawOffset = parseCanonicalInt(req.query.offset, 0);
+    if (rawLimit === null || rawLimit < 1 || rawLimit > 200) {
+      return { error: "limit must be an integer between 1 and 200", limit: 0, offset: 0 };
+    }
+    if (rawOffset === null || rawOffset < 0 || rawOffset > 100_000) {
+      return { error: "offset must be an integer between 0 and 100000", limit: 0, offset: 0 };
+    }
+    return { contentType, from, to, limit: rawLimit, offset: rawOffset };
+  };
+
+  // Engagement summary: top content by total seconds (aggregates only)
+  app.options("/api/public/engagement/summary", publicApiPreflight);
+  app.get("/api/public/engagement/summary", publicApiGuard(false), async (req, res) => {
+    const q = parseAnalyticsQuery(req);
+    if (q.error) return res.status(400).json({ message: q.error });
+    try {
+      const rows = await storage.getEngagementSummary(q);
+      return res.json({ data: rows, limit: q.limit, offset: q.offset });
+    } catch (error) {
+      console.error("Error fetching engagement summary:", error);
+      return res.status(500).json({ message: "Failed to fetch engagement summary" });
+    }
   });
 
+  // Daily engagement time series (aggregates only)
+  app.options("/api/public/engagement/daily", publicApiPreflight);
+  app.get("/api/public/engagement/daily", publicApiGuard(false), async (req, res) => {
+    const q = parseAnalyticsQuery(req);
+    if (q.error) return res.status(400).json({ message: q.error });
+    try {
+      const rows = await storage.getEngagementDaily(q);
+      return res.json({ data: rows });
+    } catch (error) {
+      console.error("Error fetching daily engagement:", error);
+      return res.status(500).json({ message: "Failed to fetch daily engagement" });
+    }
+  });
+
+  // Popup funnel: opens → email entered → subscribed, per trigger source
+  app.options("/api/public/popups/funnel", publicApiPreflight);
+  app.get("/api/public/popups/funnel", publicApiGuard(false), async (req, res) => {
+    const q = parseAnalyticsQuery(req);
+    if (q.error) return res.status(400).json({ message: q.error });
+    try {
+      const rows = await storage.getPopupFunnel(q);
+      return res.json({ data: rows });
+    } catch (error) {
+      console.error("Error fetching popup funnel:", error);
+      return res.status(500).json({ message: "Failed to fetch popup funnel" });
+    }
+  });
+
+  // CORS preflight for the public counts endpoint (allows browser dashboards)
+  app.options("/api/public/counts", publicApiPreflight);
+
   // Public counts for external dashboards — protected by an API key
-  app.get("/api/public/counts", async (req, res) => {
-    res.set("Access-Control-Allow-Origin", "*");
-    const expectedKey = process.env.PUBLIC_API_KEY;
-    if (!expectedKey) {
-      return res
-        .status(503)
-        .json({ message: "Public API is not configured" });
-    }
-
-    const providedKey =
-      (req.headers["x-api-key"] as string | undefined) ||
-      (typeof req.query.key === "string" ? req.query.key : undefined);
-
-    if (providedKey !== expectedKey) {
-      return res.status(401).json({ message: "Invalid or missing API key" });
-    }
-
+  // (query-string key kept for backward compatibility with existing callers)
+  app.get("/api/public/counts", publicApiGuard(true), async (req, res) => {
     try {
       const counts = await storage.getPublicCounts();
       return res.json(counts);
