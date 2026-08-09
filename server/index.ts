@@ -1397,10 +1397,11 @@ app.use((req, res, next) => {
 
 (async () => {
   // Ensure engagement/popup tracking tables exist BEFORE routes are
-  // registered and the server starts listening (idempotent DDL, safe for
-  // existing databases where drizzle push hasn't been run). Failure is
-  // fatal: serving tracking routes without tables would 500 every request.
-  {
+  // registered (idempotent DDL, safe for existing databases where drizzle
+  // push hasn't been run). Retries briefly, then logs a warning and starts
+  // anyway — a transient DB outage must never keep the whole site down.
+  // Tracking requests fail soft on the client, so browsing is unaffected.
+  const ensureTrackingTables = async () => {
     const { sql } = await import("drizzle-orm");
     await db.execute(sql`CREATE TABLE IF NOT EXISTS content_engagement (
       id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1431,6 +1432,20 @@ app.use((req, res, next) => {
     )`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_popup_events_user ON popup_events (user_id)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_popup_events_anon ON popup_events (anon_id)`);
+  };
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await ensureTrackingTables();
+      break;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      if (attempt === 3) {
+        log(`Warning: tracking tables setup failed after ${attempt} attempts: ${errorMsg}. Starting anyway; tracking endpoints may return errors until the database is reachable.`);
+      } else {
+        await new Promise((r) => setTimeout(r, 1000 * attempt));
+      }
+    }
   }
 
   const server = await registerRoutes(app);
