@@ -1396,6 +1396,43 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Ensure engagement/popup tracking tables exist BEFORE routes are
+  // registered and the server starts listening (idempotent DDL, safe for
+  // existing databases where drizzle push hasn't been run). Failure is
+  // fatal: serving tracking routes without tables would 500 every request.
+  {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS content_engagement (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+      identity varchar NOT NULL,
+      user_id varchar REFERENCES users(id) ON DELETE SET NULL,
+      anon_id varchar,
+      content_type varchar NOT NULL,
+      content_id varchar NOT NULL,
+      activity_date varchar NOT NULL,
+      total_seconds integer NOT NULL DEFAULT 0,
+      last_activity_at timestamp NOT NULL DEFAULT NOW(),
+      created_at timestamp NOT NULL DEFAULT NOW()
+    )`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_engagement_identity_content_date ON content_engagement (identity, content_type, content_id, activity_date)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_engagement_user ON content_engagement (user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_engagement_anon ON content_engagement (anon_id)`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS popup_events (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+      identity varchar NOT NULL,
+      user_id varchar REFERENCES users(id) ON DELETE SET NULL,
+      anon_id varchar,
+      trigger varchar NOT NULL,
+      email_entered boolean NOT NULL DEFAULT false,
+      subscribed boolean NOT NULL DEFAULT false,
+      details jsonb,
+      created_at timestamp NOT NULL DEFAULT NOW(),
+      updated_at timestamp NOT NULL DEFAULT NOW()
+    )`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_popup_events_user ON popup_events (user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_popup_events_anon ON popup_events (anon_id)`);
+  }
+
   const server = await registerRoutes(app);
 
   // One-time backfill: mark all accounts that existed at the moment the

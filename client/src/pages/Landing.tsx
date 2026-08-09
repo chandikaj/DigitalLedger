@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { PopupTrigger } from "@/lib/tracking";
 import {
   Brain,
   Podcast,
@@ -38,13 +39,20 @@ export default function Landing() {
   const [playingVideo, setPlayingVideo] = useState<{
     videoId: string;
     title: string;
+    episodeId: string;
   } | null>(null);
   const [showSubscribe, setShowSubscribe] = useState(false);
+  const [subscribeTrigger, setSubscribeTrigger] = useState<PopupTrigger>("hero");
+
+  const openSubscribe = (trigger: PopupTrigger) => {
+    setSubscribeTrigger(trigger);
+    setShowSubscribe(true);
+  };
 
   const handleWatch = (podcast: any) => {
     const videoId = getYouTubeVideoId(podcast.audioUrl);
     if (videoId) {
-      setPlayingVideo({ videoId, title: podcast.title });
+      setPlayingVideo({ videoId, title: podcast.title, episodeId: podcast.id });
       setPlayerOpen(true);
     } else {
       window.open(podcast.audioUrl, "_blank", "noopener,noreferrer");
@@ -216,7 +224,7 @@ export default function Landing() {
 
   return (
     <Layout>
-      <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} />
+      <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} trigger={subscribeTrigger} />
       {/* Hero Section */}
       <section className="py-16 bg-[#F1EDE4]" data-testid="hero-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -253,7 +261,7 @@ export default function Landing() {
               <Button
                 size="lg"
                 className="bg-[#1F2A44] hover:bg-[#162035] text-[#F7F4EC]"
-                onClick={() => setShowSubscribe(true)}
+                onClick={() => openSubscribe("hero")}
                 data-testid="button-join-community"
               >
                 Get it Wednesday
@@ -601,7 +609,7 @@ export default function Landing() {
           <Button
             size="lg"
             className="bg-[#1F2A44] hover:bg-[#162035] text-[#F7F4EC]"
-            onClick={() => setShowSubscribe(true)}
+            onClick={() => openSubscribe("hero")}
             data-testid="button-get-started"
           >
             Get it Wednesday
@@ -614,6 +622,8 @@ export default function Landing() {
         onOpenChange={setPlayerOpen}
         videoId={playingVideo?.videoId || null}
         title={playingVideo?.title}
+        onSubscribe={() => openSubscribe("video_promo")}
+        episodeId={playingVideo?.episodeId}
       />
     </Layout>
   );

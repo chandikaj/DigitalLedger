@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useEngagementTracking } from "@/hooks/useEngagementTracking";
 
 export function getYouTubeVideoId(url: string): string | null {
   if (!url) return null;
@@ -28,9 +29,14 @@ interface VideoPlayerDialogProps {
   videoId: string | null;
   title?: string;
   onSubscribe?: () => void;
+  /** Podcast episode ID for engagement tracking */
+  episodeId?: string | null;
 }
 
-export function VideoPlayerDialog({ open, onOpenChange, videoId, title, onSubscribe }: VideoPlayerDialogProps) {
+export function VideoPlayerDialog({ open, onOpenChange, videoId, title, onSubscribe, episodeId }: VideoPlayerDialogProps) {
+  // Track watch time while the player dialog is open
+  useEngagementTracking("podcast", episodeId ?? null, open && !!videoId);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-[95vw] p-0 gap-0 border-0 overflow-hidden [&>button]:hidden" data-testid="video-player-dialog">

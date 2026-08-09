@@ -46,7 +46,7 @@ export default function Podcasts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"active" | "archive">("active");
   const [playerOpen, setPlayerOpen] = useState(false);
-  const [playingVideo, setPlayingVideo] = useState<{ videoId: string; title: string } | null>(null);
+  const [playingVideo, setPlayingVideo] = useState<{ videoId: string; title: string; episodeId: string } | null>(null);
   const [showSubscribe, setShowSubscribe] = useState(false);
   const { user } = useAuth();
   const userRole = (user as any)?.role;
@@ -263,7 +263,7 @@ export default function Podcasts() {
     handlePlayCountIncrement(episode.id);
     const videoId = getYouTubeVideoId(episode.audioUrl);
     if (videoId) {
-      setPlayingVideo({ videoId, title: episode.title });
+      setPlayingVideo({ videoId, title: episode.title, episodeId: episode.id });
       setPlayerOpen(true);
     } else {
       window.open(episode.audioUrl, '_blank', 'noopener,noreferrer');
@@ -339,8 +339,9 @@ export default function Podcasts() {
         videoId={playingVideo?.videoId || null}
         title={playingVideo?.title}
         onSubscribe={() => setShowSubscribe(true)}
+        episodeId={playingVideo?.episodeId}
       />
-      <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} />
+      <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} trigger="video_promo" />
     </Layout>
   );
 

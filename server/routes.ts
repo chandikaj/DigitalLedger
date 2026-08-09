@@ -28,6 +28,9 @@ import {
   adminCreateUserSchema,
   adminUpdateUserSchema,
   insertToolboxAppSchema,
+  trackEngagementSchema,
+  trackPopupSchema,
+  updatePopupSchema,
 } from "@shared/schema";
 import { seedDatabase } from "./seed";
 
@@ -420,6 +423,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  // --- Engagement & popup tracking routes (anonymous + authenticated) ---
+  const getTrackingIdentity = (req: any, anonId: string) => {
+    const userId: string | null = req.session?.userId || null;
+    return { userId, anonId, identity: userId || anonId };
+  };
+
+  app.post("/api/track/engagement", async (req: any, res) => {
+    try {
+      const parsed = trackEngagementSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid payload" });
+      }
+      const { anonId, contentType, contentId, seconds } = parsed.data;
+      const { userId, identity } = getTrackingIdentity(req, anonId);
+      const activityDate = new Date().toISOString().slice(0, 10);
+      await storage.upsertEngagement({
+        identity,
+        userId,
+        anonId,
+        contentType,
+        contentId,
+        activityDate,
+        seconds,
+      });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error tracking engagement:", error);
+      res.status(500).json({ message: "Failed to track engagement" });
+    }
+  });
+
+  app.post("/api/track/popup", async (req: any, res) => {
+    try {
+      const parsed = trackPopupSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid payload" });
+      }
+      const { anonId, trigger, details } = parsed.data;
+      const { userId, identity } = getTrackingIdentity(req, anonId);
+      const event = await storage.createPopupEvent({
+        identity,
+        userId,
+        anonId,
+        trigger,
+        details,
+      });
+      res.json({ id: event.id });
+    } catch (error) {
+      console.error("Error tracking popup event:", error);
+      res.status(500).json({ message: "Failed to track popup event" });
+    }
+  });
+
+  app.patch("/api/track/popup/:id", async (req: any, res) => {
+    try {
+      const parsed = updatePopupSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid payload" });
+      }
+      const anonId = typeof req.body.anonId === "string" ? req.body.anonId : "";
+      const { identity } = getTrackingIdentity(req, anonId);
+      const updated = await storage.updatePopupEvent(req.params.id, identity, parsed.data);
+      if (!updated) return res.status(404).json({ message: "Event not found" });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating popup event:", error);
+      res.status(500).json({ message: "Failed to update popup event" });
+    }
+  });
+
+  // Link anonymous history to the logged-in user
+  app.post("/api/track/identify", isAuthenticated, async (req: any, res) => {
+    try {
+      const anonId = typeof req.body.anonId === "string" ? req.body.anonId : "";
+      if (anonId.length < 8 || anonId.length > 64) {
+        return res.status(400).json({ message: "Invalid anonId" });
+      }
+      await storage.linkAnonToUser(anonId, req.user.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error linking anonymous identity:", error);
+      res.status(500).json({ message: "Failed to link identity" });
+    }
+  });
 
   // News category routes
   app.get("/api/news-categories", async (req, res) => {

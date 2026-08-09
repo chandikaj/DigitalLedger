@@ -23,6 +23,8 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { z } from "zod";
 import DOMPurify from 'dompurify';
 import { convertPipeTablesToHTML } from '@/lib/tableUtils';
+import { useEngagementTracking } from '@/hooks/useEngagementTracking';
+import type { PopupTrigger } from '@/lib/tracking';
 
 // Helper to update document meta tags dynamically for SEO
 function updateMetaTags(article: any) {
@@ -186,7 +188,13 @@ export default function Article() {
   const [selectedFileName, setSelectedFileName] = useState("");
   const [showExitPopup, setShowExitPopup] = useState(false);
   const [showSubscribe, setShowSubscribe] = useState(false);
+  const [subscribeTrigger, setSubscribeTrigger] = useState<PopupTrigger>("article_cta");
   const exitPopupShown = useRef(false);
+
+  const openSubscribe = (trigger: PopupTrigger) => {
+    setSubscribeTrigger(trigger);
+    setShowSubscribe(true);
+  };
 
   const articleFormSchema = z.object({
     title: z.string().min(1, "Title is required"),
@@ -222,6 +230,9 @@ export default function Article() {
     },
     enabled: !!id,
   });
+
+  // Track reading time (per-day accumulation, paused when tab is hidden)
+  useEngagementTracking("article", id, !!article && !isEditing);
 
   // Update meta tags for SEO when article loads
   useEffect(() => {
@@ -552,13 +563,13 @@ export default function Article() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white dark:from-gray-900 dark:to-gray-800">
 
       {/* Subscribe popup with beehiiv form */}
-      <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} />
+      <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} trigger={subscribeTrigger} />
 
       {/* Floating "Get it Wednesday" button – only for guests */}
       {!user && (
         <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-center">
           <button
-            onClick={() => setShowSubscribe(true)}
+            onClick={() => openSubscribe("article_cta")}
             className="animate-wiggle-loop hover:animate-none flex flex-row items-center gap-3 bg-[#1E3A5F] hover:bg-[#162C49] text-white rounded-full shadow-lg px-5 py-3 transition-transform duration-200 hover:scale-105"
             title="Get it Wednesday"
             data-testid="button-floating-get-it-wednesday"
@@ -596,7 +607,7 @@ export default function Article() {
                 size="lg"
                 onClick={() => {
                   setShowExitPopup(false);
-                  setShowSubscribe(true);
+                  openSubscribe("exit_intent");
                 }}
                 data-testid="button-exit-popup-subscribe"
               >
@@ -701,7 +712,7 @@ export default function Article() {
               <p className="text-xl font-medium text-gray-800 dark:text-gray-100 text-center sm:text-left leading-relaxed">
                 <span className="font-semibold">The Digital Ledger</span> is a weekly brief for finance leaders. Two articles like this one, plus a podcast - every Wednesday morning.
               </p>
-              <GetItWednesdayButton className="flex-shrink-0 rounded-md bg-[#1E3A5F] hover:bg-[#162C49] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
+              <GetItWednesdayButton className="flex-shrink-0 rounded-md bg-[#1E3A5F] hover:bg-[#162C49] text-white px-6 py-2.5 h-auto" onClick={() => openSubscribe("article_cta")} />
             </div>
           )}
 
@@ -771,7 +782,7 @@ export default function Article() {
                         <p className="text-xl font-medium text-gray-800 dark:text-gray-100 text-center sm:text-left leading-relaxed">
                           Once a week. Two articles like this one, plus a podcast. That's <span className="font-semibold">The Digital Ledger</span>.
                         </p>
-                        <GetItWednesdayButton className="flex-shrink-0 rounded-md bg-[#1E3A5F] hover:bg-[#162C49] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
+                        <GetItWednesdayButton className="flex-shrink-0 rounded-md bg-[#1E3A5F] hover:bg-[#162C49] text-white px-6 py-2.5 h-auto" onClick={() => openSubscribe("article_cta")} />
                       </div>
                       <div dangerouslySetInnerHTML={{ __html: contentHalves[1] }} />
                     </>
@@ -794,7 +805,7 @@ export default function Article() {
                   <p className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-5 max-w-2xl mx-auto leading-relaxed">
                     <span className="font-semibold">The Digital Ledger</span> is a free weekly brief for finance leaders. Two articles and one podcast, every Wednesday morning, on what's actually shifting underneath the headlines.
                   </p>
-                  <GetItWednesdayButton className="rounded-md bg-[#1E3A5F] hover:bg-[#162C49] text-white px-6 py-2.5 h-auto" onClick={() => setShowSubscribe(true)} />
+                  <GetItWednesdayButton className="rounded-md bg-[#1E3A5F] hover:bg-[#162C49] text-white px-6 py-2.5 h-auto" onClick={() => openSubscribe("article_cta")} />
                 </div>
               )}
 

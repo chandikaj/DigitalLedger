@@ -19,6 +19,8 @@ import {
   menuSettings,
   subscribers,
   toolboxApps,
+  contentEngagement,
+  popupEvents,
   type User,
   type UpsertUser,
   type NewsCategory,
@@ -63,7 +65,7 @@ import {
   type InsertToolboxApp,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, or, ilike, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, or, ilike, inArray, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -1725,6 +1727,128 @@ export class DatabaseStorage implements IStorage {
       .delete(toolboxApps)
       .where(eq(toolboxApps.id, id));
     return true;
+  }
+
+  // --- Engagement tracking ---
+
+  async upsertEngagement(params: {
+    identity: string;
+    userId: string | null;
+    anonId: string | null;
+    contentType: string;
+    contentId: string;
+    activityDate: string;
+    seconds: number;
+  }): Promise<void> {
+    await db
+      .insert(contentEngagement)
+      .values({
+        identity: params.identity,
+        userId: params.userId,
+        anonId: params.anonId,
+        contentType: params.contentType,
+        contentId: params.contentId,
+        activityDate: params.activityDate,
+        totalSeconds: params.seconds,
+        lastActivityAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [
+          contentEngagement.identity,
+          contentEngagement.contentType,
+          contentEngagement.contentId,
+          contentEngagement.activityDate,
+        ],
+        set: {
+          totalSeconds: sql`${contentEngagement.totalSeconds} + ${params.seconds}`,
+          lastActivityAt: new Date(),
+          // Fill in userId if the visitor has since logged in
+          userId: sql`COALESCE(${contentEngagement.userId}, ${params.userId})`,
+        },
+      });
+  }
+
+  async createPopupEvent(params: {
+    identity: string;
+    userId: string | null;
+    anonId: string | null;
+    trigger: string;
+    details?: unknown;
+  }): Promise<{ id: string }> {
+    const [row] = await db
+      .insert(popupEvents)
+      .values({
+        identity: params.identity,
+        userId: params.userId,
+        anonId: params.anonId,
+        trigger: params.trigger,
+        details: params.details ?? null,
+      })
+      .returning({ id: popupEvents.id });
+    return row;
+  }
+
+  async updatePopupEvent(
+    id: string,
+    identity: string,
+    updates: { emailEntered?: boolean; subscribed?: boolean; details?: unknown },
+  ): Promise<boolean> {
+    const set: any = { updatedAt: new Date() };
+    if (updates.emailEntered !== undefined) set.emailEntered = updates.emailEntered;
+    if (updates.subscribed !== undefined) set.subscribed = updates.subscribed;
+    if (updates.details !== undefined) set.details = updates.details;
+    const result = await db
+      .update(popupEvents)
+      .set(set)
+      .where(and(eq(popupEvents.id, id), eq(popupEvents.identity, identity)))
+      .returning({ id: popupEvents.id });
+    return result.length > 0;
+  }
+
+  async linkAnonToUser(anonId: string, userId: string): Promise<void> {
+    // Merge anonymous engagement rows into the user's identity. Where a
+    // user-identity row already exists for the same content+day, add the
+    // seconds and drop the anonymous row; otherwise re-identify the row.
+    await db.execute(sql`
+      UPDATE content_engagement u
+      SET total_seconds = u.total_seconds + a.total_seconds,
+          last_activity_at = GREATEST(u.last_activity_at, a.last_activity_at)
+      FROM content_engagement a
+      WHERE u.identity = ${userId}
+        AND a.identity = ${anonId}
+        AND a.anon_id = ${anonId}
+        AND (a.user_id IS NULL OR a.user_id = ${userId})
+        AND u.content_type = a.content_type
+        AND u.content_id = a.content_id
+        AND u.activity_date = a.activity_date
+    `);
+    await db.execute(sql`
+      DELETE FROM content_engagement a
+      WHERE a.identity = ${anonId}
+        AND a.anon_id = ${anonId}
+        AND (a.user_id IS NULL OR a.user_id = ${userId})
+        AND EXISTS (
+          SELECT 1 FROM content_engagement u
+          WHERE u.identity = ${userId}
+            AND u.content_type = a.content_type
+            AND u.content_id = a.content_id
+            AND u.activity_date = a.activity_date
+        )
+    `);
+    await db.execute(sql`
+      UPDATE content_engagement
+      SET identity = ${userId}, user_id = ${userId}
+      WHERE identity = ${anonId}
+        AND anon_id = ${anonId}
+        AND (user_id IS NULL OR user_id = ${userId})
+    `);
+    // Popup events are append-only; re-identify them to the user
+    await db.execute(sql`
+      UPDATE popup_events
+      SET identity = ${userId}, user_id = ${userId}
+      WHERE anon_id = ${anonId}
+        AND (user_id IS NULL OR user_id = ${userId})
+    `);
   }
 }
 

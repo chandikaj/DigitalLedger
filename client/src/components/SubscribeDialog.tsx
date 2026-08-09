@@ -7,6 +7,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { getUtmSearch } from "@/lib/utm";
+import { trackPopupOpen, trackPopupUpdate, type PopupTrigger } from "@/lib/tracking";
 
 const BEEHIIV_FORM_ID = import.meta.env.VITE_BEEHIIV_FORM_ID;
 const BEEHIIV_ORIGIN = "https://subscribe-forms.beehiiv.com";
@@ -36,11 +37,26 @@ function showBeehiivToast(payload: { templateString?: string } | undefined) {
 export function SubscribeDialog({
   open,
   onOpenChange,
+  trigger = "other",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** How this popup was opened, for analytics */
+  trigger?: PopupTrigger;
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const popupEventIdRef = useRef<string | null>(null);
+  const emailEnteredSentRef = useRef(false);
+  // Milestones observed before the popup event ID arrives are queued here
+  const pendingUpdatesRef = useRef<{ emailEntered?: boolean; subscribed?: boolean; details?: Record<string, unknown> } | null>(null);
+
+  const recordPopupMilestone = (updates: { emailEntered?: boolean; subscribed?: boolean; details?: Record<string, unknown> }) => {
+    if (popupEventIdRef.current) {
+      trackPopupUpdate(popupEventIdRef.current, updates);
+    } else {
+      pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...updates };
+    }
+  };
   const [height, setHeight] = useState<string | number>(FALLBACK_HEIGHT);
   const [width, setWidth] = useState<string | number | undefined>(undefined);
   const [radius, setRadius] = useState<string | undefined>(undefined);
@@ -56,6 +72,19 @@ export function SubscribeDialog({
       setRevealed(false);
       return;
     }
+
+    // Log popup shown (analytics; never blocks the UI)
+    popupEventIdRef.current = null;
+    emailEnteredSentRef.current = false;
+    pendingUpdatesRef.current = null;
+    trackPopupOpen(trigger, { page: window.location.pathname }).then((id) => {
+      popupEventIdRef.current = id;
+      // Replay milestones that arrived before the event ID resolved
+      if (id && pendingUpdatesRef.current) {
+        trackPopupUpdate(id, pendingUpdatesRef.current);
+        pendingUpdatesRef.current = null;
+      }
+    });
 
     const revealTimer = setTimeout(() => setRevealed(true), 6000);
 
@@ -78,9 +107,20 @@ export function SubscribeDialog({
         if (msg.type === "beehiiv:styles" && msg.payload?.borderRadius) {
           setRadius(msg.payload.borderRadius);
         }
+        // A challenge appears when the visitor submits the form — the best
+        // observable signal that an email was entered (iframe is cross-origin)
+        if (msg.type === "beehiiv:challenge" && !emailEnteredSentRef.current) {
+          emailEnteredSentRef.current = true;
+          recordPopupMilestone({ emailEntered: true });
+        }
       } else if (msg.type === "beehiiv:challenge-resolved") {
         iframe.contentWindow?.postMessage({ type: "beehiiv:resize" }, BEEHIIV_ORIGIN);
       } else if (msg.type === "beehiiv:success-toast") {
+        recordPopupMilestone({
+          emailEntered: true,
+          subscribed: true,
+          details: { successMessage: msg.type },
+        });
         showBeehiivToast(msg.payload);
         onOpenChange(false);
       } else if (msg.type === "beehiiv:redirect" && typeof msg.url === "string") {

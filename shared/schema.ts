@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import { relations } from 'drizzle-orm';
 import {
   index,
+  uniqueIndex,
   jsonb,
   pgTable,
   timestamp,
@@ -282,6 +283,73 @@ export const toolboxApps = pgTable("toolbox_apps", {
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Per-user/anonymous content engagement, aggregated per content item per day
+export const contentEngagement = pgTable(
+  "content_engagement",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    identity: varchar("identity").notNull(), // userId if logged in, otherwise anonId
+    userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+    anonId: varchar("anon_id"),
+    contentType: varchar("content_type").notNull(), // 'article' | 'podcast'
+    contentId: varchar("content_id").notNull(),
+    activityDate: varchar("activity_date").notNull(), // YYYY-MM-DD (server date)
+    totalSeconds: integer("total_seconds").default(0).notNull(),
+    lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("uq_engagement_identity_content_date").on(
+      table.identity,
+      table.contentType,
+      table.contentId,
+      table.activityDate,
+    ),
+    index("idx_engagement_user").on(table.userId),
+    index("idx_engagement_anon").on(table.anonId),
+  ],
+);
+
+// "Get It Wednesday" subscribe popup events
+export const popupEvents = pgTable(
+  "popup_events",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    identity: varchar("identity").notNull(),
+    userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+    anonId: varchar("anon_id"),
+    trigger: varchar("trigger").notNull(), // 'hero', 'exit_intent', 'video_promo', 'article_cta', ...
+    emailEntered: boolean("email_entered").default(false).notNull(),
+    subscribed: boolean("subscribed").default(false).notNull(),
+    details: jsonb("details"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_popup_user").on(table.userId),
+    index("idx_popup_anon").on(table.anonId),
+  ],
+);
+
+export const trackEngagementSchema = z.object({
+  anonId: z.string().min(8).max(64),
+  contentType: z.enum(["article", "podcast"]),
+  contentId: z.string().min(1).max(64),
+  seconds: z.number().int().min(1).max(120), // cap per heartbeat/flush
+});
+
+export const trackPopupSchema = z.object({
+  anonId: z.string().min(8).max(64),
+  trigger: z.enum(["hero", "exit_intent", "video_promo", "article_cta", "other"]),
+  details: z.record(z.any()).optional(),
+});
+
+export const updatePopupSchema = z.object({
+  emailEntered: z.boolean().optional(),
+  subscribed: z.boolean().optional(),
+  details: z.record(z.any()).optional(),
 });
 
 // Relations
