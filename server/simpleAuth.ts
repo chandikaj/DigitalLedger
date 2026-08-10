@@ -11,7 +11,12 @@ import {
   User,
 } from "@shared/schema";
 import { IStorage } from "./storage";
-import { sendWelcomeEmail, sendVerificationEmail, sendPasswordResetEmail } from "./emailService";
+import {
+  sendWelcomeEmail,
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendGoogleSignInNoticeEmail,
+} from "./emailService";
 
 // Extend session type to include userId
 declare module "express-session" {
@@ -355,8 +360,7 @@ export function setupAuth(app: Express, storage: IStorage) {
       };
 
       const user = await storage.getUserByEmail(email);
-      // Only issue codes for local-auth users with a passwordHash
-      if (!user || !user.passwordHash) {
+      if (!user) {
         return res.json(successResponse);
       }
 
@@ -368,6 +372,27 @@ export function setupAuth(app: Express, storage: IStorage) {
           // Silent cooldown — still return success-shaped to avoid leaking state
           return res.json(successResponse);
         }
+      }
+
+      // Google-auth accounts have no password to reset. Tell the owner why
+      // no code arrives (only they receive the email, so nothing leaks).
+      // A throwaway code row is stored purely to drive the resend cooldown;
+      // it can never be redeemed because reset-password rejects accounts
+      // without a passwordHash.
+      if (!user.passwordHash) {
+        const throwawayHash = await bcrypt.hash(generateCode() + generateCode(), SALT_ROUNDS);
+        await storage.deletePasswordResetCodesForUser(user.id);
+        await storage.createPasswordResetCode({
+          userId: user.id,
+          codeHash: throwawayHash,
+          expiresAt: new Date(Date.now() + CODE_TTL_MS),
+          attemptCount: 0,
+          lastSentAt: new Date(),
+        });
+        sendGoogleSignInNoticeEmail(user.email!, user.firstName || "there").catch((err) => {
+          console.error("Failed to send Google sign-in notice email:", err);
+        });
+        return res.json(successResponse);
       }
 
       const code = generateCode();

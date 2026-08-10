@@ -6,7 +6,7 @@ import type { Subscriber } from "@shared/schema";
 
 const TEMPLATES_DIR = path.join(process.cwd(), "server", "email-templates");
 
-const REQUIRED_TEMPLATES = ["welcome", "article", "podcast", "verify-email", "forgot-password"] as const;
+const REQUIRED_TEMPLATES = ["welcome", "article", "podcast", "verify-email", "forgot-password", "google-signin"] as const;
 
 function validateTemplatesExist(): void {
   for (const name of REQUIRED_TEMPLATES) {
@@ -135,6 +135,32 @@ export async function sendPasswordResetEmail(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Error sending password reset email to ${userEmail}:`, message);
+    return false;
+  }
+}
+
+/** Sent when a password reset is requested for a Google-auth account (no password to reset). */
+export async function sendGoogleSignInNoticeEmail(
+  userEmail: string,
+  firstName: string,
+): Promise<boolean> {
+  try {
+    const transporter = createTransporter();
+    const from = getSenderAddress();
+    const template = loadTemplate("google-signin");
+    const html = template({ firstName: firstName || "there" });
+
+    await transporter.sendMail({
+      from,
+      to: userEmail,
+      subject: "Your account signs in with Google — no password needed",
+      html,
+    });
+    console.log(`Google sign-in notice email sent to ${userEmail}`);
+    return true;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error sending Google sign-in notice to ${userEmail}:`, message);
     return false;
   }
 }
