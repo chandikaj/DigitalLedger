@@ -15,7 +15,6 @@ import {
   sendWelcomeEmail,
   sendVerificationEmail,
   sendPasswordResetEmail,
-  sendGoogleSignInNoticeEmail,
 } from "./emailService";
 
 // Extend session type to include userId
@@ -374,25 +373,15 @@ export function setupAuth(app: Express, storage: IStorage) {
         }
       }
 
-      // Google-auth accounts have no password to reset. Tell the owner why
-      // no code arrives (only they receive the email, so nothing leaks).
-      // A throwaway code row is stored purely to drive the resend cooldown;
-      // it can never be redeemed because reset-password rejects accounts
-      // without a passwordHash.
+      // Google-auth accounts have no password to reset. Per owner decision,
+      // tell the requester directly on screen (accepted enumeration trade-off);
+      // no email is sent and no reset-code row is created.
       if (!user.passwordHash) {
-        const throwawayHash = await bcrypt.hash(generateCode() + generateCode(), SALT_ROUNDS);
-        await storage.deletePasswordResetCodesForUser(user.id);
-        await storage.createPasswordResetCode({
-          userId: user.id,
-          codeHash: throwawayHash,
-          expiresAt: new Date(Date.now() + CODE_TTL_MS),
-          attemptCount: 0,
-          lastSentAt: new Date(),
+        return res.json({
+          googleAccount: true,
+          message:
+            "This account signs in with Google — use the “Continue with Google” button. No password or reset code is needed.",
         });
-        sendGoogleSignInNoticeEmail(user.email!, user.firstName || "there").catch((err) => {
-          console.error("Failed to send Google sign-in notice email:", err);
-        });
-        return res.json(successResponse);
       }
 
       const code = generateCode();

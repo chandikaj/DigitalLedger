@@ -23,6 +23,7 @@ export default function ForgotPassword() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
+  const [googleAccount, setGoogleAccount] = useState(false);
 
   const form = useForm<ForgotPasswordRequest>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -31,9 +32,16 @@ export default function ForgotPassword() {
 
   const mutation = useMutation({
     mutationFn: async (data: ForgotPasswordRequest) => {
+      setGoogleAccount(false);
       return await apiRequest("/api/auth/forgot-password", "POST", data);
     },
-    onSuccess: (_response, variables) => {
+    onSuccess: (response, variables) => {
+      if (response?.googleAccount) {
+        // No password on this account — show the explanation instead of
+        // sending the visitor to the code-entry page.
+        setGoogleAccount(true);
+        return;
+      }
       setSubmitted(true);
       toast({
         title: "Check your email",
@@ -65,6 +73,26 @@ export default function ForgotPassword() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {googleAccount && (
+            <div
+              className="mb-4 rounded-md border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950 p-4 text-sm text-blue-900 dark:text-blue-100"
+              data-testid="notice-google-account"
+            >
+              <p className="font-medium mb-1">This account signs in with Google</p>
+              <p>
+                There's no password to reset. Just use the{" "}
+                <strong>Continue with Google</strong> button on the sign-in page —
+                no reset code is needed.
+              </p>
+              <Link
+                href="/login"
+                className="mt-3 inline-block font-medium underline underline-offset-2"
+                data-testid="link-google-signin"
+              >
+                Go to sign in
+              </Link>
+            </div>
+          )}
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit((d) => mutation.mutate(d))}
