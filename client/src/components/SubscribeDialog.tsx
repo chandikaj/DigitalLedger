@@ -128,10 +128,24 @@ export function SubscribeDialog({
       }
     };
 
+    // The beehiiv form is a cross-origin iframe, so we can't see typing
+    // directly. When our window loses focus while the iframe is the active
+    // element, the visitor clicked into the form — the earliest observable
+    // signal that they're entering their email.
+    const onBlur = () => {
+      if (emailEnteredSentRef.current) return;
+      if (document.activeElement === iframeRef.current) {
+        emailEnteredSentRef.current = true;
+        recordPopupMilestone({ emailEntered: true });
+      }
+    };
+
     window.addEventListener("message", onMessage);
+    window.addEventListener("blur", onBlur);
     return () => {
       clearTimeout(revealTimer);
       window.removeEventListener("message", onMessage);
+      window.removeEventListener("blur", onBlur);
     };
   }, [open, onOpenChange]);
 
