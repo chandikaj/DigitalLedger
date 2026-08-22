@@ -19,6 +19,7 @@ import {
   Share
 } from "lucide-react";
 import { Link } from "wouter";
+import { formatArticleDate } from "@/lib/articleDate";
 
 export default function Home() {
   const { user } = useAuth();
@@ -153,7 +154,7 @@ export default function Home() {
                                 {article.category}
                               </Badge>
                               <span className="text-sm text-gray-500 dark:text-gray-400">
-                                {new Date(article.publishedAt).toLocaleDateString()}
+                                {formatArticleDate(article)}
                               </span>
                             </div>
                             <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 hover:text-primary dark:hover:text-ai-teal transition-colors" data-testid={`news-title-${article.id}`}>

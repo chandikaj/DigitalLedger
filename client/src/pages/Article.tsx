@@ -25,6 +25,7 @@ import DOMPurify from 'dompurify';
 import { convertPipeTablesToHTML } from '@/lib/tableUtils';
 import { useEngagementTracking } from '@/hooks/useEngagementTracking';
 import type { PopupTrigger } from '@/lib/tracking';
+import { formatArticleDate, getArticleDate } from "@/lib/articleDate";
 
 // Helper to update document meta tags dynamically for SEO
 function updateMetaTags(article: any) {
@@ -78,8 +79,13 @@ function updateMetaTags(article: any) {
   if (imageUrl) setMeta('twitter:image', imageUrl);
   
   // Article specific
-  if (article.publishedAt) {
-    setMeta('article:published_time', new Date(article.publishedAt).toISOString(), true);
+  const articleDate = getArticleDate(article);
+  if (articleDate) {
+    setMeta('article:published_time', articleDate.toISOString(), true);
+  } else {
+    document
+      .querySelector('meta[property="article:published_time"]')
+      ?.remove();
   }
   
   // Canonical URL
@@ -741,7 +747,7 @@ export default function Article() {
                   <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm">
                     <Calendar className="h-4 w-4 mr-1" />
                     <span data-testid="article-date">
-                      {new Date(article.publishedAt).toLocaleDateString('en-US', {
+                      {formatArticleDate(article, {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'

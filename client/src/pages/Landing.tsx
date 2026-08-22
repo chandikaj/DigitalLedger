@@ -13,6 +13,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { PopupTrigger } from "@/lib/tracking";
+import { formatArticleDate } from "@/lib/articleDate";
 import {
   Brain,
   Podcast,
@@ -339,7 +340,7 @@ export default function Landing() {
                           className="text-gray-500 dark:text-gray-400 text-sm"
                           data-testid={`time-${article.id}`}
                         >
-                          {new Date(article.publishedAt).toLocaleDateString()}
+                          {formatArticleDate(article)}
                         </span>
                       </div>
 

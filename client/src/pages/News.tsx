@@ -18,6 +18,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatArticleDate } from "@/lib/articleDate";
 
 interface NewsCategory {
   id: string;
@@ -450,7 +451,7 @@ export default function News() {
                       </Badge>
                     )}
                     <span className="text-gray-500 dark:text-gray-400 text-sm" data-testid={`time-${article.id}`}>
-                      {new Date(article.publishedAt).toLocaleDateString()}
+                      {formatArticleDate(article)}
                     </span>
                   </div>
                   

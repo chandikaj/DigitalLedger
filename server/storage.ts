@@ -696,7 +696,7 @@ export class DatabaseStorage implements IStorage {
           .values({
             ...params.article,
             status: "draft",
-            publishedAt: null,
+            publishedAt: params.article.publishedAt ?? new Date(),
             isArchived: false,
             isFeatured: false,
           })

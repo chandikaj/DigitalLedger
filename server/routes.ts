@@ -961,7 +961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               sourceName: input.sourceLinks[0].name,
               sourceUrl: input.sourceLinks[0].url,
               authorId: null,
-              publishedAt: null,
+              publishedAt: new Date(),
               status: "draft",
               isArchived: false,
               isFeatured: false,
