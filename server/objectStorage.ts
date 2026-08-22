@@ -108,6 +108,7 @@ export class ObjectStorageService {
       res.set({
         "Content-Type": metadata.contentType || "application/octet-stream",
         "Content-Length": metadata.size,
+        "X-Content-Type-Options": "nosniff",
         "Cache-Control": `${
           isPublic ? "public" : "private"
         }, max-age=${cacheTtlSec}`,
@@ -154,6 +155,48 @@ export class ObjectStorageService {
       method: "PUT",
       ttlSec: 900,
     });
+  }
+
+  async uploadPublicObject({
+    data,
+    contentType,
+    extension,
+    owner,
+  }: {
+    data: Buffer;
+    contentType: "image/png" | "image/jpeg" | "image/webp";
+    extension: "png" | "jpg" | "webp";
+    owner: string;
+  }): Promise<string> {
+    let privateObjectDir = this.getPrivateObjectDir();
+    if (!privateObjectDir.endsWith("/")) {
+      privateObjectDir = `${privateObjectDir}/`;
+    }
+
+    const entityId = `article-imports/${randomUUID()}.${extension}`;
+    const { bucketName, objectName } = parseObjectPath(
+      `${privateObjectDir}${entityId}`,
+    );
+    const objectFile = objectStorageClient.bucket(bucketName).file(objectName);
+
+    try {
+      await objectFile.save(data, {
+        resumable: false,
+        validation: "crc32c",
+        metadata: {
+          contentType,
+          cacheControl: "public, max-age=31536000, immutable",
+        },
+      });
+      await setObjectAclPolicy(objectFile, {
+        owner,
+        visibility: "public",
+      });
+      return `/objects/${entityId}`;
+    } catch (error) {
+      await objectFile.delete({ ignoreNotFound: true }).catch(() => undefined);
+      throw error;
+    }
   }
 
   // Gets the object entity file from the object path.
@@ -240,9 +283,13 @@ export class ObjectStorageService {
         return;
       }
 
-      const { bucketName, objectName } = parseObjectPath(normalizedPath);
-      const bucket = objectStorageClient.bucket(bucketName);
-      const file = bucket.file(objectName);
+      let file: File;
+      if (normalizedPath.startsWith("/objects/")) {
+        file = await this.getObjectEntityFile(normalizedPath);
+      } else {
+        const { bucketName, objectName } = parseObjectPath(normalizedPath);
+        file = objectStorageClient.bucket(bucketName).file(objectName);
+      }
       
       const [exists] = await file.exists();
       if (exists) {

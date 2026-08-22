@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { createHash, timingSafeEqual } from "node:crypto";
 import sanitizeHtml from "sanitize-html";
@@ -34,6 +34,7 @@ import {
   trackPopupSchema,
   updatePopupSchema,
   automationNewsDraftSchema,
+  decodeAutomationCoverImageDataUri,
 } from "@shared/schema";
 import { seedDatabase } from "./seed";
 
@@ -728,6 +729,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  const articleImportJsonParser = express.json({ limit: "12mb" });
+  const parseArticleImportJson = (req: any, res: any, next: any) => {
+    articleImportJsonParser(req, res, (error?: any) => {
+      if (!error) return next();
+      if (error.type === "entity.too.large") {
+        return res.status(413).json({
+          message: "Article import request exceeds the 12 MB body limit",
+        });
+      }
+      if (error.status === 415) {
+        return res.status(415).json({
+          message: "Unsupported request encoding",
+        });
+      }
+      return res.status(400).json({ message: "Malformed JSON body" });
+    });
+  };
+
   const escapeHtml = (value: string): string =>
     value.replace(
       /[&<>"']/g,
@@ -744,6 +763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(
     "/api/automation/news/drafts",
     articleImportGuard,
+    parseArticleImportJson,
     async (req, res) => {
       const parsed = automationNewsDraftSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -844,9 +864,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (slug) => categoriesBySlug.get(slug.toLowerCase())!.id,
         );
 
+        const decodedCoverImage = input.coverImageData
+          ? decodeAutomationCoverImageDataUri(input.coverImageData)
+          : null;
+        const coverImageFingerprint = decodedCoverImage
+          ? `uploaded:${decodedCoverImage.contentType}:${createHash("sha256")
+              .update(decodedCoverImage.data)
+              .digest("hex")}`
+          : input.coverImageUrl || null;
+
         const calculateRequestHash = (candidate: {
           content: string;
-          coverImageUrl: string;
+          coverImageReference: string | null;
           sourceLinks: typeof input.sourceLinks;
         }): string =>
           createHash("sha256")
@@ -855,7 +884,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 title: input.title,
                 content: candidate.content,
                 excerpt: input.excerpt || null,
-                coverImageUrl: candidate.coverImageUrl,
+                coverImageUrl: candidate.coverImageReference,
                 sourceLinks: candidate.sourceLinks,
                 categoryIds,
               }),
@@ -864,66 +893,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const requestHash = calculateRequestHash({
           content,
-          coverImageUrl: input.coverImageUrl,
+          coverImageReference: coverImageFingerprint,
           sourceLinks: input.sourceLinks,
         });
 
         // URL canonicalization was added after the importer ledger existed.
         // Recreate the prior hash shape as a compatibility check so an exact
         // retry of an older accepted request remains idempotent.
-        const legacySourceLinks = input.sourceLinks.map((source, index) => ({
-          ...source,
-          url: String(req.body.sourceLinks[index].url).trim(),
-        }));
-        const legacySourcesHtml = renderSourcesHtml(legacySourceLinks);
-        const legacyContent = `${sanitizedBody}\n<section data-article-sources="true"><h2>Sources</h2><ol>${legacySourcesHtml}</ol></section>`;
-        const legacyRequestHash = calculateRequestHash({
-          content: legacyContent,
-          coverImageUrl: String(req.body.coverImageUrl).trim(),
-          sourceLinks: legacySourceLinks,
-        });
-        const compatibleRequestHashes = new Set([
-          requestHash,
-          legacyRequestHash,
-        ]);
+        const compatibleRequestHashes = new Set([requestHash]);
+        if (!input.coverImageData && input.coverImageUrl) {
+          const legacySourceLinks = input.sourceLinks.map((source, index) => ({
+            ...source,
+            url: String(req.body.sourceLinks[index].url).trim(),
+          }));
+          const legacySourcesHtml = renderSourcesHtml(legacySourceLinks);
+          const legacyContent = `${sanitizedBody}\n<section data-article-sources="true"><h2>Sources</h2><ol>${legacySourcesHtml}</ol></section>`;
+          compatibleRequestHashes.add(
+            calculateRequestHash({
+              content: legacyContent,
+              coverImageReference: String(req.body.coverImageUrl).trim(),
+              sourceLinks: legacySourceLinks,
+            }),
+          );
+        }
 
-        const result = await storage.createAutomationNewsDraft({
-          externalId: input.externalId,
-          requestHash,
-          categoryIds,
-          article: {
-            title: input.title,
-            content,
-            excerpt: input.excerpt || null,
-            imageUrl: input.coverImageUrl,
-            thumbnailUrl: null,
-            sourceName: input.sourceLinks[0].name,
-            sourceUrl: input.sourceLinks[0].url,
-            authorId: null,
-            publishedAt: null,
+        const existing = await storage.getAutomationNewsDraft(input.externalId);
+        if (existing) {
+          if (!compatibleRequestHashes.has(existing.requestHash)) {
+            return res.status(409).json({
+              message:
+                "externalId was already used with different article content",
+            });
+          }
+          return res.status(200).json({
+            id: existing.article.id,
+            externalId: input.externalId,
             status: "draft",
-            isArchived: false,
-            isFeatured: false,
-          },
-        });
-
-        if (
-          !result.created &&
-          !compatibleRequestHashes.has(result.requestHash)
-        ) {
-          return res.status(409).json({
-            message:
-              "externalId was already used with different article content",
+            reviewPath: `/news/${existing.article.id}/edit`,
+            created: false,
           });
         }
 
-        return res.status(result.created ? 201 : 200).json({
-          id: result.article.id,
-          externalId: input.externalId,
-          status: "draft",
-          reviewPath: `/news/${result.article.id}/edit`,
-          created: result.created,
-        });
+        const objectStorageService = decodedCoverImage
+          ? new ObjectStorageService()
+          : null;
+        let uploadedObjectPath: string | null = null;
+        try {
+          if (decodedCoverImage && objectStorageService) {
+            uploadedObjectPath = await objectStorageService.uploadPublicObject({
+              ...decodedCoverImage,
+              owner: "automation-article-importer",
+            });
+          }
+
+          const result = await storage.createAutomationNewsDraft({
+            externalId: input.externalId,
+            requestHash,
+            categoryIds,
+            article: {
+              title: input.title,
+              content,
+              excerpt: input.excerpt || null,
+              imageUrl: uploadedObjectPath
+                ? `/public-objects${uploadedObjectPath}`
+                : input.coverImageUrl || null,
+              thumbnailUrl: null,
+              sourceName: input.sourceLinks[0].name,
+              sourceUrl: input.sourceLinks[0].url,
+              authorId: null,
+              publishedAt: null,
+              status: "draft",
+              isArchived: false,
+              isFeatured: false,
+            },
+          });
+
+          if (!result.created && uploadedObjectPath && objectStorageService) {
+            await objectStorageService.deleteObjectEntity(uploadedObjectPath);
+            uploadedObjectPath = null;
+          }
+
+          if (
+            !result.created &&
+            !compatibleRequestHashes.has(result.requestHash)
+          ) {
+            return res.status(409).json({
+              message:
+                "externalId was already used with different article content",
+            });
+          }
+
+          return res.status(result.created ? 201 : 200).json({
+            id: result.article.id,
+            externalId: input.externalId,
+            status: "draft",
+            reviewPath: `/news/${result.article.id}/edit`,
+            created: result.created,
+          });
+        } catch (error) {
+          if (uploadedObjectPath && objectStorageService) {
+            await objectStorageService.deleteObjectEntity(uploadedObjectPath);
+          }
+          throw error;
+        }
       } catch (error) {
         console.error("Article draft import failed:", error);
         return res.status(500).json({ message: "Failed to import article draft" });
@@ -1882,14 +1954,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       let file = await objectStorageService.searchPublicObject(filePath);
 
-      // If not found in public directories and path starts with "objects/",
-      // try to get it from the private directory (it may have public ACL)
+      // Entity objects live in the private directory even when their custom
+      // ACL marks them public. Never stream one based on path knowledge alone.
       if (!file && filePath.startsWith("objects/")) {
         try {
           const objectPath = `/${filePath}`;
-          file = await objectStorageService.getObjectEntityFile(objectPath);
+          const entityFile =
+            await objectStorageService.getObjectEntityFile(objectPath);
+          const isPublic = await objectStorageService.canAccessObjectEntity({
+            objectFile: entityFile,
+          });
+          if (isPublic) {
+            file = entityFile;
+          }
         } catch (error) {
-          // File not found in private directory either
+          // Missing, private, and invalid-ACL objects are all indistinguishable
+          // to anonymous callers.
         }
       }
 

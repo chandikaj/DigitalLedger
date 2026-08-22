@@ -113,6 +113,9 @@ export interface IStorage {
   getNewsArticles(categoryIds?: string[], limit?: number, userRole?: string, archivedOnly?: boolean): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number })[]>;
   getNewsArticle(id: string): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number }) | undefined>;
   createNewsArticle(article: InsertNewsArticle, categoryIds: string[]): Promise<NewsArticle & { categories: NewsCategory[] }>;
+  getAutomationNewsDraft(
+    externalId: string,
+  ): Promise<{ article: NewsArticle; requestHash: string } | undefined>;
   createAutomationNewsDraft(params: {
     externalId: string;
     requestHash: string;
@@ -660,7 +663,7 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  private async getAutomationNewsDraft(
+  async getAutomationNewsDraft(
     externalId: string,
   ): Promise<{ article: NewsArticle; requestHash: string } | undefined> {
     const [existing] = await db

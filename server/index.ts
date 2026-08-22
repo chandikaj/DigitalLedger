@@ -1381,7 +1381,18 @@ ${JSON.stringify(jsonLd, null, 2)}
   }
 });
 
-app.use(express.json());
+const defaultJsonParser = express.json();
+app.use((req, res, next) => {
+  // The importer installs its own authenticated 12 MB parser. Skipping the
+  // default 100 KB parser here keeps the larger limit isolated to that route.
+  if (
+    req.method === "POST" &&
+    req.path === "/api/automation/news/drafts"
+  ) {
+    return next();
+  }
+  return defaultJsonParser(req, res, next);
+});
 app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {

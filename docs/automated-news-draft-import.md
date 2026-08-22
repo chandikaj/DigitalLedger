@@ -28,13 +28,18 @@ The JSON object accepts only the fields below. Unknown fields are rejected.
 | `title` | Yes | 5–250 characters after trimming. |
 | `content` | Yes | HTML string, 1–80,000 characters. Unsafe tags, attributes, and URL schemes are removed. Content that is empty after sanitization is rejected. |
 | `excerpt` | No | Up to 1,000 characters after trimming. |
-| `coverImageUrl` | Yes | Valid HTTPS URL, up to 2,048 characters. The server stores this URL but does not fetch it. |
+| `coverImageUrl` | No | Valid HTTPS URL, up to 2,048 characters. The server stores this URL but does not fetch or re-host it. Ignored when `coverImageData` is present. |
+| `coverImageData` | No | Base64 data URI containing PNG, JPEG/JPG, or WebP bytes, up to 8 MB after decoding. The declared type must match the file signature. SVG and other formats are rejected. Uploaded images are stored under a random object key. |
 | `sourceLinks` | Yes | Array of 1–20 source objects. Each object must contain only `name` and `url`. `name` is 1–160 characters after trimming; `url` is a valid HTTPS URL up to 2,048 characters. |
 | `categorySlugs` | Yes | Array of 1–5 unique, active category slugs. Each slug is 1–100 characters in lowercase kebab-case, such as `audit` or `financial-reporting`. |
 
 The server sanitizes the submitted HTML and appends a standard Sources section
 from `sourceLinks`. The first source is also stored in the article's existing
 primary source fields for editor compatibility.
+
+If both cover-image fields are omitted, the draft is created without a cover
+image so an editor can add one during review. The importer accepts request bodies
+up to 12 MB; the rest of the API retains its normal JSON body limit.
 
 The server always overrides article state to:
 
@@ -60,7 +65,6 @@ curl --request POST "https://<YOUR_DOMAIN>/api/automation/news/drafts" \
     "title": "<ARTICLE_HEADLINE>",
     "content": "<p>ARTICLE_HTML</p>",
     "excerpt": "<SHORT_EXCERPT>",
-    "coverImageUrl": "https://<IMAGE_HOST>/<IMAGE_PATH>",
     "sourceLinks": [
       {
         "name": "<SOURCE_NAME>",
@@ -70,6 +74,11 @@ curl --request POST "https://<YOUR_DOMAIN>/api/automation/news/drafts" \
     "categorySlugs": ["<ACTIVE_CATEGORY_SLUG>"]
   }'
 ```
+
+To upload a cover directly, add a `coverImageData` value such as
+`data:image/png;base64,<BASE64_IMAGE_BYTES>`. Do not log or persist that value in
+automation run output. Alternatively, provide `coverImageUrl`, or omit both
+cover-image fields.
 
 ## Success responses
 
@@ -97,6 +106,7 @@ Retries do not create duplicate articles.
 | `400 Bad Request` | Invalid fields, unknown fields, inactive/unknown categories, unsafe content that becomes empty, or another request validation failure. |
 | `401 Unauthorized` | Missing, malformed, or incorrect Bearer credential. |
 | `409 Conflict` | The `externalId` already exists, but the normalized article content differs from the original accepted request. Use a new `externalId` for a different article. |
+| `413 Payload Too Large` | The JSON request exceeds 12 MB. Uploaded image bytes are also limited to 8 MB after base64 decoding. |
 | `415 Unsupported Media Type` | `Content-Type` is not `application/json`. |
 | `429 Too Many Requests` | More than 10 requests were attempted from the same IP address within one minute. |
 | `500 Internal Server Error` | The draft could not be imported because of an unexpected server or database error. |

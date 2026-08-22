@@ -384,6 +384,97 @@ const httpsUrlSchema = z
   // Crawler templates still attribute-escape URLs as a second line of defense.
   .transform((value) => new URL(value).toString());
 
+export const AUTOMATION_COVER_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+
+export function decodeAutomationCoverImageDataUri(value: string): {
+  data: Buffer;
+  contentType: "image/png" | "image/jpeg" | "image/webp";
+  extension: "png" | "jpg" | "webp";
+} {
+  const match =
+    /^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(
+      value,
+    );
+  if (!match) {
+    throw new Error(
+      "coverImageData must be a base64 PNG, JPEG, or WebP data URI",
+    );
+  }
+
+  const declaredType = match[1] as "png" | "jpeg" | "jpg" | "webp";
+  const encoded = match[2];
+  if (encoded.length % 4 !== 0) {
+    throw new Error("coverImageData contains invalid base64");
+  }
+
+  const paddingBytes = encoded.endsWith("==")
+    ? 2
+    : encoded.endsWith("=")
+      ? 1
+      : 0;
+  const decodedSize = (encoded.length / 4) * 3 - paddingBytes;
+  if (decodedSize <= 0) {
+    throw new Error("coverImageData must contain image bytes");
+  }
+  if (decodedSize > AUTOMATION_COVER_IMAGE_MAX_BYTES) {
+    throw new Error("coverImageData exceeds the 8 MB decoded-size limit");
+  }
+
+  const data = Buffer.from(encoded, "base64");
+  if (
+    data.length !== decodedSize ||
+    data.toString("base64") !== encoded
+  ) {
+    throw new Error("coverImageData contains invalid base64");
+  }
+
+  const isPng =
+    data.length >= 8 &&
+    data.subarray(0, 8).equals(
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    );
+  const isJpeg =
+    data.length >= 3 &&
+    data[0] === 0xff &&
+    data[1] === 0xd8 &&
+    data[2] === 0xff;
+  const isWebp =
+    data.length >= 12 &&
+    data.toString("ascii", 0, 4) === "RIFF" &&
+    data.toString("ascii", 8, 12) === "WEBP";
+  const magicMatches =
+    (declaredType === "png" && isPng) ||
+    ((declaredType === "jpeg" || declaredType === "jpg") && isJpeg) ||
+    (declaredType === "webp" && isWebp);
+  if (!magicMatches) {
+    throw new Error(
+      "coverImageData bytes do not match the declared image type",
+    );
+  }
+
+  if (declaredType === "png") {
+    return { data, contentType: "image/png", extension: "png" };
+  }
+  if (declaredType === "webp") {
+    return { data, contentType: "image/webp", extension: "webp" };
+  }
+  return { data, contentType: "image/jpeg", extension: "jpg" };
+}
+
+const automationCoverImageDataSchema = z.string().superRefine((value, ctx) => {
+  try {
+    decodeAutomationCoverImageDataUri(value);
+  } catch (error) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        error instanceof Error
+          ? error.message
+          : "coverImageData is invalid",
+    });
+  }
+});
+
 export const automationNewsDraftSchema = z
   .object({
     externalId: z
@@ -395,7 +486,8 @@ export const automationNewsDraftSchema = z
     title: z.string().trim().min(5).max(250),
     content: z.string().min(1).max(80_000),
     excerpt: z.string().trim().max(1_000).optional(),
-    coverImageUrl: httpsUrlSchema,
+    coverImageUrl: httpsUrlSchema.optional(),
+    coverImageData: automationCoverImageDataSchema.optional(),
     sourceLinks: z
       .array(
         z
