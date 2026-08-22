@@ -379,7 +379,10 @@ const httpsUrlSchema = z
     } catch {
       return false;
     }
-  }, "Only HTTPS URLs are allowed");
+  }, "Only HTTPS URLs are allowed")
+  // Persist the canonical URL, which percent-encodes characters such as quotes.
+  // Crawler templates still attribute-escape URLs as a second line of defense.
+  .transform((value) => new URL(value).toString());
 
 export const automationNewsDraftSchema = z
   .object({

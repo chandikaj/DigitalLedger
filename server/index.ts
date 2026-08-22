@@ -22,6 +22,18 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, char => htmlEntities[char] || char);
 }
 
+function serializeJsonForHtml(value: unknown): string {
+  return JSON.stringify(value, null, 2).replace(
+    /[<>&]/g,
+    (character) =>
+      ({
+        "<": "\\u003c",
+        ">": "\\u003e",
+        "&": "\\u0026",
+      })[character]!,
+  );
+}
+
 // Strip HTML tags and clean text for meta descriptions
 function stripHtml(html: string): string {
   return html
@@ -389,6 +401,11 @@ app.use(async (req, res, next) => {
     
     // Clean article content - keep HTML structure for readability
     const articleContent = article.content || '';
+    const hasEmbeddedSources = articleContent.includes('data-article-sources="true"');
+    const escapedArticleUrl = escapeHtml(articleUrl);
+    const escapedBaseUrl = escapeHtml(baseUrl);
+    const escapedImageUrl = escapeHtml(imageUrl);
+    const escapedKeywords = escapeHtml(keywords.join(', '));
     
     const html = `<!DOCTYPE html>
 <html lang="en" prefix="og: https://ogp.me/ns# article: https://ogp.me/ns/article#">
@@ -400,18 +417,18 @@ app.use(async (req, res, next) => {
   <title>${escapeHtml(article.title)} | The Digital Ledger</title>
   <meta name="title" content="${escapeHtml(article.title)} | The Digital Ledger">
   <meta name="description" content="${escapeHtml(description)}">
-  <meta name="keywords" content="${keywords.join(', ')}">
+  <meta name="keywords" content="${escapedKeywords}">
   <meta name="author" content="${escapeHtml(authorName)}">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <meta name="googlebot" content="index, follow">
-  <link rel="canonical" href="${articleUrl}">
+  <link rel="canonical" href="${escapedArticleUrl}">
   
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="article">
-  <meta property="og:url" content="${articleUrl}">
+  <meta property="og:url" content="${escapedArticleUrl}">
   <meta property="og:title" content="${escapeHtml(article.title)}">
   <meta property="og:description" content="${escapeHtml(ogDescription)}">
-  <meta property="og:image" content="${imageUrl}">
+  <meta property="og:image" content="${escapedImageUrl}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="${escapeHtml(article.title)}">
@@ -427,19 +444,19 @@ app.use(async (req, res, next) => {
   
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:url" content="${articleUrl}">
+  <meta name="twitter:url" content="${escapedArticleUrl}">
   <meta name="twitter:title" content="${escapeHtml(article.title)}">
   <meta name="twitter:description" content="${escapeHtml(ogDescription)}">
-  <meta name="twitter:image" content="${imageUrl}">
+  <meta name="twitter:image" content="${escapedImageUrl}">
   <meta name="twitter:image:alt" content="${escapeHtml(article.title)}">
   <meta name="twitter:site" content="@thedigitalledger">
   
   <!-- LinkedIn specific -->
-  <meta property="og:image:secure_url" content="${imageUrl}">
+  <meta property="og:image:secure_url" content="${escapedImageUrl}">
   
   <!-- JSON-LD Structured Data for Google -->
   <script type="application/ld+json">
-${JSON.stringify(jsonLd, null, 2)}
+${serializeJsonForHtml(jsonLd)}
   </script>
   
   <!-- Basic styling for crawlers that render HTML -->
@@ -478,7 +495,7 @@ ${JSON.stringify(jsonLd, null, 2)}
     
     ${article.imageUrl ? `
     <figure>
-      <img src="${imageUrl}" alt="${escapeHtml(article.title)}" itemprop="image">
+      <img src="${escapedImageUrl}" alt="${escapeHtml(article.title)}" itemprop="image">
     </figure>
     ` : ''}
     
@@ -486,14 +503,14 @@ ${JSON.stringify(jsonLd, null, 2)}
       ${articleContent}
     </div>
     
-    ${article.sourceUrl ? `
+    ${article.sourceUrl && !hasEmbeddedSources ? `
     <footer class="source">
-      <p>Source: <a href="${article.sourceUrl}" rel="noopener" target="_blank">${escapeHtml(article.sourceName || 'Original Source')}</a></p>
+      <p>Source: <a href="${escapeHtml(article.sourceUrl)}" rel="noopener" target="_blank">${escapeHtml(article.sourceName || 'Original Source')}</a></p>
     </footer>
     ` : ''}
     
     <nav>
-      <p><a href="${baseUrl}/news">← Back to all articles</a> | <a href="${baseUrl}">Visit The Digital Ledger</a></p>
+      <p><a href="${escapedBaseUrl}/news">← Back to all articles</a> | <a href="${escapedBaseUrl}">Visit The Digital Ledger</a></p>
     </nav>
   </article>
   

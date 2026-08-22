@@ -1,2 +1,3 @@
 - [Dependency audit residuals](dependency-audit-residuals.md) — which audit CVEs are intentionally left unfixed here and why; don't churn re-fixing them.
 - [beehiiv embed protocol](beehiiv-embed-protocol.md) — success message arrives as a parent-page postMessage toast, not inside the iframe; headless submits are bot-blocked.
+- [Durable test identifiers](durable-test-identifiers.md) — CodeExecution may reject clock/UUID helpers; use fixed test-only IDs with cleanup before and after.

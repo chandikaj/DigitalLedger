@@ -829,29 +829,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        const sourcesHtml = input.sourceLinks
-          .map(
-            (source) =>
-              `<li><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer nofollow">${escapeHtml(source.name)}</a></li>`,
-          )
-          .join("");
+        const renderSourcesHtml = (
+          sourceLinks: typeof input.sourceLinks,
+        ): string =>
+          sourceLinks
+            .map(
+              (source) =>
+                `<li><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer nofollow">${escapeHtml(source.name)}</a></li>`,
+            )
+            .join("");
+        const sourcesHtml = renderSourcesHtml(input.sourceLinks);
         const content = `${sanitizedBody}\n<section data-article-sources="true"><h2>Sources</h2><ol>${sourcesHtml}</ol></section>`;
         const categoryIds = input.categorySlugs.map(
           (slug) => categoriesBySlug.get(slug.toLowerCase())!.id,
         );
 
-        const requestHash = createHash("sha256")
-          .update(
-            JSON.stringify({
-              title: input.title,
-              content,
-              excerpt: input.excerpt || null,
-              coverImageUrl: input.coverImageUrl,
-              sourceLinks: input.sourceLinks,
-              categoryIds,
-            }),
-          )
-          .digest("hex");
+        const calculateRequestHash = (candidate: {
+          content: string;
+          coverImageUrl: string;
+          sourceLinks: typeof input.sourceLinks;
+        }): string =>
+          createHash("sha256")
+            .update(
+              JSON.stringify({
+                title: input.title,
+                content: candidate.content,
+                excerpt: input.excerpt || null,
+                coverImageUrl: candidate.coverImageUrl,
+                sourceLinks: candidate.sourceLinks,
+                categoryIds,
+              }),
+            )
+            .digest("hex");
+
+        const requestHash = calculateRequestHash({
+          content,
+          coverImageUrl: input.coverImageUrl,
+          sourceLinks: input.sourceLinks,
+        });
+
+        // URL canonicalization was added after the importer ledger existed.
+        // Recreate the prior hash shape as a compatibility check so an exact
+        // retry of an older accepted request remains idempotent.
+        const legacySourceLinks = input.sourceLinks.map((source, index) => ({
+          ...source,
+          url: String(req.body.sourceLinks[index].url).trim(),
+        }));
+        const legacySourcesHtml = renderSourcesHtml(legacySourceLinks);
+        const legacyContent = `${sanitizedBody}\n<section data-article-sources="true"><h2>Sources</h2><ol>${legacySourcesHtml}</ol></section>`;
+        const legacyRequestHash = calculateRequestHash({
+          content: legacyContent,
+          coverImageUrl: String(req.body.coverImageUrl).trim(),
+          sourceLinks: legacySourceLinks,
+        });
+        const compatibleRequestHashes = new Set([
+          requestHash,
+          legacyRequestHash,
+        ]);
 
         const result = await storage.createAutomationNewsDraft({
           externalId: input.externalId,
@@ -873,7 +907,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         });
 
-        if (!result.created && result.requestHash !== requestHash) {
+        if (
+          !result.created &&
+          !compatibleRequestHashes.has(result.requestHash)
+        ) {
           return res.status(409).json({
             message:
               "externalId was already used with different article content",
