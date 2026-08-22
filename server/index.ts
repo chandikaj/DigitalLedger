@@ -294,8 +294,10 @@ app.use(async (req, res, next) => {
   try {
     const articleId = match[1];
     const article = await storage.getNewsArticle(articleId);
-    if (!article) {
-      return next();
+    if (!article || article.status !== "published" || article.isArchived) {
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      return res.status(404).send("Article not found");
     }
     
     log(`Serving SEO-optimized HTML for article ${articleId} to crawler`);

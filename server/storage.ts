@@ -4,6 +4,7 @@ import {
   passwordResetCodes,
   newsCategories,
   newsArticles,
+  automationArticleImports,
   newsComments,
   articleCategories,
   podcastCategories,
@@ -112,6 +113,12 @@ export interface IStorage {
   getNewsArticles(categoryIds?: string[], limit?: number, userRole?: string, archivedOnly?: boolean): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number })[]>;
   getNewsArticle(id: string): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number }) | undefined>;
   createNewsArticle(article: InsertNewsArticle, categoryIds: string[]): Promise<NewsArticle & { categories: NewsCategory[] }>;
+  createAutomationNewsDraft(params: {
+    externalId: string;
+    requestHash: string;
+    article: InsertNewsArticle;
+    categoryIds: string[];
+  }): Promise<{ article: NewsArticle; created: boolean; requestHash: string }>;
   updateNewsArticle(articleId: string, updates: Partial<InsertNewsArticle>, categoryIds?: string[]): Promise<(NewsArticle & { categories: NewsCategory[] }) | undefined>;
   deleteNewsArticle(articleId: string): Promise<boolean>;
   archiveNewsArticle(articleId: string, isArchived: boolean): Promise<NewsArticle | undefined>;
@@ -624,7 +631,11 @@ export class DatabaseStorage implements IStorage {
     return await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(newsArticles)
-        .values(article)
+        .values({
+          ...article,
+          // Drafts do not have a publication date until an editor publishes.
+          publishedAt: article.status === "draft" ? null : article.publishedAt,
+        })
         .returning();
 
       if (categoryIds.length > 0) {
@@ -649,8 +660,88 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  private async getAutomationNewsDraft(
+    externalId: string,
+  ): Promise<{ article: NewsArticle; requestHash: string } | undefined> {
+    const [existing] = await db
+      .select({
+        article: newsArticles,
+        requestHash: automationArticleImports.requestHash,
+      })
+      .from(automationArticleImports)
+      .innerJoin(
+        newsArticles,
+        eq(automationArticleImports.articleId, newsArticles.id),
+      )
+      .where(eq(automationArticleImports.externalId, externalId));
+    return existing;
+  }
+
+  async createAutomationNewsDraft(params: {
+    externalId: string;
+    requestHash: string;
+    article: InsertNewsArticle;
+    categoryIds: string[];
+  }): Promise<{ article: NewsArticle; created: boolean; requestHash: string }> {
+    const existing = await this.getAutomationNewsDraft(params.externalId);
+    if (existing) return { ...existing, created: false };
+
+    try {
+      const article = await db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(newsArticles)
+          .values({
+            ...params.article,
+            status: "draft",
+            publishedAt: null,
+            isArchived: false,
+            isFeatured: false,
+          })
+          .returning();
+
+        await tx.insert(articleCategories).values(
+          params.categoryIds.map((categoryId) => ({
+            articleId: created.id,
+            categoryId,
+          })),
+        );
+
+        await tx.insert(automationArticleImports).values({
+          externalId: params.externalId,
+          articleId: created.id,
+          requestHash: params.requestHash,
+        });
+
+        return created;
+      });
+      return { article, created: true, requestHash: params.requestHash };
+    } catch (error) {
+      // Concurrent retries can race on externalId. The unique ledger row makes
+      // one transaction win; return that result instead of creating a duplicate.
+      const raced = await this.getAutomationNewsDraft(params.externalId);
+      if (raced) return { ...raced, created: false };
+      throw error;
+    }
+  }
+
   async updateNewsArticle(articleId: string, updates: Partial<InsertNewsArticle>, categoryIds?: string[]): Promise<(NewsArticle & { categories: NewsCategory[] }) | undefined> {
     return await db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({
+          status: newsArticles.status,
+          publishedAt: newsArticles.publishedAt,
+        })
+        .from(newsArticles)
+        .where(eq(newsArticles.id, articleId));
+      if (!current) return undefined;
+
+      const publicationUpdates: Partial<InsertNewsArticle> = {};
+      if (updates.status === "draft") {
+        publicationUpdates.publishedAt = null;
+      } else if (updates.status === "published" && current.status !== "published") {
+        publicationUpdates.publishedAt = new Date();
+      }
+
       if (categoryIds !== undefined) {
         // Delete existing category associations
         await tx
@@ -670,7 +761,7 @@ export class DatabaseStorage implements IStorage {
 
       const [updated] = await tx
         .update(newsArticles)
-        .set(updates)
+        .set({ ...updates, ...publicationUpdates })
         .where(eq(newsArticles.id, articleId))
         .returning();
 
@@ -706,9 +797,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async toggleNewsArticleStatus(articleId: string, status: 'published' | 'draft'): Promise<NewsArticle | undefined> {
+    const [current] = await db
+      .select({
+        status: newsArticles.status,
+        publishedAt: newsArticles.publishedAt,
+      })
+      .from(newsArticles)
+      .where(eq(newsArticles.id, articleId));
+    if (!current) return undefined;
+
     const [updated] = await db
       .update(newsArticles)
-      .set({ status })
+      .set({
+        status,
+        ...(status === "draft"
+          ? { publishedAt: null }
+          : current.status !== "published"
+            ? { publishedAt: new Date() }
+            : {}),
+      })
       .where(eq(newsArticles.id, articleId))
       .returning();
     return updated;

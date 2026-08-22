@@ -1,5 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { createHash, timingSafeEqual } from "node:crypto";
+import sanitizeHtml from "sanitize-html";
 import { storage } from "./storage";
 import {
   setupAuth,
@@ -31,10 +33,20 @@ import {
   trackEngagementSchema,
   trackPopupSchema,
   updatePopupSchema,
+  automationNewsDraftSchema,
 } from "@shared/schema";
 import { seedDatabase } from "./seed";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const safeKeyCompare = (provided: string, expected: string): boolean => {
+    const a = Buffer.from(provided);
+    const b = Buffer.from(expected);
+    // Always perform a timing-safe comparison, even when lengths differ.
+    return a.length === b.length
+      ? timingSafeEqual(a, b)
+      : (timingSafeEqual(b, b), false);
+  };
+
   // Session middleware
   app.use(getSession());
 
@@ -639,12 +651,248 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!article) {
         return res.status(404).json({ message: "Article not found" });
       }
+
+      // Draft and archived article details are editor/admin previews only.
+      // Return the same 404 as a missing article so existence is not leaked.
+      if (article.status !== "published" || article.isArchived) {
+        const sessionUserId = (req as any).session?.userId;
+        const user = sessionUserId
+          ? await storage.getUser(sessionUserId)
+          : undefined;
+        if (user?.role !== "admin" && user?.role !== "editor") {
+          return res.status(404).json({ message: "Article not found" });
+        }
+      }
+
+      res.set("Cache-Control", "no-store");
       res.json(article);
     } catch (error) {
       console.error("Error fetching news article:", error);
       res.status(500).json({ message: "Failed to fetch news article" });
     }
   });
+
+  // --- Isolated server-to-server news draft importer ---
+  // The dedicated key grants exactly one capability: create a draft.
+  const articleImportBuckets = new Map<
+    string,
+    { windowStart: number; count: number }
+  >();
+  const ARTICLE_IMPORT_LIMIT = 10;
+  const articleImportRateLimited = (bucket: string): boolean => {
+    const now = Date.now();
+    let entry = articleImportBuckets.get(bucket);
+    if (!entry || now - entry.windowStart >= 60_000) {
+      if (!entry && articleImportBuckets.size >= 1_000) {
+        // Strict memory bound. Map iteration order is insertion order.
+        const oldest = articleImportBuckets.keys().next().value;
+        if (oldest) articleImportBuckets.delete(oldest);
+      }
+      entry = { windowStart: now, count: 1 };
+      articleImportBuckets.set(bucket, entry);
+      return false;
+    }
+    if (entry.count >= ARTICLE_IMPORT_LIMIT) return true;
+    entry.count++;
+    return false;
+  };
+
+  const articleImportGuard = (req: any, res: any, next: any) => {
+    res.set("Cache-Control", "no-store");
+    res.set("X-Content-Type-Options", "nosniff");
+
+    if (articleImportRateLimited(req.ip || "unknown")) {
+      return res.status(429).json({ message: "Rate limit exceeded" });
+    }
+
+    if (!req.is("application/json")) {
+      return res.status(415).json({ message: "Content-Type must be application/json" });
+    }
+
+    const expectedKey = process.env.ARTICLE_IMPORT_API_KEY;
+    // Refuse to run with a missing or weak secret.
+    if (!expectedKey || expectedKey.length < 32) {
+      return res.status(503).json({ message: "Article import API is not configured" });
+    }
+
+    const authorization = req.headers.authorization;
+    const match =
+      typeof authorization === "string"
+        ? authorization.match(/^Bearer ([^\s]+)$/)
+        : null;
+    const providedKey = match?.[1];
+    if (!providedKey || !safeKeyCompare(providedKey, expectedKey)) {
+      return res.status(401).json({ message: "Invalid or missing credential" });
+    }
+
+    next();
+  };
+
+  const escapeHtml = (value: string): string =>
+    value.replace(
+      /[&<>"']/g,
+      (character) =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[character]!,
+    );
+
+  app.post(
+    "/api/automation/news/drafts",
+    articleImportGuard,
+    async (req, res) => {
+      const parsed = automationNewsDraftSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: "Invalid article draft",
+          errors: parsed.error.flatten().fieldErrors,
+        });
+      }
+
+      try {
+        const input = parsed.data;
+        const activeCategories = await storage.getNewsCategories(true);
+        const categoriesBySlug = new Map(
+          activeCategories.map((category) => [
+            category.slug.toLowerCase(),
+            category,
+          ]),
+        );
+        const missingCategorySlugs = input.categorySlugs.filter(
+          (slug) => !categoriesBySlug.has(slug.toLowerCase()),
+        );
+        if (missingCategorySlugs.length > 0) {
+          return res.status(400).json({
+            message: "One or more categories are invalid or inactive",
+            invalidCategorySlugs: missingCategorySlugs,
+          });
+        }
+
+        const sanitizedBody = sanitizeHtml(input.content, {
+          allowedTags: [
+            "p",
+            "br",
+            "h2",
+            "h3",
+            "h4",
+            "strong",
+            "b",
+            "em",
+            "i",
+            "u",
+            "s",
+            "blockquote",
+            "ul",
+            "ol",
+            "li",
+            "a",
+            "code",
+            "pre",
+            "hr",
+            "table",
+            "thead",
+            "tbody",
+            "tr",
+            "th",
+            "td",
+          ],
+          allowedSchemes: ["https"],
+          allowProtocolRelative: false,
+          enforceHtmlBoundary: true,
+          transformTags: {
+            a: (_tagName, attribs) => ({
+              tagName: "a",
+              attribs: {
+                ...attribs,
+                target: "_blank",
+                rel: "noopener noreferrer nofollow",
+              },
+            }),
+          },
+          allowedAttributes: {
+            a: ["href", "title", "target", "rel"],
+            th: ["colspan", "rowspan"],
+            td: ["colspan", "rowspan"],
+          },
+        });
+        const bodyText = sanitizeHtml(sanitizedBody, {
+          allowedTags: [],
+          allowedAttributes: {},
+        }).trim();
+        if (!bodyText) {
+          return res.status(400).json({
+            message: "Article content is empty after security sanitization",
+          });
+        }
+
+        const sourcesHtml = input.sourceLinks
+          .map(
+            (source) =>
+              `<li><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer nofollow">${escapeHtml(source.name)}</a></li>`,
+          )
+          .join("");
+        const content = `${sanitizedBody}\n<section data-article-sources="true"><h2>Sources</h2><ol>${sourcesHtml}</ol></section>`;
+        const categoryIds = input.categorySlugs.map(
+          (slug) => categoriesBySlug.get(slug.toLowerCase())!.id,
+        );
+
+        const requestHash = createHash("sha256")
+          .update(
+            JSON.stringify({
+              title: input.title,
+              content,
+              excerpt: input.excerpt || null,
+              coverImageUrl: input.coverImageUrl,
+              sourceLinks: input.sourceLinks,
+              categoryIds,
+            }),
+          )
+          .digest("hex");
+
+        const result = await storage.createAutomationNewsDraft({
+          externalId: input.externalId,
+          requestHash,
+          categoryIds,
+          article: {
+            title: input.title,
+            content,
+            excerpt: input.excerpt || null,
+            imageUrl: input.coverImageUrl,
+            thumbnailUrl: null,
+            sourceName: input.sourceLinks[0].name,
+            sourceUrl: input.sourceLinks[0].url,
+            authorId: null,
+            publishedAt: null,
+            status: "draft",
+            isArchived: false,
+            isFeatured: false,
+          },
+        });
+
+        if (!result.created && result.requestHash !== requestHash) {
+          return res.status(409).json({
+            message:
+              "externalId was already used with different article content",
+          });
+        }
+
+        return res.status(result.created ? 201 : 200).json({
+          id: result.article.id,
+          externalId: input.externalId,
+          status: "draft",
+          reviewPath: `/news/${result.article.id}/edit`,
+          created: result.created,
+        });
+      } catch (error) {
+        console.error("Article draft import failed:", error);
+        return res.status(500).json({ message: "Failed to import article draft" });
+      }
+    },
+  );
 
   app.post("/api/news", isEditorOrAdmin, async (req: any, res) => {
     try {
@@ -1709,15 +1957,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // --- Public read-only API (GET only, protected by PUBLIC_API_KEY) ---
-  const { timingSafeEqual } = await import("node:crypto");
-
-  const safeKeyCompare = (provided: string, expected: string): boolean => {
-    const a = Buffer.from(provided);
-    const b = Buffer.from(expected);
-    // Compare against self when lengths differ to keep timing constant
-    return a.length === b.length ? timingSafeEqual(a, b) : (timingSafeEqual(b, b), false);
-  };
-
   // Simple in-memory rate limit for public endpoints (per IP, 60 req/min).
   // Fixed-window counters: O(1) memory per IP regardless of request rate.
   const publicApiBuckets = new Map<string, { windowStart: number; count: number }>();

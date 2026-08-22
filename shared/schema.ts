@@ -124,6 +124,22 @@ export const newsArticles = pgTable("news_articles", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Idempotency/audit ledger for the server-to-server article draft importer.
+// It stores no credential or request body.
+export const automationArticleImports = pgTable(
+  "automation_article_imports",
+  {
+    externalId: varchar("external_id", { length: 128 }).primaryKey(),
+    articleId: varchar("article_id")
+      .references(() => newsArticles.id, { onDelete: "cascade" })
+      .notNull()
+      .unique(),
+    requestHash: varchar("request_hash", { length: 64 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("idx_automation_article_imports_article").on(table.articleId)],
+);
+
 // News comments
 export const newsComments = pgTable("news_comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -351,6 +367,57 @@ export const updatePopupSchema = z.object({
   subscribed: z.boolean().optional(),
   details: z.record(z.any()).optional(),
 });
+
+const httpsUrlSchema = z
+  .string()
+  .trim()
+  .url("Must be a valid URL")
+  .max(2048)
+  .refine((value) => {
+    try {
+      return new URL(value).protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "Only HTTPS URLs are allowed");
+
+export const automationNewsDraftSchema = z
+  .object({
+    externalId: z
+      .string()
+      .trim()
+      .min(1)
+      .max(128)
+      .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/, "externalId contains unsupported characters"),
+    title: z.string().trim().min(5).max(250),
+    content: z.string().min(1).max(80_000),
+    excerpt: z.string().trim().max(1_000).optional(),
+    coverImageUrl: httpsUrlSchema,
+    sourceLinks: z
+      .array(
+        z
+          .object({
+            name: z.string().trim().min(1).max(160),
+            url: httpsUrlSchema,
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(20),
+    categorySlugs: z
+      .array(
+        z
+          .string()
+          .trim()
+          .min(1)
+          .max(100)
+          .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Category slugs must be lowercase kebab-case"),
+      )
+      .min(1)
+      .max(5)
+      .refine((slugs) => new Set(slugs).size === slugs.length, "Category slugs must be unique"),
+  })
+  .strict();
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -632,6 +699,7 @@ export type NewsCategory = typeof newsCategories.$inferSelect;
 export type InsertNewsCategory = z.infer<typeof insertNewsCategorySchema>;
 export type NewsArticle = typeof newsArticles.$inferSelect;
 export type InsertNewsArticle = z.infer<typeof insertNewsArticleSchema>;
+export type AutomationNewsDraftRequest = z.infer<typeof automationNewsDraftSchema>;
 export type NewsComment = typeof newsComments.$inferSelect;
 export type InsertNewsComment = z.infer<typeof insertNewsCommentSchema>;
 export type ForumCategory = typeof forumCategories.$inferSelect;

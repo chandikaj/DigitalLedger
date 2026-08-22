@@ -554,9 +554,11 @@ export default function Article() {
   const sanitizedContent = article.content
     ? DOMPurify.sanitize(convertPipeTablesToHTML(article.content), SANITIZE_OPTIONS)
     : "";
-  const sourcesSplit = !user ? splitOffTrailingSources(sanitizedContent) : null;
+  const trailingSourcesSplit = splitOffTrailingSources(sanitizedContent);
+  const sourcesSplit = !user ? trailingSourcesSplit : null;
   const mainContent = sourcesSplit ? sourcesSplit[0] : sanitizedContent;
   const sourcesContent = sourcesSplit ? sourcesSplit[1] : null;
+  const hasTrailingSources = trailingSourcesSplit !== null;
   const contentHalves = !user ? splitContentInHalf(mainContent) : null;
 
   return (
@@ -818,7 +820,7 @@ export default function Article() {
                 />
               )}
 
-              {article.sourceName && article.sourceUrl && (
+              {!hasTrailingSources && article.sourceName && article.sourceUrl && (
                 <div className="border-t pt-6 mb-6">
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
                     Original Source:
