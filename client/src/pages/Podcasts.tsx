@@ -27,8 +27,6 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { VideoPlayerDialog, getYouTubeVideoId } from "@/components/VideoPlayerDialog";
-import { SubscribeDialog } from "@/components/SubscribeDialog";
 
 interface NewsCategory {
   id: string;
@@ -45,9 +43,6 @@ export default function Podcasts() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"active" | "archive">("active");
-  const [playerOpen, setPlayerOpen] = useState(false);
-  const [playingVideo, setPlayingVideo] = useState<{ videoId: string; title: string; episodeId: string } | null>(null);
-  const [showSubscribe, setShowSubscribe] = useState(false);
   const { user } = useAuth();
   const userRole = (user as any)?.role;
   const { toast } = useToast();
@@ -242,34 +237,6 @@ export default function Podcasts() {
     likePodcastMutation.mutate(podcastId);
   };
 
-  // Play count increment mutation
-  const incrementPlayCountMutation = useMutation({
-    mutationFn: async (podcastId: string) => {
-      return await apiRequest(`/api/podcasts/${podcastId}/play`, 'POST');
-    },
-    onSuccess: async () => {
-      // Refetch podcast data to show updated play count
-      await queryClient.invalidateQueries({ queryKey: ["/api/podcasts"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/podcasts/featured"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/podcasts", "all"] });
-    },
-  });
-
-  const handlePlayCountIncrement = (podcastId: string) => {
-    incrementPlayCountMutation.mutate(podcastId);
-  };
-
-  const handleWatch = (episode: any) => {
-    handlePlayCountIncrement(episode.id);
-    const videoId = getYouTubeVideoId(episode.audioUrl);
-    if (videoId) {
-      setPlayingVideo({ videoId, title: episode.title, episodeId: episode.id });
-      setPlayerOpen(true);
-    } else {
-      window.open(episode.audioUrl, '_blank', 'noopener,noreferrer');
-    }
-  };
-
   if (isLoading) {
     return (
       <Layout>
@@ -333,15 +300,6 @@ export default function Podcasts() {
         )}
       </div>
 
-      <VideoPlayerDialog
-        open={playerOpen}
-        onOpenChange={setPlayerOpen}
-        videoId={playingVideo?.videoId || null}
-        title={playingVideo?.title}
-        onSubscribe={() => setShowSubscribe(true)}
-        episodeId={playingVideo?.episodeId}
-      />
-      <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} trigger="video_promo" />
     </Layout>
   );
 
@@ -406,18 +364,33 @@ export default function Podcasts() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8" data-testid="episodes-grid">
             {filteredEpisodes.map((episode: any) => (
-              <Card key={episode.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300 relative" data-testid={`episode-card-${episode.id}`}>
+              <Card
+                key={episode.id}
+                className="overflow-hidden hover:shadow-lg transition-shadow duration-300 relative cursor-pointer"
+                data-testid={`episode-card-${episode.id}`}
+                role="link"
+                tabIndex={0}
+                onClick={() => setLocation(`/podcasts/${episode.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setLocation(`/podcasts/${episode.id}`);
+                  }
+                }}
+              >
                 {(userRole === 'editor' || userRole === 'admin') && (
-                  <Link href={`/podcasts/${episode.id}/edit`}>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 z-10 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800"
-                      data-testid={`button-edit-podcast-${episode.id}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </Link>
+                  <div onClick={(event) => event.stopPropagation()}>
+                    <Link href={`/podcasts/${episode.id}/edit`}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 z-10 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800"
+                        data-testid={`button-edit-podcast-${episode.id}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
                 )}
                 <div className="aspect-video w-full overflow-hidden">
                   <img 
@@ -497,7 +470,8 @@ export default function Podcasts() {
                         data-testid={`watch-youtube-${episode.id}`}
                         onClick={(e) => {
                           e.preventDefault();
-                          handleWatch(episode);
+                           e.stopPropagation();
+                           setLocation(`/podcasts/${episode.id}`);
                         }}
                       >
                         <PlayCircle className="h-4 w-4" />

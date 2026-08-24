@@ -21,6 +21,7 @@ import Forums from "@/pages/Forums";
 import DiscussionDetail from "@/pages/DiscussionDetail";
 import Resources from "@/pages/Resources";
 import Podcasts from "@/pages/Podcasts";
+import PodcastEpisode from "@/pages/PodcastEpisode";
 import Community from "@/pages/Community";
 import About from "@/pages/About";
 import Admin from "@/pages/Admin";
@@ -78,6 +79,8 @@ function Router() {
       
       {/* Article detail route must come AFTER /news/add to avoid matching "add" as an id */}
       <Route path="/news/:id" component={Article} />
+      {/* Podcast detail route must come AFTER podcast add/edit routes */}
+      <Route path="/podcasts/:id" component={PodcastEpisode} />
       
       {/* Home/Landing route - same for everyone */}
       <Route path="/" component={Landing} />

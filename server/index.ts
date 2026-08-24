@@ -34,6 +34,18 @@ function serializeJsonForHtml(value: unknown): string {
   );
 }
 
+function resolveSafeHttpUrl(value: string | null | undefined, baseUrl: string): string | null {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value, baseUrl);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 // Strip HTML tags and clean text for meta descriptions
 function stripHtml(html: string): string {
   return html
@@ -259,7 +271,7 @@ app.get('/sitemap.xml', async (req, res) => {
     }
 
     // Add podcast episodes
-    for (const podcast of podcasts.filter(p => !p.isArchived)) {
+    for (const podcast of podcasts.filter(p => !p.isArchived && p.status === 'published')) {
       const lastMod = podcast.publishedAt ? new Date(podcast.publishedAt).toISOString() : now;
       sitemap += `
   <url>
@@ -550,22 +562,29 @@ app.use(async (req, res, next) => {
   try {
     const podcastId = match[1];
     const podcast = await storage.getPodcastEpisode(podcastId);
-    if (!podcast || podcast.isArchived) {
-      return next();
+    if (!podcast || podcast.isArchived || podcast.status !== "published") {
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      return res.status(404).type("text/plain").send("Podcast episode not found");
     }
     
     log(`Serving SEO-optimized HTML for podcast ${podcastId} to crawler`);
     
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const podcastUrl = `${baseUrl}/podcasts/${podcast.id}`;
+    const escapedBaseUrl = escapeHtml(baseUrl);
+    const escapedPodcastUrl = escapeHtml(podcastUrl);
     
     const description = generateDescription(podcast.description || '', 160);
     const ogDescription = generateDescription(podcast.description || '', 300);
     
-    let imageUrl = podcast.imageUrl || `${baseUrl}/og-default.jpg`;
-    if (imageUrl.startsWith('/')) {
-      imageUrl = `${baseUrl}${imageUrl}`;
-    }
+    const storedImageUrl = resolveSafeHttpUrl(podcast.imageUrl, baseUrl);
+    const imageUrl =
+      storedImageUrl ||
+      resolveSafeHttpUrl("/og-default.jpg", baseUrl) ||
+      `${baseUrl}/og-default.jpg`;
+    const audioUrl = resolveSafeHttpUrl(podcast.audioUrl, baseUrl);
+    const escapedImageUrl = escapeHtml(imageUrl);
+    const escapedAudioUrl = audioUrl ? escapeHtml(audioUrl) : null;
     
     const keywords = extractKeywords(podcast.title, podcast.description || '', []);
     keywords.push('podcast', 'audio', 'episode');
@@ -605,24 +624,24 @@ app.use(async (req, res, next) => {
   
   <title>${escapeHtml(podcast.title)} | The Digital Ledger Podcast</title>
   <meta name="description" content="${escapeHtml(description)}">
-  <meta name="keywords" content="${keywords.join(', ')}">
+  <meta name="keywords" content="${escapeHtml(keywords.join(', '))}">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="${podcastUrl}">
+  <link rel="canonical" href="${escapedPodcastUrl}">
   
   <meta property="og:type" content="music.song">
-  <meta property="og:url" content="${podcastUrl}">
+  <meta property="og:url" content="${escapedPodcastUrl}">
   <meta property="og:title" content="${escapeHtml(podcast.title)}">
   <meta property="og:description" content="${escapeHtml(ogDescription)}">
-  <meta property="og:image" content="${imageUrl}">
+  <meta property="og:image" content="${escapedImageUrl}">
   <meta property="og:site_name" content="The Digital Ledger">
   
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(podcast.title)}">
   <meta name="twitter:description" content="${escapeHtml(ogDescription)}">
-  <meta name="twitter:image" content="${imageUrl}">
+  <meta name="twitter:image" content="${escapedImageUrl}">
   
   <script type="application/ld+json">
-${JSON.stringify(jsonLd, null, 2)}
+${serializeJsonForHtml(jsonLd)}
   </script>
   
   <style>
@@ -639,23 +658,23 @@ ${JSON.stringify(jsonLd, null, 2)}
     <header>
       <h1 itemprop="name">${escapeHtml(podcast.title)}</h1>
       <div class="meta">
-        <time itemprop="datePublished" datetime="${publishedAtISO}">${publishDateFormatted}</time>
-        ${podcast.duration ? `&bull; ${podcast.duration}` : ''}
+        <time itemprop="datePublished" datetime="${escapeHtml(publishedAtISO)}">${escapeHtml(publishDateFormatted)}</time>
+        ${podcast.duration ? `&bull; ${escapeHtml(podcast.duration)}` : ''}
         ${podcast.hostName ? `&bull; Host: ${escapeHtml(podcast.hostName)}` : ''}
         ${podcast.guestName ? `&bull; Guest: ${escapeHtml(podcast.guestName)}` : ''}
       </div>
     </header>
     
-    ${podcast.imageUrl ? `<img src="${imageUrl}" alt="${escapeHtml(podcast.title)}" itemprop="image">` : ''}
+    ${storedImageUrl ? `<img src="${escapeHtml(storedImageUrl)}" alt="${escapeHtml(podcast.title)}" itemprop="image">` : ''}
     
     <div class="description" itemprop="description">
-      ${podcast.description || ''}
+      ${escapeHtml(podcast.description || '')}
     </div>
     
-    ${podcast.audioUrl ? `<a href="${podcast.audioUrl}" class="listen-link" target="_blank" rel="noopener">Listen Now</a>` : ''}
+    ${escapedAudioUrl ? `<a href="${escapedAudioUrl}" class="listen-link" target="_blank" rel="noopener">Listen Now</a>` : ''}
     
     <nav>
-      <p><a href="${baseUrl}/podcasts">← Back to all podcasts</a> | <a href="${baseUrl}">Visit The Digital Ledger</a></p>
+      <p><a href="${escapedBaseUrl}/podcasts">← Back to all podcasts</a> | <a href="${escapedBaseUrl}">Visit The Digital Ledger</a></p>
     </nav>
   </article>
 </body>

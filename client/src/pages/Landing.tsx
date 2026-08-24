@@ -3,10 +3,6 @@ import { Button } from "@/components/ui/button";
 import { SubscribeDialog } from "@/components/SubscribeDialog";
 import { useLocation, Link } from "wouter";
 import { useState } from "react";
-import {
-  VideoPlayerDialog,
-  getYouTubeVideoId,
-} from "@/components/VideoPlayerDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -36,28 +32,12 @@ interface MenuSetting {
 export default function Landing() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [playerOpen, setPlayerOpen] = useState(false);
-  const [playingVideo, setPlayingVideo] = useState<{
-    videoId: string;
-    title: string;
-    episodeId: string;
-  } | null>(null);
   const [showSubscribe, setShowSubscribe] = useState(false);
   const [subscribeTrigger, setSubscribeTrigger] = useState<PopupTrigger>("hero");
 
   const openSubscribe = (trigger: PopupTrigger) => {
     setSubscribeTrigger(trigger);
     setShowSubscribe(true);
-  };
-
-  const handleWatch = (podcast: any) => {
-    const videoId = getYouTubeVideoId(podcast.audioUrl);
-    if (videoId) {
-      setPlayingVideo({ videoId, title: podcast.title, episodeId: podcast.id });
-      setPlayerOpen(true);
-    } else {
-      window.open(podcast.audioUrl, "_blank", "noopener,noreferrer");
-    }
   };
 
   // Fetch menu settings to control section visibility
@@ -435,8 +415,17 @@ export default function Landing() {
                 latestPodcasts.map((podcast: any, index: number) => (
                   <Card
                     key={podcast.id}
-                    className="hover:shadow-md transition-shadow"
+                    className="cursor-pointer hover:shadow-md transition-shadow"
                     data-testid={`podcast-card-${index}`}
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => setLocation(`/podcasts/${podcast.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setLocation(`/podcasts/${podcast.id}`);
+                      }
+                    }}
                   >
                     <div className="aspect-video w-full overflow-hidden rounded-t-lg">
                       <img
@@ -482,7 +471,10 @@ export default function Landing() {
                           <Button
                             className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center space-x-2"
                             data-testid={`button-listen-now-${index}`}
-                            onClick={() => handleWatch(podcast)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setLocation(`/podcasts/${podcast.id}`);
+                            }}
                           >
                             <PlayCircle className="h-5 w-5" />
                             <span>Listen Now</span>
@@ -613,14 +605,6 @@ export default function Landing() {
         </div>
       </section>
 
-      <VideoPlayerDialog
-        open={playerOpen}
-        onOpenChange={setPlayerOpen}
-        videoId={playingVideo?.videoId || null}
-        title={playingVideo?.title}
-        onSubscribe={() => openSubscribe("video_promo")}
-        episodeId={playingVideo?.episodeId}
-      />
     </Layout>
   );
 }

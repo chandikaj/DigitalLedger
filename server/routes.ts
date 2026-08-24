@@ -1669,13 +1669,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/podcasts/:id", async (req, res) => {
+  app.get("/api/podcasts/:id", async (req: any, res) => {
     try {
       const { id } = req.params;
       const episode = await storage.getPodcastEpisode(id);
       if (!episode) {
         return res.status(404).json({ message: "Podcast episode not found" });
       }
+
+      let canSeeUnpublished = false;
+      if (req.session?.userId) {
+        const user = await storage.getUser(req.session.userId);
+        canSeeUnpublished = user?.role === "admin" || user?.role === "editor";
+      }
+
+      if (
+        !canSeeUnpublished &&
+        (episode.status !== "published" || episode.isArchived)
+      ) {
+        return res.status(404).json({ message: "Podcast episode not found" });
+      }
+
       res.json(episode);
     } catch (error) {
       console.error("Error fetching podcast episode:", error);

@@ -690,12 +690,29 @@ export const insertResourceSchema = createInsertSchema(resources).omit({
   downloadCount: true,
 });
 
-export const insertPodcastEpisodeSchema = createInsertSchema(podcastEpisodes).omit({
-  id: true,
-  createdAt: true,
-  playCount: true,
-  likes: true,
-});
+const podcastMediaUrlSchema = z.string().trim().refine((value) => {
+  if (!value) return true;
+  if (value.startsWith("/") && !value.startsWith("//")) return true;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}, "Media URL must be an HTTP(S) URL or a site-relative path");
+
+export const insertPodcastEpisodeSchema = createInsertSchema(podcastEpisodes)
+  .omit({
+    id: true,
+    createdAt: true,
+    playCount: true,
+    likes: true,
+  })
+  .extend({
+    audioUrl: podcastMediaUrlSchema.optional().nullable(),
+    imageUrl: podcastMediaUrlSchema.optional().nullable(),
+  });
 
 export const insertPollSchema = createInsertSchema(polls).omit({
   id: true,
