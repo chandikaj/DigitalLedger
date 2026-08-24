@@ -1541,6 +1541,12 @@ export class DatabaseStorage implements IStorage {
     const [episode] = await db
       .select()
       .from(podcastEpisodes)
+      .where(
+        and(
+          eq(podcastEpisodes.status, 'published'),
+          eq(podcastEpisodes.isArchived, false),
+        ),
+      )
       .orderBy(desc(podcastEpisodes.publishedAt))
       .limit(1);
 

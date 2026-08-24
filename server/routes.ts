@@ -1638,16 +1638,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const user = await storage.getUser(req.session.userId);
         userRole = user?.role || undefined;
         console.log(
-          `[GET /api/podcasts] Authenticated user: ${user?.email}, role: ${userRole}`,
+          `[GET /api/podcasts] Authenticated request, role: ${userRole}`,
         );
       } else {
         console.log(`[GET /api/podcasts] Unauthenticated request (no session)`);
       }
+
+      const canViewArchived =
+        userRole === "admin" || userRole === "editor";
+      const requestedArchived = archivedOnly === "true";
+      if (requestedArchived && !canViewArchived) {
+        return res.status(403).json({ message: "Archived podcasts require editor access" });
+      }
+
       const episodes = await storage.getPodcastEpisodes(
         categoryIds,
         limit ? parseInt(limit as string) : undefined,
         userRole,
-        archivedOnly === "true",
+        requestedArchived,
       );
       console.log(
         `[GET /api/podcasts] Returning ${episodes.length} episodes, userRole: ${userRole}, archivedOnly: ${archivedOnly}, statuses: ${episodes.map((e) => e.status).join(", ")}`,

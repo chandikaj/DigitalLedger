@@ -710,6 +710,9 @@ app.use(async (req, res, next) => {
     const publishedPodcasts = podcasts.filter(p => p.status === 'published' && !p.isArchived).slice(0, 20);
     
     const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const escapedBaseUrl = escapeHtml(baseUrl);
+    const podcastListingUrl = `${baseUrl}/podcasts`;
+    const escapedPodcastListingUrl = escapeHtml(podcastListingUrl);
     
     const jsonLd = {
       "@context": "https://schema.org",
@@ -725,14 +728,21 @@ app.use(async (req, res, next) => {
     };
     
     const podcastListHtml = publishedPodcasts.map(p => {
-      let imgUrl = p.imageUrl || '';
-      if (imgUrl.startsWith('/')) imgUrl = `${baseUrl}${imgUrl}`;
+      const imgUrl = resolveSafeHttpUrl(p.imageUrl, baseUrl);
+      const episodeUrl = escapeHtml(`${baseUrl}/podcasts/${p.id}`);
+      const description = escapeHtml(
+        generateDescription(p.description || '', 200),
+      );
+      const publishedDate = p.publishedAt
+        ? escapeHtml(new Date(p.publishedAt).toLocaleDateString())
+        : '';
+      const duration = p.duration ? ` • ${escapeHtml(p.duration)}` : '';
       return `
       <article>
-        <h2><a href="${baseUrl}/podcasts/${p.id}">${escapeHtml(p.title)}</a></h2>
-        ${p.imageUrl ? `<img src="${imgUrl}" alt="${escapeHtml(p.title)}" style="max-width:200px;">` : ''}
-        <p>${generateDescription(p.description || '', 200)}</p>
-        <p><small>${p.publishedAt ? new Date(p.publishedAt).toLocaleDateString() : ''} ${p.duration ? `• ${p.duration}` : ''}</small></p>
+        <h2><a href="${episodeUrl}">${escapeHtml(p.title)}</a></h2>
+        ${imgUrl ? `<img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(p.title)}" style="max-width:200px;">` : ''}
+        <p>${description}</p>
+        <p><small>${publishedDate}${duration}</small></p>
       </article>`;
     }).join('\n');
     
@@ -746,10 +756,10 @@ app.use(async (req, res, next) => {
   <meta name="description" content="Listen to expert interviews, industry insights, and practical discussions about the future of Corporate Finance and Accounting.">
   <meta name="keywords" content="podcast, finance, accounting, AI, corporate finance, FP&A, CFO">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="${baseUrl}/podcasts">
+  <link rel="canonical" href="${escapedPodcastListingUrl}">
   
   <meta property="og:type" content="website">
-  <meta property="og:url" content="${baseUrl}/podcasts">
+  <meta property="og:url" content="${escapedPodcastListingUrl}">
   <meta property="og:title" content="The Digital Ledger Podcast Hub">
   <meta property="og:description" content="Expert interviews, industry insights, and practical discussions about the future of Corporate Finance and Accounting">
   <meta property="og:site_name" content="The Digital Ledger">
@@ -759,7 +769,7 @@ app.use(async (req, res, next) => {
   <meta name="twitter:description" content="Expert interviews and insights on Corporate Finance and Accounting">
   
   <script type="application/ld+json">
-${JSON.stringify(jsonLd, null, 2)}
+${serializeJsonForHtml(jsonLd)}
   </script>
   
   <style>
@@ -783,7 +793,7 @@ ${JSON.stringify(jsonLd, null, 2)}
   </main>
   
   <nav>
-    <p><a href="${baseUrl}">← Back to The Digital Ledger</a></p>
+    <p><a href="${escapedBaseUrl}">← Back to The Digital Ledger</a></p>
   </nav>
 </body>
 </html>`;

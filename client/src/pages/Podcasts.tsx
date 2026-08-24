@@ -152,11 +152,6 @@ export default function Podcasts() {
     },
   });
 
-  const { data: featuredEpisode } = useQuery({
-    queryKey: ["/api/podcasts/featured"],
-    queryFn: () => fetch("/api/podcasts/featured").then(res => res.json()),
-  });
-
   // Extract unique categories from all episodes (keeps filter buttons stable)
   const categoriesData = allEpisodes?.reduce((acc: NewsCategory[], episode: any) => {
     episode.categories?.forEach((cat: NewsCategory) => {
