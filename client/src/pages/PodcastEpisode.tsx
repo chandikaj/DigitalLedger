@@ -309,29 +309,6 @@ export default function PodcastEpisode() {
             >
               {episode.title}
             </h1>
-            {episode.description && (
-              <p className="mx-auto max-w-3xl text-lg leading-8 text-gray-600 dark:text-gray-300">
-                {episode.description}
-              </p>
-            )}
-            <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" />
-                {formatArticleDate(episode)}
-              </span>
-              {duration && (
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" />
-                  {duration}
-                </span>
-              )}
-              {episode.hostName && (
-                <span className="inline-flex items-center gap-1.5">
-                  <Mic2 className="h-4 w-4" />
-                  Hosted by {episode.hostName}
-                </span>
-              )}
-            </div>
           </header>
 
           <section
@@ -400,6 +377,32 @@ export default function PodcastEpisode() {
                 </div>
               </div>
             )}
+          </section>
+
+          <section className="mx-auto mb-10 max-w-4xl text-center">
+            {episode.description && (
+              <p className="text-lg leading-8 text-gray-600 dark:text-gray-300">
+                {episode.description}
+              </p>
+            )}
+            <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
+              <span className="inline-flex items-center gap-1.5">
+                <Calendar className="h-4 w-4" />
+                {formatArticleDate(episode)}
+              </span>
+              {duration && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" />
+                  {duration}
+                </span>
+              )}
+              {episode.hostName && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Mic2 className="h-4 w-4" />
+                  Hosted by {episode.hostName}
+                </span>
+              )}
+            </div>
           </section>
 
           <div className="mb-10 flex flex-wrap items-center justify-center gap-3">
