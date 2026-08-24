@@ -73,24 +73,19 @@ export default function Landing() {
 
   const { data: allPodcasts } = useQuery({
     queryKey: ["/api/podcasts"],
-    queryFn: () => fetch("/api/podcasts?limit=50").then((res) => res.json()),
+    queryFn: () => fetch("/api/podcasts?limit=3").then((res) => res.json()),
   });
 
   const { data: allNews = [] } = useQuery({
     queryKey: ["/api/news"],
-    queryFn: () => fetch("/api/news?limit=50").then((res) => res.json()),
+    queryFn: () => fetch("/api/news?limit=3").then((res) => res.json()),
   });
 
-  const featuredNews = allNews.filter((article: any) => article.isFeatured);
-  const newsArticles =
-    featuredNews.length > 0 ? featuredNews.slice(0, 3) : allNews.slice(0, 3);
-
-  const featuredPodcasts =
-    allPodcasts?.filter((podcast: any) => podcast.isFeatured) || [];
-  const latestPodcasts =
-    featuredPodcasts.length > 0
-      ? featuredPodcasts.slice(0, 3)
-      : allPodcasts?.slice(0, 3) || [];
+  // Both endpoints return content in newest-first publication order.
+  // The landing page intentionally ignores featured flags so these sections
+  // always show the latest three published articles and podcast episodes.
+  const latestArticles = allNews.slice(0, 3);
+  const latestPodcasts = allPodcasts?.slice(0, 3) || [];
 
   const { data: user } = useQuery({ queryKey: ["/api/auth/user"] });
 
@@ -284,7 +279,7 @@ export default function Landing() {
                 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4"
                 data-testid="news-title"
               >
-                This Week's Articles
+                Latest Articles
               </h2>
               <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto">
                 Two articles a week, on what's actually shifting underneath the
@@ -293,7 +288,7 @@ export default function Landing() {
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {newsArticles.map((article: any) => (
+              {latestArticles.map((article: any) => (
                 <Link key={article.id} href={`/news/${article.id}`}>
                   <Card
                     className="hover:shadow-lg transition-shadow duration-300 relative"
@@ -426,7 +421,7 @@ export default function Landing() {
                 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4"
                 data-testid="podcast-title"
               >
-                The Podcast
+                Latest Podcast Episodes
               </h2>
               <p className="text-gray-600 dark:text-gray-300 text-lg max-w-3xl mx-auto">
                 One podcast episode a week. Conversations on what's actually
