@@ -48,6 +48,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       : (timingSafeEqual(b, b), false);
   };
 
+  const getActiveSessionUser = async (req: any) => {
+    const userId = req.session?.userId;
+    if (!userId) return undefined;
+    const user = await storage.getUser(userId);
+    return user?.isActive ? user : undefined;
+  };
+
+  const canViewPrivateContent = (user: any): boolean =>
+    user?.isActive === true &&
+    (user.role === "admin" || user.role === "editor");
+
   // Session middleware
   app.use(getSession());
 
@@ -616,21 +627,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       // Pass user role to filter by status (admins/editors see all, regular users see only published)
       // Check session for authenticated user since this is a public route
-      let userRole: string | undefined;
-      if (req.session?.userId) {
-        const user = await storage.getUser(req.session.userId);
-        userRole = user?.role || undefined;
+      const user = await getActiveSessionUser(req);
+      const userRole = user?.role || undefined;
+      if (user) {
         console.log(
-          `[GET /api/news] Authenticated user: ${user?.email}, role: ${userRole}`,
+          `[GET /api/news] Authenticated request, role: ${userRole}`,
         );
       } else {
         console.log(`[GET /api/news] Unauthenticated request (no session)`);
       }
+
+      const canViewArchived =
+        userRole === "admin" || userRole === "editor";
+      const requestedArchived = archivedOnly === "true";
+      if (requestedArchived && !canViewArchived) {
+        return res.status(403).json({ message: "Archived articles require editor access" });
+      }
+
       const articles = await storage.getNewsArticles(
         categoryIds,
         limit ? parseInt(limit as string) : undefined,
         userRole,
-        archivedOnly === "true",
+        requestedArchived,
       );
       console.log(
         `[GET /api/news] Returning ${articles.length} articles, userRole: ${userRole}, archivedOnly: ${archivedOnly}, statuses: ${articles.map((a) => a.status).join(", ")}`,
@@ -656,11 +674,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Draft and archived article details are editor/admin previews only.
       // Return the same 404 as a missing article so existence is not leaked.
       if (article.status !== "published" || article.isArchived) {
-        const sessionUserId = (req as any).session?.userId;
-        const user = sessionUserId
-          ? await storage.getUser(sessionUserId)
-          : undefined;
-        if (user?.role !== "admin" && user?.role !== "editor") {
+        const user = await getActiveSessionUser(req);
+        if (!canViewPrivateContent(user)) {
           return res.status(404).json({ message: "Article not found" });
         }
       }
@@ -1151,7 +1166,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/news/:id/comments", async (req, res) => {
     try {
       const articleId = req.params.id;
+      const article = await storage.getNewsArticle(articleId);
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      if (article.status !== "published" || article.isArchived) {
+        const user = await getActiveSessionUser(req);
+        if (!canViewPrivateContent(user)) {
+          return res.status(404).json({ message: "Article not found" });
+        }
+      }
+
       const comments = await storage.getNewsComments(articleId);
+      res.set("Cache-Control", "no-store");
       res.json(comments);
     } catch (error) {
       console.error("Error fetching comments:", error);
@@ -1165,6 +1192,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id;
       const articleId = req.params.id;
       const { content } = req.body;
+
+      const article = await storage.getNewsArticle(articleId);
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      if (
+        (article.status !== "published" || article.isArchived) &&
+        !canViewPrivateContent(req.user)
+      ) {
+        return res.status(404).json({ message: "Article not found" });
+      }
 
       if (!content || content.trim().length === 0) {
         return res.status(400).json({ message: "Comment content is required" });
@@ -1633,10 +1671,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       // Pass user role to filter by status (admins/editors see all, regular users see only published)
       // Check session for authenticated user since this is a public route
-      let userRole: string | undefined;
-      if (req.session?.userId) {
-        const user = await storage.getUser(req.session.userId);
-        userRole = user?.role || undefined;
+      const user = await getActiveSessionUser(req);
+      const userRole = user?.role || undefined;
+      if (user) {
         console.log(
           `[GET /api/podcasts] Authenticated request, role: ${userRole}`,
         );
@@ -1685,11 +1722,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Podcast episode not found" });
       }
 
-      let canSeeUnpublished = false;
-      if (req.session?.userId) {
-        const user = await storage.getUser(req.session.userId);
-        canSeeUnpublished = user?.role === "admin" || user?.role === "editor";
-      }
+      const user = await getActiveSessionUser(req);
+      const canSeeUnpublished = canViewPrivateContent(user);
 
       if (
         !canSeeUnpublished &&
