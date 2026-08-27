@@ -874,7 +874,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             )
             .join("");
         const sourcesHtml = renderSourcesHtml(input.sourceLinks);
-        const content = `${sanitizedBody}\n<section data-article-sources="true"><h2>Sources</h2><ol>${sourcesHtml}</ol></section>`;
+        const sourcesSection = sourcesHtml
+          ? `\n<section data-article-sources="true"><h2>Sources</h2><ol>${sourcesHtml}</ol></section>`
+          : "";
+        const content = `${sanitizedBody}${sourcesSection}`;
         const categoryIds = input.categorySlugs.map(
           (slug) => categoriesBySlug.get(slug.toLowerCase())!.id,
         );
@@ -973,8 +976,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 ? `/public-objects${uploadedObjectPath}`
                 : input.coverImageUrl || null,
               thumbnailUrl: null,
-              sourceName: input.sourceLinks[0].name,
-              sourceUrl: input.sourceLinks[0].url,
+              sourceName: input.sourceLinks[0]?.name || null,
+              sourceUrl: input.sourceLinks[0]?.url || null,
               authorId: null,
               publishedAt: new Date(),
               status: "draft",

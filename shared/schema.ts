@@ -492,13 +492,14 @@ export const automationNewsDraftSchema = z
       .array(
         z
           .object({
-            name: z.string().trim().min(1).max(160),
+            name: z.string().trim().min(1).max(300),
             url: httpsUrlSchema,
           })
           .strict(),
       )
-      .min(1)
-      .max(20),
+      .max(20)
+      .optional()
+      .default([]),
     categorySlugs: z
       .array(
         z
