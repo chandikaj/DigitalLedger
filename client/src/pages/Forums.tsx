@@ -1,7 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -399,7 +399,7 @@ export default function Forums() {
                   >
                     <div className="flex items-start space-x-4">
                       <Avatar className="w-12 h-12">
-                        <AvatarImage src={discussion.author?.profileImageUrl} />
+                        <AvatarImage src={discussion.author?.profileImageUrl} alt="" />
                         <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
                           {discussion.author?.firstName?.[0]}{discussion.author?.lastName?.[0]}
                         </AvatarFallback>
@@ -408,9 +408,11 @@ export default function Forums() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-3 flex-wrap">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white line-clamp-1 hover:text-primary transition-colors" data-testid={`discussion-title-${discussion.id}`}>
-                              {discussion.title}
-                            </h3>
+                            <Link href={`/forums/${discussion.id}`}>
+                              <h3 className="text-lg font-medium text-gray-900 dark:text-white line-clamp-1 hover:text-primary transition-colors" data-testid={`discussion-title-${discussion.id}`}>
+                                {discussion.title}
+                              </h3>
+                            </Link>
                             {discussion.isPinned && (
                               <Badge variant="secondary" className="bg-primary/10 text-primary">
                                 Pinned

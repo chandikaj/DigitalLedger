@@ -135,7 +135,7 @@ export default function DiscussionDetail() {
             {/* Header */}
             <div className="flex items-start gap-4 mb-4">
               <Avatar className="h-12 w-12">
-                <AvatarImage src={discussion.author?.profileImageUrl} />
+                <AvatarImage src={discussion.author?.profileImageUrl} alt="" />
                 <AvatarFallback>
                   {getAuthorInitials(
                     discussion.author?.firstName,
@@ -255,7 +255,7 @@ export default function DiscussionDetail() {
                   <CardContent className="p-4">
                     <div className="flex gap-4">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={reply.author?.profileImageUrl} />
+                        <AvatarImage src={reply.author?.profileImageUrl} alt="" />
                         <AvatarFallback>
                           {getAuthorInitials(
                             reply.author?.firstName,

@@ -283,6 +283,9 @@ export default function Landing() {
                         alt={article.title}
                         className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                         loading="lazy"
+                        decoding="async"
+                        width="800"
+                        height="450"
                       />
                     </div>
                     <CardContent className="p-6">
@@ -427,16 +430,22 @@ export default function Landing() {
                       }
                     }}
                   >
-                    <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-                      <img
-                        src={
-                          podcast.imageUrl ||
-                          "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400"
-                        }
-                        alt={podcast.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    <Link href={`/podcasts/${podcast.id}`}>
+                      <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+                        <img
+                          src={
+                            podcast.imageUrl ||
+                            "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400"
+                          }
+                          alt={podcast.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                          width="800"
+                          height="450"
+                        />
+                      </div>
+                    </Link>
                     <CardContent className="p-6">
                       <div className="flex items-center gap-2 mb-3">
                         <Badge
@@ -452,12 +461,14 @@ export default function Landing() {
                           {podcast.duration}
                         </span>
                       </div>
-                      <h3
-                        className="text-xl font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2"
-                        data-testid={`podcast-title-${index}`}
-                      >
-                        {podcast.title}
-                      </h3>
+                      <Link href={`/podcasts/${podcast.id}`}>
+                        <h3
+                          className="text-xl font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2"
+                          data-testid={`podcast-title-${index}`}
+                        >
+                          {podcast.title}
+                        </h3>
+                      </Link>
                       <p
                         className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3 text-sm"
                         data-testid={`podcast-description-${index}`}
@@ -495,13 +506,14 @@ export default function Landing() {
             </div>
 
             <div className="text-center mt-12">
-              <Button
-                className="bg-primary hover:bg-blue-700 text-white"
-                onClick={() => setLocation("/podcasts")}
-                data-testid="button-view-all-podcasts"
-              >
-                View All Episodes
-              </Button>
+              <Link href="/podcasts">
+                <Button
+                  className="bg-primary hover:bg-blue-700 text-white"
+                  data-testid="button-view-all-podcasts"
+                >
+                  View All Episodes
+                </Button>
+              </Link>
             </div>
           </div>
         </section>
@@ -569,12 +581,13 @@ export default function Landing() {
                       >
                         Latest: {category.latest}
                       </span>
-                      <span
+                      <Link
+                        href="/forums"
                         className="text-primary dark:text-ai-teal font-medium"
                         data-testid={`category-join-${index}`}
                       >
                         Join Discussion →
-                      </span>
+                      </Link>
                     </div>
                   </CardContent>
                 </Card>

@@ -1,0 +1,42 @@
+Complete SEO Process
+What & Why
+Complete the website's SEO work end-to-end so every intended public page is crawlable, indexable, secure, correctly described, and validated against modern technical and on-page SEO requirements.
+
+Done looks like
+Search engines receive valid robots rules, an accurate XML sitemap, canonical URLs, and crawlable HTML for every intended public route
+Draft, archived, private, error, and duplicate pages cannot be indexed or leak content
+Public pages have unique titles, descriptions, canonical tags, Open Graph/Twitter metadata, and appropriate structured data
+Metadata resets correctly during client-side navigation and does not remain stale between pages
+Crawler HTML, sitemap XML, URLs, JSON-LD, and stored article content are safely escaped, sanitized, and protocol-validated
+Article, podcast, listing, homepage, and static-page heading structures, internal links, images, and page copy meet on-page SEO basics
+Mobile behavior, broken links, status codes, redirects, performance fundamentals, and Core Web Vitals risks are checked
+Automated and browser-based validation confirms the important public journeys, crawler responses, and private-content exclusions
+A final SEO status summary clearly separates completed fixes from external actions that require site-owner access
+Out of scope
+Guaranteed rankings, traffic, backlinks, or search-engine indexing timelines
+Paid search campaigns
+Creating or verifying Google Search Console, Bing Webmaster Tools, or analytics accounts without an existing authorized connection
+Large editorial rewrites or a new keyword/content strategy unless required to fix a blocking on-page issue
+Steps
+Establish the indexable route inventory -- Catalogue every public route and classify it as indexable, noindex, authenticated, draft, archived, redirect, or error content.
+Fix crawlability and canonicalization -- Validate robots rules, sitemap contents, production-origin handling, status codes, redirects, canonical consistency, and exclusion of private or duplicate URLs.
+Harden crawler-rendered output -- Standardize escaping, sanitization, safe URL handling, and JSON-LD serialization across article, podcast, homepage, listing, and static crawler responses.
+Complete page metadata -- Ensure every indexable page has unique title, description, canonical, robots, Open Graph, Twitter, and suitable schema markup with clean route-transition behavior.
+Improve on-page SEO -- Check headings, image alt text, internal links, descriptive anchors, content discoverability, and orphan-page risks across primary public pages.
+Review technical performance -- Assess mobile rendering, bundle and font delivery, image loading, caching, mixed content, and the main Core Web Vitals risks without destabilizing the application.
+Run the formal SEO scan -- Record grouped findings, resolve all safe in-scope issues, and rerun the scan until no blocking issue remains.
+Verify end-to-end -- Test normal and crawler requests for representative pages, validate sitemap/robots/XML/JSON-LD, check private-content 404/noindex behavior, run the production build, and inspect runtime/browser logs.
+Deliver the SEO status -- Summarize completed work, validation evidence, remaining non-blocking limitations, and any external webmaster actions requiring owner access.
+Relevant files
+server/index.ts
+server/routes.ts
+shared/schema.ts
+client/index.html
+client/src/App.tsx
+client/src/pages/Landing.tsx
+client/src/pages/Home.tsx
+client/src/pages/News.tsx
+client/src/pages/Article.tsx
+client/src/pages/Podcasts.tsx
+client/src/pages/PodcastEpisode.tsx
+package.json

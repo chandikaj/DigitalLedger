@@ -8,6 +8,59 @@ import { nanoid } from "nanoid";
 
 const viteLogger = createLogger();
 
+const SPA_STATIC_PATHS = new Set([
+  "/",
+  "/about",
+  "/admin",
+  "/admin/categories",
+  "/admin/main-page",
+  "/admin/menu",
+  "/admin/users",
+  "/community",
+  "/forgot-password",
+  "/forums",
+  "/login",
+  "/logout",
+  "/news",
+  "/news/add",
+  "/podcasts",
+  "/podcasts/add",
+  "/reset-password",
+  "/resources",
+  "/settings",
+  "/toolbox",
+  "/unsubscribe",
+  "/verify-email",
+  "/welcome",
+]);
+
+const SPA_DYNAMIC_PATHS = [
+  /^\/forums\/[^/]+$/,
+  /^\/news\/[^/]+$/,
+  /^\/news\/[^/]+\/edit$/,
+  /^\/podcasts\/[^/]+$/,
+  /^\/podcasts\/[^/]+\/edit$/,
+];
+
+function normalizedSpaPath(pathname: string) {
+  return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+}
+
+function isKnownSpaPath(pathname: string) {
+  const normalized = normalizedSpaPath(pathname);
+  return (
+    SPA_STATIC_PATHS.has(normalized) ||
+    SPA_DYNAMIC_PATHS.some((pattern) => pattern.test(normalized))
+  );
+}
+
+function applyHtmlResponseHeaders(res: express.Response, pathname: string) {
+  res.setHeader("Cache-Control", "no-cache");
+  if (!isKnownSpaPath(pathname)) {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+  }
+}
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -40,8 +93,22 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
-  app.use(vite.middlewares);
   app.use("*", async (req, res, next) => {
+    const pathname = new URL(req.originalUrl, "http://localhost").pathname;
+    // Handle document navigations before Vite's middleware so unknown SPA
+    // routes keep their real 404 status. Source-module and asset requests
+    // continue to Vite below, even when their client sends a broad Accept
+    // header.
+    const isViteAssetRequest =
+      path.extname(pathname) !== "" ||
+      /^\/(?:@|src\/|node_modules\/)/.test(pathname);
+    if (
+      isViteAssetRequest &&
+      !(req.headers.accept || "").includes("text/html")
+    ) {
+      return next();
+    }
+
     const url = req.originalUrl;
 
     try {
@@ -59,12 +126,17 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
       const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      applyHtmlResponseHeaders(res, pathname);
+      res
+        .status(isKnownSpaPath(pathname) ? 200 : 404)
+        .set({ "Content-Type": "text/html" })
+        .end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
       next(e);
     }
   });
+  app.use(vite.middlewares);
 }
 
 export function serveStatic(app: Express) {
@@ -76,10 +148,24 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  app.use(
+    express.static(distPath, {
+      index: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        }
+      },
+    }),
+  );
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // Serve the SPA shell for known routes and preserve the app's NotFound UI
+  // with a real 404 status for unknown paths.
+  app.use("*", (req, res) => {
+    const pathname = new URL(req.originalUrl, "http://localhost").pathname;
+    applyHtmlResponseHeaders(res, pathname);
+    res
+      .status(isKnownSpaPath(pathname) ? 200 : 404)
+      .sendFile(path.resolve(distPath, "index.html"));
   });
 }

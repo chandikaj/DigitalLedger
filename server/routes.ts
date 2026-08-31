@@ -1385,8 +1385,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? (newsCategories as string[])
           : [newsCategories as string];
       }
-      // Pass user role to filter by status
-      const userRole = req.user?.role;
+      // Only active editor/admin sessions may receive draft discussions.
+      const userRole = (await getActiveSessionUser(req))?.role ?? undefined;
       const discussions = await storage.getForumDiscussions(
         categoryId as string,
         newsCategoryIds,
@@ -1406,6 +1406,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!discussion) {
         return res.status(404).json({ message: "Discussion not found" });
       }
+
+      if (discussion.status !== "published") {
+        const user = await getActiveSessionUser(req);
+        if (!canViewPrivateContent(user)) {
+          return res.status(404).json({ message: "Discussion not found" });
+        }
+      }
+
+      res.set("Cache-Control", "no-store");
       res.json(discussion);
     } catch (error) {
       console.error("Error fetching forum discussion:", error);
@@ -2143,7 +2152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!entry || now - entry.windowStart >= 60_000) {
       // New window; also evict expired buckets to keep the map bounded
       if (publicApiBuckets.size > 1000) {
-        for (const [k, v] of publicApiBuckets) {
+        for (const [k, v] of Array.from(publicApiBuckets.entries())) {
           if (now - v.windowStart >= 60_000) publicApiBuckets.delete(k);
         }
       }

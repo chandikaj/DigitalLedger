@@ -387,14 +387,19 @@ export default function Podcasts() {
                     </Link>
                   </div>
                 )}
-                <div className="aspect-video w-full overflow-hidden">
-                  <img 
-                    src={episode.imageUrl || "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=300"}
-                    alt={episode.title}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </div>
+                <Link href={`/podcasts/${episode.id}`}>
+                  <div className="aspect-video w-full overflow-hidden">
+                    <img
+                      src={episode.imageUrl || "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=300"}
+                      alt={episode.title}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                      decoding="async"
+                      width="800"
+                      height="450"
+                    />
+                  </div>
+                </Link>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <Badge variant="secondary" data-testid={`episode-number-${episode.id}`}>
@@ -428,9 +433,11 @@ export default function Podcasts() {
                     </div>
                   )}
                   
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2" data-testid={`episode-title-${episode.id}`}>
-                    {episode.title}
-                  </h3>
+                  <Link href={`/podcasts/${episode.id}`}>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2" data-testid={`episode-title-${episode.id}`}>
+                      {episode.title}
+                    </h3>
+                  </Link>
                   
                   <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3" data-testid={`episode-description-${episode.id}`}>
                     {episode.description}

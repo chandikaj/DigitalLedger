@@ -23,8 +23,9 @@ import { getYouTubeVideoId } from "@/components/VideoPlayerDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useEngagementTracking } from "@/hooks/useEngagementTracking";
 import { useToast } from "@/hooks/use-toast";
-import { formatArticleDate } from "@/lib/articleDate";
+import { formatArticleDate, getArticleDate } from "@/lib/articleDate";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getSeoOrigin, useSeoMetadata } from "@/components/SeoMetadata";
 
 const DEFAULT_IMAGE =
   "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=675";
@@ -49,50 +50,6 @@ function isDirectAudioUrl(value: string) {
   } catch {
     return false;
   }
-}
-
-function updatePodcastMetaTags(episode: any) {
-  const baseUrl = window.location.origin;
-  const episodeUrl = `${baseUrl}/podcasts/${episode.id}`;
-  const description = (episode.description || "").replace(/\s+/g, " ").trim().slice(0, 300);
-  const imageUrl = getSafeMediaUrl(episode.imageUrl) || DEFAULT_IMAGE;
-
-  const setMeta = (name: string, content: string, property = false) => {
-    const attribute = property ? "property" : "name";
-    let tag = document.querySelector(
-      `meta[${attribute}="${name}"]`,
-    ) as HTMLMetaElement | null;
-    if (!tag) {
-      tag = document.createElement("meta");
-      tag.setAttribute(attribute, name);
-      document.head.appendChild(tag);
-    }
-    tag.content = content;
-  };
-
-  document.title = `${episode.title} | The Digital Ledger Podcast`;
-  setMeta("description", description);
-  setMeta("og:type", "music.song", true);
-  setMeta("og:url", episodeUrl, true);
-  setMeta("og:title", episode.title, true);
-  setMeta("og:description", description, true);
-  setMeta("og:image", imageUrl, true);
-  setMeta("og:site_name", "The Digital Ledger", true);
-  setMeta("twitter:card", "summary_large_image");
-  setMeta("twitter:url", episodeUrl);
-  setMeta("twitter:title", episode.title);
-  setMeta("twitter:description", description);
-  setMeta("twitter:image", imageUrl);
-
-  let canonical = document.querySelector(
-    'link[rel="canonical"]',
-  ) as HTMLLinkElement | null;
-  if (!canonical) {
-    canonical = document.createElement("link");
-    canonical.rel = "canonical";
-    document.head.appendChild(canonical);
-  }
-  canonical.href = episodeUrl;
 }
 
 function formatDuration(duration?: string | null) {
@@ -153,13 +110,107 @@ export default function PodcastEpisode() {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [id]);
 
-  useEffect(() => {
-    if (episode) updatePodcastMetaTags(episode);
-    return () => {
-      document.title =
-        "The Digital Ledger | Corporate Finance & Accounting Community";
-    };
-  }, [episode]);
+  const episodeDate = episode ? getArticleDate(episode) : null;
+  const episodeModifiedDate = episode?.updatedAt
+    ? new Date(episode.updatedAt)
+    : null;
+  const episodeDescription = (episode?.description || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 300);
+  const episodeUrl = episode ? `/podcasts/${episode.id}` : `/podcasts/${id}`;
+  const seoOrigin = getSeoOrigin();
+  const schemaDuration =
+    episode?.duration && /^\d+$/.test(episode.duration)
+      ? `PT${episode.duration}M`
+      : undefined;
+
+  useSeoMetadata(
+    episode
+      ? {
+          title: `${episode.title} | The Digital Ledger Podcast`,
+          description: episodeDescription,
+          canonical: episodeUrl,
+          robots:
+            (episode.status && episode.status !== "published") || episode.isArchived
+              ? "noindex, nofollow"
+              : undefined,
+          type: "music.song",
+          image: imageUrl,
+          publishedTime: episodeDate?.toISOString(),
+          modifiedTime:
+            episodeModifiedDate && !Number.isNaN(episodeModifiedDate.getTime())
+              ? episodeModifiedDate.toISOString()
+              : episodeDate?.toISOString(),
+          structuredData: [
+            {
+              "@context": "https://schema.org",
+              "@type": "PodcastEpisode",
+              name: episode.title,
+              description: episodeDescription,
+              url: new URL(episodeUrl, seoOrigin).toString(),
+              image: imageUrl,
+              datePublished: episodeDate?.toISOString(),
+              dateModified:
+                episodeModifiedDate && !Number.isNaN(episodeModifiedDate.getTime())
+                  ? episodeModifiedDate.toISOString()
+                  : episodeDate?.toISOString(),
+              duration: schemaDuration,
+              episodeNumber: episode.episodeNumber || undefined,
+              partOfSeries: {
+                "@type": "PodcastSeries",
+                name: "The Digital Ledger Podcast",
+                url: new URL("/podcasts", seoOrigin).toString(),
+              },
+              author: episode.hostName
+                ? { "@type": "Person", name: episode.hostName }
+                : { "@type": "Organization", name: "The Digital Ledger" },
+              contributor: episode.guestName
+                ? { "@type": "Person", name: episode.guestName }
+                : undefined,
+              associatedMedia: mediaUrl
+                ? {
+                    "@type": videoId ? "VideoObject" : "AudioObject",
+                    contentUrl: mediaUrl,
+                    name: episode.title,
+                  }
+                : undefined,
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: "Home",
+                  item: seoOrigin,
+                },
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: "Podcasts",
+                  item: new URL("/podcasts", seoOrigin).toString(),
+                },
+                {
+                  "@type": "ListItem",
+                  position: 3,
+                  name: episode.title,
+                  item: new URL(episodeUrl, seoOrigin).toString(),
+                },
+              ],
+            },
+          ],
+        }
+      : error
+        ? {
+            title: "Podcast Episode Not Found | The Digital Ledger",
+            description: "The requested podcast episode could not be found.",
+            canonical: episodeUrl,
+            robots: "noindex, nofollow",
+          }
+        : null,
+  );
 
   const likeMutation = useMutation({
     mutationFn: () => apiRequest(`/api/podcasts/${id}/like`, "POST"),
@@ -332,6 +383,10 @@ export default function PodcastEpisode() {
                   src={imageUrl}
                   alt=""
                   className="absolute inset-0 h-full w-full object-cover opacity-40"
+                  loading="eager"
+                  decoding="async"
+                  width="1200"
+                  height="675"
                 />
                 <div className="relative z-10 w-full max-w-2xl rounded-xl bg-black/75 p-5 text-center backdrop-blur-sm">
                   <p className="mb-4 font-medium text-white">{episode.title}</p>
@@ -352,6 +407,10 @@ export default function PodcastEpisode() {
                   src={imageUrl}
                   alt={episode.title}
                   className="h-full w-full object-cover opacity-70"
+                  loading="eager"
+                  decoding="async"
+                  width="1200"
+                  height="675"
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
                   {mediaUrl ? (

@@ -177,7 +177,7 @@ export default function Community() {
                       <div key={contributor.id} className="text-center" data-testid={`contributor-${index}`}>
                         <div className="relative inline-block mb-4">
                           <Avatar className="w-20 h-20 mx-auto">
-                            <AvatarImage src={contributor.profileImageUrl} />
+                            <AvatarImage src={contributor.profileImageUrl} alt="" />
                             <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-2xl font-bold">
                               {contributor.firstName?.[0]}{contributor.lastName?.[0]}
                             </AvatarFallback>
@@ -277,7 +277,7 @@ export default function Community() {
                           {index + 1}
                         </div>
                         <Avatar className="w-8 h-8">
-                          <AvatarImage src={contributor.profileImageUrl} />
+                          <AvatarImage src={contributor.profileImageUrl} alt="" />
                           <AvatarFallback className="text-xs">
                             {contributor.firstName?.[0]}{contributor.lastName?.[0]}
                           </AvatarFallback>

@@ -147,6 +147,10 @@ export default function Home() {
                             src={article.imageUrl || "https://images.unsplash.com/photo-1551434678-e076c223a692?w=100&h=100&fit=crop"}
                             alt={article.title}
                             className="w-20 h-20 rounded-lg object-cover"
+                            loading="lazy"
+                            decoding="async"
+                            width="80"
+                            height="80"
                           />
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
@@ -201,7 +205,7 @@ export default function Home() {
                     <CardContent className="p-6">
                       <div className="flex items-start space-x-4">
                         <Avatar>
-                          <AvatarImage src={discussion.author?.profileImageUrl} />
+                          <AvatarImage src={discussion.author?.profileImageUrl} alt="" />
                           <AvatarFallback>
                             {discussion.author?.firstName?.[0]}{discussion.author?.lastName?.[0]}
                           </AvatarFallback>
@@ -215,9 +219,11 @@ export default function Home() {
                               {new Date(discussion.createdAt).toLocaleDateString()}
                             </span>
                           </div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2" data-testid={`discussion-title-${discussion.id}`}>
-                            {discussion.title}
-                          </h3>
+                           <Link href={`/forums/${discussion.id}`}>
+                             <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2" data-testid={`discussion-title-${discussion.id}`}>
+                               {discussion.title}
+                             </h3>
+                           </Link>
                           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                             by {discussion.author?.firstName} {discussion.author?.lastName}
                           </p>
@@ -251,6 +257,10 @@ export default function Home() {
                       src={featuredPodcast.imageUrl || "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=300&h=200&fit=crop"}
                       alt={featuredPodcast.title}
                       className="w-full h-32 rounded-lg object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      width="300"
+                      height="128"
                     />
                     <div>
                       <Badge variant="secondary" className="mb-2">

@@ -26,77 +26,7 @@ import { convertPipeTablesToHTML } from '@/lib/tableUtils';
 import { useEngagementTracking } from '@/hooks/useEngagementTracking';
 import type { PopupTrigger } from '@/lib/tracking';
 import { formatArticleDate, getArticleDate } from "@/lib/articleDate";
-
-// Helper to update document meta tags dynamically for SEO
-function updateMetaTags(article: any) {
-  if (!article) return;
-  
-  const baseUrl = window.location.origin;
-  const articleUrl = `${baseUrl}/news/${article.id}`;
-  
-  // Strip HTML from content for description
-  const plainContent = article.content 
-    ? article.content.replace(/<[^>]*>/g, '').substring(0, 160)
-    : article.excerpt || '';
-  
-  const description = article.excerpt || plainContent;
-  const imageUrl = article.imageUrl?.startsWith('/') 
-    ? `${baseUrl}${article.imageUrl}` 
-    : article.imageUrl || '';
-  
-  // Update title
-  document.title = `${article.title} | The Digital Ledger`;
-  
-  // Helper to set or create meta tag
-  const setMeta = (property: string, content: string, isProperty = false) => {
-    const attr = isProperty ? 'property' : 'name';
-    let meta = document.querySelector(`meta[${attr}="${property}"]`) as HTMLMetaElement;
-    if (!meta) {
-      meta = document.createElement('meta');
-      meta.setAttribute(attr, property);
-      document.head.appendChild(meta);
-    }
-    meta.content = content;
-  };
-  
-  // Primary meta tags
-  setMeta('description', description);
-  setMeta('author', 'The Digital Ledger');
-  
-  // Open Graph
-  setMeta('og:type', 'article', true);
-  setMeta('og:url', articleUrl, true);
-  setMeta('og:title', article.title, true);
-  setMeta('og:description', description, true);
-  setMeta('og:site_name', 'The Digital Ledger', true);
-  if (imageUrl) setMeta('og:image', imageUrl, true);
-  
-  // Twitter Card
-  setMeta('twitter:card', 'summary_large_image');
-  setMeta('twitter:url', articleUrl);
-  setMeta('twitter:title', article.title);
-  setMeta('twitter:description', description);
-  if (imageUrl) setMeta('twitter:image', imageUrl);
-  
-  // Article specific
-  const articleDate = getArticleDate(article);
-  if (articleDate) {
-    setMeta('article:published_time', articleDate.toISOString(), true);
-  } else {
-    document
-      .querySelector('meta[property="article:published_time"]')
-      ?.remove();
-  }
-  
-  // Canonical URL
-  let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
-  if (!canonical) {
-    canonical = document.createElement('link');
-    canonical.rel = 'canonical';
-    document.head.appendChild(canonical);
-  }
-  canonical.href = articleUrl;
-}
+import { getSeoOrigin, useSeoMetadata } from "@/components/SeoMetadata";
 
 const SANITIZE_OPTIONS = {
   ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'span', 'div', 'a', 'img', 'blockquote', 'code', 'pre', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'colgroup', 'col'],
@@ -240,17 +170,95 @@ export default function Article() {
   // Track reading time (per-day accumulation, paused when tab is hidden)
   useEngagementTracking("article", id, !!article && !isEditing);
 
-  // Update meta tags for SEO when article loads
-  useEffect(() => {
-    if (article) {
-      updateMetaTags(article);
-    }
-    
-    // Cleanup - restore default title on unmount
-    return () => {
-      document.title = 'The Digital Ledger | Corporate Finance & Accounting Community';
-    };
-  }, [article]);
+  const articleDate = article ? getArticleDate(article) : null;
+  const modifiedDate = article?.updatedAt ? new Date(article.updatedAt) : null;
+  const articleDescription = article
+    ? (article.excerpt || article.content?.replace(/<[^>]*>/g, " ") || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 160)
+    : "";
+  const articleImage =
+    article?.imageUrl ||
+    "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop&q=80";
+  const articleUrl = article ? `/news/${article.id}` : `/news/${id}`;
+  const seoOrigin = getSeoOrigin();
+
+  useSeoMetadata(
+    article
+      ? {
+          title: `${article.title} | The Digital Ledger`,
+          description: articleDescription,
+          canonical: articleUrl,
+          robots:
+            (article.status && article.status !== "published") || article.isArchived
+              ? "noindex, nofollow"
+              : undefined,
+          type: "article",
+          image: articleImage,
+          author: "The Digital Ledger",
+          publishedTime: articleDate?.toISOString(),
+          modifiedTime:
+            modifiedDate && !Number.isNaN(modifiedDate.getTime())
+              ? modifiedDate.toISOString()
+              : articleDate?.toISOString(),
+          structuredData: [
+            {
+              "@context": "https://schema.org",
+              "@type": "NewsArticle",
+              headline: article.title,
+              description: articleDescription,
+              image: [new URL(articleImage, seoOrigin).toString()],
+              mainEntityOfPage: new URL(articleUrl, seoOrigin).toString(),
+              datePublished: articleDate?.toISOString(),
+              dateModified:
+                modifiedDate && !Number.isNaN(modifiedDate.getTime())
+                  ? modifiedDate.toISOString()
+                  : articleDate?.toISOString(),
+              author: {
+                "@type": "Organization",
+                name: "The Digital Ledger",
+              },
+              publisher: {
+                "@type": "Organization",
+                name: "The Digital Ledger",
+              },
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: "Home",
+                  item: seoOrigin,
+                },
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: "Articles",
+                  item: new URL("/news", seoOrigin).toString(),
+                },
+                {
+                  "@type": "ListItem",
+                  position: 3,
+                  name: article.title,
+                  item: new URL(articleUrl, seoOrigin).toString(),
+                },
+              ],
+            },
+          ],
+        }
+      : error
+        ? {
+            title: "Article Not Found | The Digital Ledger",
+            description: "The requested article could not be found.",
+            canonical: articleUrl,
+            robots: "noindex, nofollow",
+          }
+        : null,
+  );
 
   // Exit-intent detection for non-logged-in users
   useEffect(() => {
@@ -482,7 +490,7 @@ export default function Article() {
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/news/${id}`;
+    const url = `${seoOrigin}/news/${id}`;
     
     try {
       await navigator.clipboard.writeText(url);
@@ -772,6 +780,10 @@ export default function Article() {
                   src={article.imageUrl || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop&q=80"}
                   alt={article.title}
                   className="w-full h-full object-cover"
+                  loading="eager"
+                  decoding="async"
+                  width="800"
+                  height="450"
                   data-testid="article-image"
                   onError={(e) => {
                     // Fallback to default image if the uploaded image fails to load

@@ -129,7 +129,7 @@ export function Navigation() {
             {isAuthenticated && user ? (
               <div className="flex items-center space-x-3">
                 <Avatar className="h-8 w-8" data-testid="avatar-user">
-                  <AvatarImage src={(user as any)?.profileImageUrl || ""} />
+                  <AvatarImage src={(user as any)?.profileImageUrl || ""} alt="" />
                   <AvatarFallback className="bg-gradient-to-br from-accent to-primary text-white text-sm font-semibold">
                     {(user as any)?.firstName?.[0] || "U"}{(user as any)?.lastName?.[0] || ""}
                   </AvatarFallback>

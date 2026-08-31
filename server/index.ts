@@ -5,6 +5,7 @@ import { seedDatabase } from "./seed";
 import { db } from "./db";
 import { users, newsArticles, podcastEpisodes, forumDiscussions } from "@shared/schema";
 import { storage } from "./storage";
+import sanitizeHtml from "sanitize-html";
 
 // ============================================
 // SEO & Bot Detection Utilities
@@ -34,17 +35,104 @@ function serializeJsonForHtml(value: unknown): string {
   );
 }
 
+function escapeXml(text: string): string {
+  return text
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/g, "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+const UNSAFE_ORIGIN_CHARACTERS = /[\u0000-\u001f\u007f<>"'`\\]/;
+
+function getPublicOrigin(req: Request): string {
+  for (const configuredOrigin of [
+    process.env.PUBLIC_ORIGIN,
+    process.env.SITE_URL,
+  ]) {
+    if (!configuredOrigin || UNSAFE_ORIGIN_CHARACTERS.test(configuredOrigin)) {
+      continue;
+    }
+    try {
+      const url = new URL(configuredOrigin.trim());
+      if (
+        url.protocol === "https:" &&
+        !url.username &&
+        !url.password &&
+        url.origin !== "null"
+      ) {
+        return url.origin.replace(/\/+$/, "");
+      }
+    } catch {
+      // Try the next configured origin, then the validated request origin.
+    }
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("A valid HTTPS PUBLIC_ORIGIN or SITE_URL is required in production");
+  }
+
+  const requestOrigin = `${req.protocol}://${req.get("host") || ""}`;
+  if (UNSAFE_ORIGIN_CHARACTERS.test(requestOrigin)) {
+    throw new Error("Invalid request origin");
+  }
+  const url = new URL(requestOrigin);
+  if (
+    (url.protocol !== "https:" && url.protocol !== "http:") ||
+    url.username ||
+    url.password ||
+    url.origin === "null"
+  ) {
+    throw new Error("Invalid request origin");
+  }
+  return url.origin.replace(/\/+$/, "");
+}
+
 function resolveSafeHttpUrl(value: string | null | undefined, baseUrl: string): string | null {
-  if (!value) return null;
+  if (!value || UNSAFE_ORIGIN_CHARACTERS.test(value)) return null;
 
   try {
     const url = new URL(value, baseUrl);
-    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    if (
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password
+    ) {
+      return null;
+    }
     return url.toString();
   } catch {
     return null;
   }
 }
+
+const ARTICLE_CONTENT_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: [
+    "p", "br", "h2", "h3", "h4", "strong", "b", "em", "i", "u", "s",
+    "blockquote", "ul", "ol", "li", "a", "code", "pre", "hr", "table",
+    "thead", "tbody", "tr", "th", "td",
+  ],
+  allowedSchemes: ["https"],
+  allowProtocolRelative: false,
+  enforceHtmlBoundary: true,
+  transformTags: {
+    a: (_tagName, attribs) => ({
+      tagName: "a",
+      attribs: {
+        ...attribs,
+        target: "_blank",
+        rel: "noopener noreferrer nofollow",
+      },
+    }),
+  },
+  allowedAttributes: {
+    a: ["href", "title", "target", "rel"],
+    th: ["colspan", "rowspan"],
+    td: ["colspan", "rowspan"],
+  },
+};
 
 // Strip HTML tags and clean text for meta descriptions
 function stripHtml(html: string): string {
@@ -134,11 +222,25 @@ const app = express();
 // This ensures Express correctly recognizes HTTPS connections and sets secure cookies
 app.set("trust proxy", 1);
 
+// Prevent private, authentication, editing, administrative, and utility
+// responses from being indexed without changing how those routes function.
+app.use((req, res, next) => {
+  const noIndexPath =
+    /^\/api(?:\/|$)/.test(req.path) ||
+    /^\/(?:login|logout|signup|register|settings|welcome|verify-email|forgot-password|reset-password|unsubscribe|admin|editor)(?:\/|$)/.test(req.path) ||
+    /^\/news\/(?:add|[^/]+\/edit)\/?$/.test(req.path) ||
+    /^\/podcasts\/(?:add|[^/]+\/edit)\/?$/.test(req.path);
+  if (noIndexPath) {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+  }
+  next();
+});
+
 // ============================================
 // Robots.txt - Allow all crawlers
 // ============================================
 app.get('/robots.txt', (req, res) => {
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const baseUrl = getPublicOrigin(req);
   res.type('text/plain');
   res.send(`# The Digital Ledger - Robots.txt
 # Welcome crawlers! We want our content indexed and shared.
@@ -198,7 +300,8 @@ Sitemap: ${baseUrl}/sitemap.xml
 // ============================================
 app.get('/sitemap.xml', async (req, res) => {
   try {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getPublicOrigin(req);
+    const xmlBaseUrl = escapeXml(baseUrl);
     const articles = await storage.getNewsArticles();
     const podcasts = await storage.getPodcastEpisodes();
     
@@ -211,37 +314,47 @@ app.get('/sitemap.xml', async (req, res) => {
   
   <!-- Homepage -->
   <url>
-    <loc>${baseUrl}/</loc>
-    <lastmod>${now}</lastmod>
+    <loc>${xmlBaseUrl}/</loc>
+    <lastmod>${escapeXml(now)}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   
   <!-- Static Pages -->
   <url>
-    <loc>${baseUrl}/about</loc>
+    <loc>${xmlBaseUrl}/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>${baseUrl}/news</loc>
-    <lastmod>${now}</lastmod>
+    <loc>${xmlBaseUrl}/news</loc>
+    <lastmod>${escapeXml(now)}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>${baseUrl}/podcasts</loc>
-    <lastmod>${now}</lastmod>
+    <loc>${xmlBaseUrl}/podcasts</loc>
+    <lastmod>${escapeXml(now)}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>${baseUrl}/forums</loc>
+    <loc>${xmlBaseUrl}/forums</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>${baseUrl}/resources</loc>
+    <loc>${xmlBaseUrl}/resources</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${xmlBaseUrl}/community</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${xmlBaseUrl}/toolbox</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -250,12 +363,13 @@ app.get('/sitemap.xml', async (req, res) => {
     // Add news articles
     for (const article of articles.filter(a => !a.isArchived && a.status === 'published')) {
       const lastMod = article.publishedAt ? new Date(article.publishedAt).toISOString() : now;
-      const imageUrl = article.imageUrl ? (article.imageUrl.startsWith('/') ? `${baseUrl}${article.imageUrl}` : article.imageUrl) : '';
+      const imageUrl = resolveSafeHttpUrl(article.imageUrl, baseUrl);
+      const articleLoc = `${baseUrl}/news/${encodeURIComponent(article.id)}`;
       
       sitemap += `
   <url>
-    <loc>${baseUrl}/news/${article.id}</loc>
-    <lastmod>${lastMod}</lastmod>
+    <loc>${escapeXml(articleLoc)}</loc>
+    <lastmod>${escapeXml(lastMod)}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
     <news:news>
@@ -263,20 +377,21 @@ app.get('/sitemap.xml', async (req, res) => {
         <news:name>The Digital Ledger</news:name>
         <news:language>en</news:language>
       </news:publication>
-      <news:publication_date>${lastMod}</news:publication_date>
-      <news:title>${escapeHtml(article.title)}</news:title>
+      <news:publication_date>${escapeXml(lastMod)}</news:publication_date>
+      <news:title>${escapeXml(article.title)}</news:title>
     </news:news>
-    ${imageUrl ? `<image:image><image:loc>${imageUrl}</image:loc><image:title>${escapeHtml(article.title)}</image:title></image:image>` : ''}
+    ${imageUrl ? `<image:image><image:loc>${escapeXml(imageUrl)}</image:loc><image:title>${escapeXml(article.title)}</image:title></image:image>` : ''}
   </url>`;
     }
 
     // Add podcast episodes
     for (const podcast of podcasts.filter(p => !p.isArchived && p.status === 'published')) {
       const lastMod = podcast.publishedAt ? new Date(podcast.publishedAt).toISOString() : now;
+      const podcastLoc = `${baseUrl}/podcasts/${encodeURIComponent(podcast.id)}`;
       sitemap += `
   <url>
-    <loc>${baseUrl}/podcasts/${podcast.id}</loc>
-    <lastmod>${lastMod}</lastmod>
+    <loc>${escapeXml(podcastLoc)}</loc>
+    <lastmod>${escapeXml(lastMod)}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>`;
@@ -304,17 +419,6 @@ app.use(async (req, res, next) => {
     return next();
   }
   
-  const userAgent = req.headers['user-agent'] || '';
-  
-  // Check for ChatGPT Agent mode (uses standard Chrome UA but has special signature header)
-  const signatureAgent = req.headers['signature-agent'] as string || '';
-  const isChatGPTAgent = signatureAgent.includes('chatgpt.com');
-  
-  // If not a bot and not ChatGPT Agent mode, let Vite/SPA handle it
-  if (!isBot(userAgent) && !isChatGPTAgent) {
-    return next();
-  }
-  
   try {
     const articleId = match[1];
     const article = await storage.getNewsArticle(articleId);
@@ -322,6 +426,15 @@ app.use(async (req, res, next) => {
       res.setHeader("Cache-Control", "no-store");
       res.setHeader("X-Robots-Tag", "noindex, nofollow");
       return res.status(404).send("Article not found");
+    }
+
+    const userAgent = req.headers['user-agent'] || '';
+    const signatureAgent = req.headers['signature-agent'] as string || '';
+    const isChatGPTAgent = signatureAgent.includes('chatgpt.com');
+    // Valid browser requests remain SPA-rendered, after the public visibility
+    // check above has prevented SPA soft-404s for private content.
+    if (!isBot(userAgent) && !isChatGPTAgent) {
+      return next();
     }
     
     log(`Serving SEO-optimized HTML for article ${articleId} to crawler`);
@@ -342,8 +455,8 @@ app.use(async (req, res, next) => {
       }
     }
     
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const articleUrl = `${baseUrl}/news/${article.id}`;
+    const baseUrl = getPublicOrigin(req);
+    const articleUrl = `${baseUrl}/news/${encodeURIComponent(article.id)}`;
     
     // Generate optimized description
     const description = article.excerpt 
@@ -356,10 +469,11 @@ app.use(async (req, res, next) => {
       : generateDescription(article.content || '', 300);
     
     // Ensure image URL is absolute
-    let imageUrl = article.imageUrl || `${baseUrl}/og-default.png`;
-    if (imageUrl.startsWith('/')) {
-      imageUrl = `${baseUrl}${imageUrl}`;
-    }
+    const storedImageUrl = resolveSafeHttpUrl(article.imageUrl, baseUrl);
+    const imageUrl =
+      storedImageUrl ||
+      resolveSafeHttpUrl("/og-default.png", baseUrl) ||
+      `${baseUrl}/og-default.png`;
     
     // Generate keywords
     const keywords = extractKeywords(article.title, article.content || '', categoryNames);
@@ -412,8 +526,12 @@ app.use(async (req, res, next) => {
     };
     
     // Clean article content - keep HTML structure for readability
-    const articleContent = article.content || '';
-    const hasEmbeddedSources = articleContent.includes('data-article-sources="true"');
+    const articleContent = sanitizeHtml(
+      article.content || "",
+      ARTICLE_CONTENT_SANITIZE_OPTIONS,
+    );
+    const hasEmbeddedSources = (article.content || '').includes('data-article-sources="true"');
+    const safeSourceUrl = resolveSafeHttpUrl(article.sourceUrl, baseUrl);
     const escapedArticleUrl = escapeHtml(articleUrl);
     const escapedBaseUrl = escapeHtml(baseUrl);
     const escapedImageUrl = escapeHtml(imageUrl);
@@ -496,7 +614,7 @@ ${serializeJsonForHtml(jsonLd)}
           By <span itemprop="name">${escapeHtml(authorName)}</span>
         </span>
         &bull; 
-        <time itemprop="datePublished" datetime="${publishedAtISO}">${publishDateFormatted}</time>
+        <time itemprop="datePublished" datetime="${escapeHtml(publishedAtISO)}">${escapeHtml(publishDateFormatted)}</time>
         &bull; 
         ${readingTime} min read
         ${categoryNames.length > 0 ? `&bull; ${categoryNames.map(c => escapeHtml(c)).join(', ')}` : ''}
@@ -505,7 +623,7 @@ ${serializeJsonForHtml(jsonLd)}
     
     ${article.excerpt ? `<p class="excerpt" itemprop="description">${escapeHtml(article.excerpt)}</p>` : ''}
     
-    ${article.imageUrl ? `
+    ${storedImageUrl ? `
     <figure>
       <img src="${escapedImageUrl}" alt="${escapeHtml(article.title)}" itemprop="image">
     </figure>
@@ -515,9 +633,9 @@ ${serializeJsonForHtml(jsonLd)}
       ${articleContent}
     </div>
     
-    ${article.sourceUrl && !hasEmbeddedSources ? `
+    ${safeSourceUrl && !hasEmbeddedSources ? `
     <footer class="source">
-      <p>Source: <a href="${escapeHtml(article.sourceUrl)}" rel="noopener" target="_blank">${escapeHtml(article.sourceName || 'Original Source')}</a></p>
+      <p>Source: <a href="${escapeHtml(safeSourceUrl)}" rel="noopener noreferrer nofollow" target="_blank">${escapeHtml(article.sourceName || 'Original Source')}</a></p>
     </footer>
     ` : ''}
     
@@ -533,7 +651,7 @@ ${serializeJsonForHtml(jsonLd)}
 </html>`;
     
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.setHeader('Cache-Control', 'no-store');
     return res.send(html);
   } catch (error) {
     console.error('Error serving bot-friendly article:', error);
@@ -551,26 +669,26 @@ app.use(async (req, res, next) => {
     return next();
   }
   
-  const userAgent = req.headers['user-agent'] || '';
-  const signatureAgent = req.headers['signature-agent'] as string || '';
-  const isChatGPTAgent = signatureAgent.includes('chatgpt.com');
-  
-  if (!isBot(userAgent) && !isChatGPTAgent) {
-    return next();
-  }
-  
   try {
     const podcastId = match[1];
     const podcast = await storage.getPodcastEpisode(podcastId);
     if (!podcast || podcast.isArchived || podcast.status !== "published") {
+      res.setHeader("Cache-Control", "no-store");
       res.setHeader("X-Robots-Tag", "noindex, nofollow");
       return res.status(404).type("text/plain").send("Podcast episode not found");
+    }
+
+    const userAgent = req.headers['user-agent'] || '';
+    const signatureAgent = req.headers['signature-agent'] as string || '';
+    const isChatGPTAgent = signatureAgent.includes('chatgpt.com');
+    if (!isBot(userAgent) && !isChatGPTAgent) {
+      return next();
     }
     
     log(`Serving SEO-optimized HTML for podcast ${podcastId} to crawler`);
     
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const podcastUrl = `${baseUrl}/podcasts/${podcast.id}`;
+    const baseUrl = getPublicOrigin(req);
+    const podcastUrl = `${baseUrl}/podcasts/${encodeURIComponent(podcast.id)}`;
     const escapedBaseUrl = escapeHtml(baseUrl);
     const escapedPodcastUrl = escapeHtml(podcastUrl);
     
@@ -580,8 +698,8 @@ app.use(async (req, res, next) => {
     const storedImageUrl = resolveSafeHttpUrl(podcast.imageUrl, baseUrl);
     const imageUrl =
       storedImageUrl ||
-      resolveSafeHttpUrl("/og-default.jpg", baseUrl) ||
-      `${baseUrl}/og-default.jpg`;
+      resolveSafeHttpUrl("/og-default.png", baseUrl) ||
+      `${baseUrl}/og-default.png`;
     const audioUrl = resolveSafeHttpUrl(podcast.audioUrl, baseUrl);
     const escapedImageUrl = escapeHtml(imageUrl);
     const escapedAudioUrl = audioUrl ? escapeHtml(audioUrl) : null;
@@ -633,12 +751,17 @@ app.use(async (req, res, next) => {
   <meta property="og:title" content="${escapeHtml(podcast.title)}">
   <meta property="og:description" content="${escapeHtml(ogDescription)}">
   <meta property="og:image" content="${escapedImageUrl}">
+  <meta property="og:image:alt" content="${escapeHtml(podcast.title)}">
+  <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="The Digital Ledger">
   
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(podcast.title)}">
   <meta name="twitter:description" content="${escapeHtml(ogDescription)}">
   <meta name="twitter:image" content="${escapedImageUrl}">
+  <meta name="twitter:image:alt" content="${escapeHtml(podcast.title)}">
+  <meta name="twitter:url" content="${escapedPodcastUrl}">
+  <meta name="twitter:site" content="@thedigitalledger">
   
   <script type="application/ld+json">
 ${serializeJsonForHtml(jsonLd)}
@@ -681,10 +804,124 @@ ${serializeJsonForHtml(jsonLd)}
 </html>`;
     
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Cache-Control', 'no-store');
     return res.send(html);
   } catch (error) {
     console.error('Error serving bot-friendly podcast:', error);
+    next();
+  }
+});
+
+// Validate forum detail routes for every visitor and provide complete,
+// server-rendered content to recognized crawlers.
+app.use(async (req, res, next) => {
+  const match = req.path.match(/^\/forums\/([a-zA-Z0-9-]+)$/);
+  if (!match) return next();
+
+  try {
+    const discussion = await storage.getForumDiscussion(match[1]);
+    if (!discussion || discussion.status !== "published") {
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      return res.status(404).type("text/plain").send("Discussion not found");
+    }
+
+    const userAgent = req.headers["user-agent"] || "";
+    const signatureAgent = (req.headers["signature-agent"] as string) || "";
+    if (!isBot(userAgent) && !signatureAgent.includes("chatgpt.com")) {
+      return next();
+    }
+
+    const baseUrl = getPublicOrigin(req);
+    const discussionUrl = `${baseUrl}/forums/${encodeURIComponent(discussion.id)}`;
+    const escapedDiscussionUrl = escapeHtml(discussionUrl);
+    const escapedBaseUrl = escapeHtml(baseUrl);
+    const imageUrl = `${baseUrl}/og-default.png`;
+    const description = generateDescription(discussion.content || "", 300);
+    const authorName =
+      `${discussion.author?.firstName || ""} ${discussion.author?.lastName || ""}`.trim() ||
+      "The Digital Ledger Community";
+    const publishedAt = discussion.createdAt ? new Date(discussion.createdAt) : new Date();
+    const publishedAtIso = publishedAt.toISOString();
+    const publishedDate = publishedAt.toLocaleDateString("en-US", {
+      year: "numeric", month: "long", day: "numeric",
+    });
+    const categoryName = discussion.category?.name || "Community";
+    const jsonLd = [
+      {
+        "@context": "https://schema.org",
+        "@type": "DiscussionForumPosting",
+        "headline": discussion.title,
+        "text": stripHtml(discussion.content || ""),
+        "description": description,
+        "url": discussionUrl,
+        "datePublished": publishedAtIso,
+        "author": { "@type": "Person", "name": authorName },
+        "publisher": {
+          "@type": "Organization",
+          "name": "The Digital Ledger",
+          "url": baseUrl,
+        },
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl },
+          { "@type": "ListItem", "position": 2, "name": "Forums", "item": `${baseUrl}/forums` },
+          { "@type": "ListItem", "position": 3, "name": discussion.title, "item": discussionUrl },
+        ],
+      },
+    ];
+    const discussionContent = sanitizeHtml(discussion.content || "", ARTICLE_CONTENT_SANITIZE_OPTIONS);
+    const repliesHtml = discussion.replies.map((reply) => {
+      const replyAuthor =
+        `${reply.author?.firstName || ""} ${reply.author?.lastName || ""}`.trim() ||
+        "Community member";
+      const replyDate = reply.createdAt
+        ? escapeHtml(new Date(reply.createdAt).toLocaleDateString("en-US"))
+        : "";
+      return `<article class="reply"><p class="meta">${escapeHtml(replyAuthor)}${replyDate ? ` · ${replyDate}` : ""}</p><div>${sanitizeHtml(reply.content || "", ARTICLE_CONTENT_SANITIZE_OPTIONS)}</div></article>`;
+    }).join("\n");
+
+    const html = `<!DOCTYPE html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(discussion.title)} | The Digital Ledger Forums</title>
+  <meta name="description" content="${escapeHtml(description)}">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="${escapedDiscussionUrl}">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="${escapedDiscussionUrl}">
+  <meta property="og:title" content="${escapeHtml(discussion.title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:image" content="${escapeHtml(imageUrl)}">
+  <meta property="og:image:alt" content="The Digital Ledger Community Forums">
+  <meta property="og:site_name" content="The Digital Ledger">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="${escapedDiscussionUrl}">
+  <meta name="twitter:title" content="${escapeHtml(discussion.title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <meta name="twitter:image" content="${escapeHtml(imageUrl)}">
+  <meta name="twitter:image:alt" content="The Digital Ledger Community Forums">
+  <meta name="twitter:site" content="@thedigitalledger">
+  <script type="application/ld+json">${serializeJsonForHtml(jsonLd)}</script>
+  <style>body{font-family:system-ui,sans-serif;max-width:800px;margin:auto;padding:20px;line-height:1.6}.meta{color:#666}.reply{border-top:1px solid #ddd;margin-top:1.5em;padding-top:1em}img{max-width:100%;height:auto}</style>
+</head>
+<body>
+  <nav aria-label="Breadcrumb"><a href="${escapedBaseUrl}">Home</a> / <a href="${escapedBaseUrl}/forums">Forums</a> / ${escapeHtml(discussion.title)}</nav>
+  <main><article><h1>${escapeHtml(discussion.title)}</h1><p class="meta">Posted by ${escapeHtml(authorName)} in ${escapeHtml(categoryName)} · <time datetime="${escapeHtml(publishedAtIso)}">${escapeHtml(publishedDate)}</time></p><div>${discussionContent}</div></article>
+  <section><h2>Replies</h2>${repliesHtml || "<p>No replies yet.</p>"}</section></main>
+</body>
+</html>`;
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    return res.send(html);
+  } catch (error) {
+    console.error("Error serving bot-friendly forum discussion:", error);
     next();
   }
 });
@@ -709,10 +946,11 @@ app.use(async (req, res, next) => {
     const podcasts = await storage.getPodcastEpisodes();
     const publishedPodcasts = podcasts.filter(p => p.status === 'published' && !p.isArchived).slice(0, 20);
     
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getPublicOrigin(req);
     const escapedBaseUrl = escapeHtml(baseUrl);
     const podcastListingUrl = `${baseUrl}/podcasts`;
     const escapedPodcastListingUrl = escapeHtml(podcastListingUrl);
+    const defaultImageUrl = escapeHtml(`${baseUrl}/og-default.png`);
     
     const jsonLd = {
       "@context": "https://schema.org",
@@ -729,7 +967,7 @@ app.use(async (req, res, next) => {
     
     const podcastListHtml = publishedPodcasts.map(p => {
       const imgUrl = resolveSafeHttpUrl(p.imageUrl, baseUrl);
-      const episodeUrl = escapeHtml(`${baseUrl}/podcasts/${p.id}`);
+      const episodeUrl = escapeHtml(`${baseUrl}/podcasts/${encodeURIComponent(p.id)}`);
       const description = escapeHtml(
         generateDescription(p.description || '', 200),
       );
@@ -762,11 +1000,18 @@ app.use(async (req, res, next) => {
   <meta property="og:url" content="${escapedPodcastListingUrl}">
   <meta property="og:title" content="The Digital Ledger Podcast Hub">
   <meta property="og:description" content="Expert interviews, industry insights, and practical discussions about the future of Corporate Finance and Accounting">
+  <meta property="og:image" content="${defaultImageUrl}">
+  <meta property="og:image:alt" content="The Digital Ledger Podcast Hub">
+  <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="The Digital Ledger">
   
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="The Digital Ledger Podcast Hub">
   <meta name="twitter:description" content="Expert interviews and insights on Corporate Finance and Accounting">
+  <meta name="twitter:image" content="${defaultImageUrl}">
+  <meta name="twitter:image:alt" content="The Digital Ledger Podcast Hub">
+  <meta name="twitter:url" content="${escapedPodcastListingUrl}">
+  <meta name="twitter:site" content="@thedigitalledger">
   
   <script type="application/ld+json">
 ${serializeJsonForHtml(jsonLd)}
@@ -799,7 +1044,7 @@ ${serializeJsonForHtml(jsonLd)}
 </html>`;
     
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=1800');
+    res.setHeader('Cache-Control', 'no-store');
     return res.send(html);
   } catch (error) {
     console.error('Error serving bot-friendly podcasts listing:', error);
@@ -831,7 +1076,9 @@ app.use(async (req, res, next) => {
     const recentArticles = articles.filter(a => a.status === 'published' && !a.isArchived).slice(0, 6);
     const recentPodcasts = podcasts.filter(p => p.status === 'published' && !p.isArchived).slice(0, 3);
     
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getPublicOrigin(req);
+    const escapedBaseUrl = escapeHtml(baseUrl);
+    const defaultImageUrl = escapeHtml(`${baseUrl}/og-default.png`);
     
     const jsonLd = {
       "@context": "https://schema.org",
@@ -845,8 +1092,8 @@ app.use(async (req, res, next) => {
       }
     };
     
-    const articlesHtml = recentArticles.map(a => `<li><a href="${baseUrl}/news/${a.id}">${escapeHtml(a.title)}</a></li>`).join('\n');
-    const podcastsHtml = recentPodcasts.map(p => `<li><a href="${baseUrl}/podcasts/${p.id}">${escapeHtml(p.title)}</a></li>`).join('\n');
+    const articlesHtml = recentArticles.map(a => `<li><a href="${escapedBaseUrl}/news/${encodeURIComponent(a.id)}">${escapeHtml(a.title)}</a></li>`).join('\n');
+    const podcastsHtml = recentPodcasts.map(p => `<li><a href="${escapedBaseUrl}/podcasts/${encodeURIComponent(p.id)}">${escapeHtml(p.title)}</a></li>`).join('\n');
     
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -858,20 +1105,27 @@ app.use(async (req, res, next) => {
   <meta name="description" content="Where CFOs, Controllers, FP&A leaders, and senior finance professionals come to stay sharp and stay ahead. Join a growing community focused on AI, finance transformation, and modern corporate finance.">
   <meta name="keywords" content="corporate finance, accounting, CFO, controller, FP&A, AI, finance transformation, digital ledger">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="${baseUrl}">
+  <link rel="canonical" href="${escapedBaseUrl}">
   
   <meta property="og:type" content="website">
-  <meta property="og:url" content="${baseUrl}">
+  <meta property="og:url" content="${escapedBaseUrl}">
   <meta property="og:title" content="The Digital Ledger | Corporate Finance & Accounting Community">
   <meta property="og:description" content="Where CFOs, Controllers, FP&A leaders, and senior finance professionals come to stay sharp and stay ahead.">
+  <meta property="og:image" content="${defaultImageUrl}">
+  <meta property="og:image:alt" content="The Digital Ledger">
+  <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="The Digital Ledger">
   
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="The Digital Ledger">
   <meta name="twitter:description" content="Where CFOs, Controllers, FP&A leaders, and senior finance professionals stay sharp and stay ahead.">
+  <meta name="twitter:image" content="${defaultImageUrl}">
+  <meta name="twitter:image:alt" content="The Digital Ledger">
+  <meta name="twitter:url" content="${escapedBaseUrl}">
+  <meta name="twitter:site" content="@thedigitalledger">
   
   <script type="application/ld+json">
-${JSON.stringify(jsonLd, null, 2)}
+ ${serializeJsonForHtml(jsonLd)}
   </script>
   
   <style>
@@ -897,28 +1151,28 @@ ${JSON.stringify(jsonLd, null, 2)}
     <section>
       <h2>Latest Insights in Corporate Finance, FP&A, Accounting and AI-Driven Operations</h2>
       <ul>${articlesHtml || '<li>No articles available yet.</li>'}</ul>
-      <p><a href="${baseUrl}/news">View all articles →</a></p>
+      <p><a href="${escapedBaseUrl}/news">View all articles →</a></p>
     </section>
     
     <section>
       <h2>The Digital Ledger Podcast Hub</h2>
       <ul>${podcastsHtml || '<li>No podcasts available yet.</li>'}</ul>
-      <p><a href="${baseUrl}/podcasts">View all podcasts →</a></p>
+      <p><a href="${escapedBaseUrl}/podcasts">View all podcasts →</a></p>
     </section>
   </main>
   
   <nav>
-    <a href="${baseUrl}/news">News & Insights</a>
-    <a href="${baseUrl}/podcasts">Podcasts</a>
-    <a href="${baseUrl}/forums">Forums</a>
-    <a href="${baseUrl}/resources">Resources</a>
-    <a href="${baseUrl}/about">About Us</a>
+    <a href="${escapedBaseUrl}/news">News & Insights</a>
+    <a href="${escapedBaseUrl}/podcasts">Podcasts</a>
+    <a href="${escapedBaseUrl}/forums">Forums</a>
+    <a href="${escapedBaseUrl}/resources">Resources</a>
+    <a href="${escapedBaseUrl}/about">About Us</a>
   </nav>
 </body>
 </html>`;
     
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=1800');
+    res.setHeader('Cache-Control', 'no-store');
     return res.send(html);
   } catch (error) {
     console.error('Error serving bot-friendly homepage:', error);
@@ -948,7 +1202,9 @@ app.use(async (req, res, next) => {
     const articles = await storage.getNewsArticles();
     const publishedArticles = articles.filter(a => a.status === 'published' && !a.isArchived).slice(0, 20);
     
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getPublicOrigin(req);
+    const escapedBaseUrl = escapeHtml(baseUrl);
+    const defaultImageUrl = escapeHtml(`${baseUrl}/og-default.png`);
     
     const jsonLd = {
       "@context": "https://schema.org",
@@ -960,14 +1216,14 @@ app.use(async (req, res, next) => {
     };
     
     const articlesHtml = publishedArticles.map(a => {
-      let imgUrl = a.imageUrl || '';
-      if (imgUrl.startsWith('/')) imgUrl = `${baseUrl}${imgUrl}`;
+      const imgUrl = resolveSafeHttpUrl(a.imageUrl, baseUrl);
+      const articleUrl = `${baseUrl}/news/${encodeURIComponent(a.id)}`;
       return `
       <article>
-        <h2><a href="${baseUrl}/news/${a.id}">${escapeHtml(a.title)}</a></h2>
-        ${a.imageUrl ? `<img src="${imgUrl}" alt="${escapeHtml(a.title)}" style="max-width:200px;">` : ''}
-        <p>${generateDescription(a.excerpt || a.content || '', 200)}</p>
-        <p><small>${a.publishedAt ? new Date(a.publishedAt).toLocaleDateString() : ''}</small></p>
+        <h2><a href="${escapeHtml(articleUrl)}">${escapeHtml(a.title)}</a></h2>
+        ${imgUrl ? `<img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(a.title)}" style="max-width:200px;">` : ''}
+        <p>${escapeHtml(generateDescription(a.excerpt || a.content || '', 200))}</p>
+        <p><small>${a.publishedAt ? escapeHtml(new Date(a.publishedAt).toLocaleDateString()) : ''}</small></p>
       </article>`;
     }).join('\n');
     
@@ -981,16 +1237,26 @@ app.use(async (req, res, next) => {
   <meta name="description" content="Stay up to date with concise, high-quality insights from trusted sources, academic research, and industry leaders. Perfect for busy finance professionals.">
   <meta name="keywords" content="finance news, accounting news, corporate finance, FP&A, AI, CFO insights">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="${baseUrl}/news">
+  <link rel="canonical" href="${escapedBaseUrl}/news">
   
   <meta property="og:type" content="website">
-  <meta property="og:url" content="${baseUrl}/news">
+  <meta property="og:url" content="${escapedBaseUrl}/news">
   <meta property="og:title" content="News & Insights | The Digital Ledger">
   <meta property="og:description" content="Stay up to date with concise, high-quality insights for finance professionals.">
+  <meta property="og:image" content="${defaultImageUrl}">
+  <meta property="og:image:alt" content="News and Insights from The Digital Ledger">
+  <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="The Digital Ledger">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="News & Insights | The Digital Ledger">
+  <meta name="twitter:description" content="Stay up to date with concise, high-quality insights for finance professionals.">
+  <meta name="twitter:image" content="${defaultImageUrl}">
+  <meta name="twitter:image:alt" content="News and Insights from The Digital Ledger">
+  <meta name="twitter:url" content="${escapedBaseUrl}/news">
+  <meta name="twitter:site" content="@thedigitalledger">
   
   <script type="application/ld+json">
-${JSON.stringify(jsonLd, null, 2)}
+${serializeJsonForHtml(jsonLd)}
   </script>
   
   <style>
@@ -1015,13 +1281,13 @@ ${JSON.stringify(jsonLd, null, 2)}
   </main>
   
   <nav>
-    <p><a href="${baseUrl}">← Back to The Digital Ledger</a></p>
+    <p><a href="${escapedBaseUrl}">← Back to The Digital Ledger</a></p>
   </nav>
 </body>
 </html>`;
     
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=1800');
+    res.setHeader('Cache-Control', 'no-store');
     return res.send(html);
   } catch (error) {
     console.error('Error serving bot-friendly news listing:', error);
@@ -1048,7 +1314,9 @@ app.use(async (req, res, next) => {
   try {
     log('Serving SEO-optimized HTML for about page to crawler');
     
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getPublicOrigin(req);
+    const escapedBaseUrl = escapeHtml(baseUrl);
+    const defaultImageUrl = escapeHtml(`${baseUrl}/og-default.png`);
     
     const jsonLd = {
       "@context": "https://schema.org",
@@ -1069,16 +1337,26 @@ app.use(async (req, res, next) => {
   <meta name="description" content="The Digital Ledger is a community platform for CFOs, Controllers, FP&A leaders, and senior finance professionals focused on AI, finance transformation, and modern corporate finance.">
   <meta name="keywords" content="about, digital ledger, finance community, CFO, controller, FP&A">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="${baseUrl}/about">
+  <link rel="canonical" href="${escapedBaseUrl}/about">
   
   <meta property="og:type" content="website">
-  <meta property="og:url" content="${baseUrl}/about">
+  <meta property="og:url" content="${escapedBaseUrl}/about">
   <meta property="og:title" content="About The Digital Ledger">
   <meta property="og:description" content="A community platform for finance professionals focused on AI and modern corporate finance.">
+  <meta property="og:image" content="${defaultImageUrl}">
+  <meta property="og:image:alt" content="About The Digital Ledger">
+  <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="The Digital Ledger">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="About The Digital Ledger">
+  <meta name="twitter:description" content="A community platform for finance professionals focused on AI and modern corporate finance.">
+  <meta name="twitter:image" content="${defaultImageUrl}">
+  <meta name="twitter:image:alt" content="About The Digital Ledger">
+  <meta name="twitter:url" content="${escapedBaseUrl}/about">
+  <meta name="twitter:site" content="@thedigitalledger">
   
   <script type="application/ld+json">
-${JSON.stringify(jsonLd, null, 2)}
+${serializeJsonForHtml(jsonLd)}
   </script>
   
   <style>
@@ -1112,13 +1390,13 @@ ${JSON.stringify(jsonLd, null, 2)}
   </main>
   
   <nav>
-    <p><a href="${baseUrl}">← Back to The Digital Ledger</a></p>
+    <p><a href="${escapedBaseUrl}">← Back to The Digital Ledger</a></p>
   </nav>
 </body>
 </html>`;
     
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Cache-Control', 'no-store');
     return res.send(html);
   } catch (error) {
     console.error('Error serving bot-friendly about page:', error);
@@ -1146,9 +1424,11 @@ app.use(async (req, res, next) => {
     log('Serving SEO-optimized HTML for forums page to crawler');
     
     const discussions = await storage.getForumDiscussions();
-    const recentDiscussions = discussions.slice(0, 15);
+    const recentDiscussions = discussions.filter(d => d.status === "published").slice(0, 15);
     
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getPublicOrigin(req);
+    const escapedBaseUrl = escapeHtml(baseUrl);
+    const defaultImageUrl = escapeHtml(`${baseUrl}/og-default.png`);
     
     const jsonLd = {
       "@context": "https://schema.org",
@@ -1161,9 +1441,9 @@ app.use(async (req, res, next) => {
     
     const discussionsHtml = recentDiscussions.map(d => `
       <article>
-        <h3>${escapeHtml(d.title)}</h3>
-        <p>${generateDescription(d.content || '', 150)}</p>
-        <p><small>${d.createdAt ? new Date(d.createdAt).toLocaleDateString() : ''}</small></p>
+        <h3><a href="${escapedBaseUrl}/forums/${encodeURIComponent(d.id)}">${escapeHtml(d.title)}</a></h3>
+         <p>${escapeHtml(generateDescription(d.content || '', 150))}</p>
+         <p><small>${d.createdAt ? escapeHtml(new Date(d.createdAt).toLocaleDateString()) : ''}</small></p>
       </article>`).join('\n');
     
     const html = `<!DOCTYPE html>
@@ -1176,16 +1456,26 @@ app.use(async (req, res, next) => {
   <meta name="description" content="Engage with fellow finance professionals, share insights, and discuss AI in accounting and corporate finance.">
   <meta name="keywords" content="finance forum, accounting discussion, CFO community, FP&A forum, AI accounting">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="${baseUrl}/forums">
+  <link rel="canonical" href="${escapedBaseUrl}/forums">
   
   <meta property="og:type" content="website">
-  <meta property="og:url" content="${baseUrl}/forums">
+  <meta property="og:url" content="${escapedBaseUrl}/forums">
   <meta property="og:title" content="Community Forums | The Digital Ledger">
   <meta property="og:description" content="Engage with fellow finance professionals and share insights.">
+  <meta property="og:image" content="${defaultImageUrl}">
+  <meta property="og:image:alt" content="The Digital Ledger Community Forums">
+  <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="The Digital Ledger">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Community Forums | The Digital Ledger">
+  <meta name="twitter:description" content="Engage with fellow finance professionals and share insights.">
+  <meta name="twitter:image" content="${defaultImageUrl}">
+  <meta name="twitter:image:alt" content="The Digital Ledger Community Forums">
+  <meta name="twitter:url" content="${escapedBaseUrl}/forums">
+  <meta name="twitter:site" content="@thedigitalledger">
   
   <script type="application/ld+json">
-${JSON.stringify(jsonLd, null, 2)}
+${serializeJsonForHtml(jsonLd)}
   </script>
   
   <style>
@@ -1208,13 +1498,13 @@ ${JSON.stringify(jsonLd, null, 2)}
   </main>
   
   <nav>
-    <p><a href="${baseUrl}">← Back to The Digital Ledger</a></p>
+    <p><a href="${escapedBaseUrl}">← Back to The Digital Ledger</a></p>
   </nav>
 </body>
 </html>`;
     
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=1800');
+    res.setHeader('Cache-Control', 'no-store');
     return res.send(html);
   } catch (error) {
     console.error('Error serving bot-friendly forums page:', error);
@@ -1244,7 +1534,9 @@ app.use(async (req, res, next) => {
     const resourcesList = await storage.getResources();
     const publishedResources = resourcesList.slice(0, 20);
     
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getPublicOrigin(req);
+    const escapedBaseUrl = escapeHtml(baseUrl);
+    const defaultImageUrl = escapeHtml(`${baseUrl}/og-default.png`);
     
     const jsonLd = {
       "@context": "https://schema.org",
@@ -1258,8 +1550,8 @@ app.use(async (req, res, next) => {
     const resourcesHtml = publishedResources.map(r => `
       <article>
         <h3>${escapeHtml(r.title)}</h3>
-        <p>${generateDescription(r.description || '', 150)}</p>
-        <p><small>Type: ${r.type || 'Resource'}</small></p>
+        <p>${escapeHtml(generateDescription(r.description || '', 150))}</p>
+        <p><small>Type: ${escapeHtml(r.type || 'Resource')}</small></p>
       </article>`).join('\n');
     
     const html = `<!DOCTYPE html>
@@ -1272,16 +1564,26 @@ app.use(async (req, res, next) => {
   <meta name="description" content="Comprehensive learning materials for finance professionals on AI, automation, and modern accounting practices.">
   <meta name="keywords" content="finance education, accounting resources, AI learning, CFO training, FP&A education">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="${baseUrl}/resources">
+  <link rel="canonical" href="${escapedBaseUrl}/resources">
   
   <meta property="og:type" content="website">
-  <meta property="og:url" content="${baseUrl}/resources">
+  <meta property="og:url" content="${escapedBaseUrl}/resources">
   <meta property="og:title" content="Educational Resources | The Digital Ledger">
   <meta property="og:description" content="Comprehensive learning materials for finance professionals.">
+  <meta property="og:image" content="${defaultImageUrl}">
+  <meta property="og:image:alt" content="Educational Resources from The Digital Ledger">
+  <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="The Digital Ledger">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Educational Resources | The Digital Ledger">
+  <meta name="twitter:description" content="Comprehensive learning materials for finance professionals.">
+  <meta name="twitter:image" content="${defaultImageUrl}">
+  <meta name="twitter:image:alt" content="Educational Resources from The Digital Ledger">
+  <meta name="twitter:url" content="${escapedBaseUrl}/resources">
+  <meta name="twitter:site" content="@thedigitalledger">
   
   <script type="application/ld+json">
-${JSON.stringify(jsonLd, null, 2)}
+${serializeJsonForHtml(jsonLd)}
   </script>
   
   <style>
@@ -1303,16 +1605,103 @@ ${JSON.stringify(jsonLd, null, 2)}
   </main>
   
   <nav>
-    <p><a href="${baseUrl}">← Back to The Digital Ledger</a></p>
+    <p><a href="${escapedBaseUrl}">← Back to The Digital Ledger</a></p>
   </nav>
 </body>
 </html>`;
     
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Cache-Control', 'no-store');
     return res.send(html);
   } catch (error) {
     console.error('Error serving bot-friendly resources page:', error);
+    next();
+  }
+});
+
+// ============================================
+// Bot-friendly Toolbox page
+// ============================================
+app.use(async (req, res, next) => {
+  if (req.path !== "/toolbox") return next();
+  const userAgent = req.headers["user-agent"] || "";
+  const signatureAgent = (req.headers["signature-agent"] as string) || "";
+  if (!isBot(userAgent) && !signatureAgent.includes("chatgpt.com")) return next();
+
+  try {
+    const baseUrl = getPublicOrigin(req);
+    const toolboxUrl = `${baseUrl}/toolbox`;
+    const escapedToolboxUrl = escapeHtml(toolboxUrl);
+    const defaultImageUrl = escapeHtml(`${baseUrl}/og-default.png`);
+    const apps = await storage.getToolboxApps(true);
+    const appsHtml = apps.map((tool) => {
+      const safeLink = resolveSafeHttpUrl(tool.link, baseUrl);
+      const safeImage = resolveSafeHttpUrl(tool.imageUrl, baseUrl);
+      const title = escapeHtml(tool.name);
+      return `<article>${safeImage ? `<img src="${escapeHtml(safeImage)}" alt="${title}">` : ""}<h2>${safeLink ? `<a href="${escapeHtml(safeLink)}" rel="noopener noreferrer">${title}</a>` : title}</h2><p>${escapeHtml(tool.description)}</p>${tool.section ? `<p><small>${escapeHtml(tool.section)}</small></p>` : ""}</article>`;
+    }).join("\n");
+    const description = "Explore practical tools for controllers, FP&A leaders, and finance teams.";
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "name": "Controller's Toolbox | The Digital Ledger",
+          "description": description,
+          "url": toolboxUrl,
+        },
+        {
+          "@type": "CollectionPage",
+          "name": "Controller's Toolbox",
+          "url": toolboxUrl,
+          "mainEntity": {
+            "@type": "ItemList",
+            "itemListElement": apps.map((tool, index) => ({
+              "@type": "ListItem",
+              "position": index + 1,
+              "name": tool.name,
+              ...(resolveSafeHttpUrl(tool.link, baseUrl)
+                ? { "url": resolveSafeHttpUrl(tool.link, baseUrl) }
+                : {}),
+            })),
+          },
+        },
+      ],
+    };
+    const html = `<!DOCTYPE html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controller's Toolbox | The Digital Ledger</title>
+  <meta name="description" content="${description}">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="${escapedToolboxUrl}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${escapedToolboxUrl}">
+  <meta property="og:title" content="Controller's Toolbox | The Digital Ledger">
+  <meta property="og:description" content="${description}">
+  <meta property="og:image" content="${defaultImageUrl}">
+  <meta property="og:image:alt" content="Controller's Toolbox from The Digital Ledger">
+  <meta property="og:site_name" content="The Digital Ledger">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="${escapedToolboxUrl}">
+  <meta name="twitter:title" content="Controller's Toolbox | The Digital Ledger">
+  <meta name="twitter:description" content="${description}">
+  <meta name="twitter:image" content="${defaultImageUrl}">
+  <meta name="twitter:image:alt" content="Controller's Toolbox from The Digital Ledger">
+  <meta name="twitter:site" content="@thedigitalledger">
+  <script type="application/ld+json">${serializeJsonForHtml(jsonLd)}</script>
+  <style>body{font-family:system-ui,sans-serif;max-width:900px;margin:auto;padding:20px;line-height:1.6}article{border-top:1px solid #ddd;padding:1em 0}img{max-width:200px;height:auto}a{color:#0656a6}</style>
+</head>
+<body><main><h1>Controller's Toolbox</h1><p>Practical tools to help finance leaders streamline planning, analysis, reporting, and modern accounting operations.</p>${appsHtml || "<p>New tools are being added soon.</p>"}</main><nav><a href="${escapeHtml(baseUrl)}">The Digital Ledger</a></nav></body>
+</html>`;
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    return res.send(html);
+  } catch (error) {
+    console.error("Error serving bot-friendly toolbox:", error);
     next();
   }
 });
@@ -1336,7 +1725,9 @@ app.use(async (req, res, next) => {
   try {
     log('Serving SEO-optimized HTML for community page to crawler');
     
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getPublicOrigin(req);
+    const escapedBaseUrl = escapeHtml(baseUrl);
+    const defaultImageUrl = escapeHtml(`${baseUrl}/og-default.png`);
     
     const jsonLd = {
       "@context": "https://schema.org",
@@ -1357,16 +1748,26 @@ app.use(async (req, res, next) => {
   <meta name="description" content="Join thousands of finance professionals using AI and modern tools to transform how finance operates.">
   <meta name="keywords" content="finance community, accounting professionals, CFO network, FP&A community">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="${baseUrl}/community">
+  <link rel="canonical" href="${escapedBaseUrl}/community">
   
   <meta property="og:type" content="website">
-  <meta property="og:url" content="${baseUrl}/community">
+  <meta property="og:url" content="${escapedBaseUrl}/community">
   <meta property="og:title" content="Community | The Digital Ledger">
   <meta property="og:description" content="Join thousands of finance professionals transforming how finance operates.">
+  <meta property="og:image" content="${defaultImageUrl}">
+  <meta property="og:image:alt" content="The Digital Ledger Finance Community">
+  <meta property="og:locale" content="en_US">
   <meta property="og:site_name" content="The Digital Ledger">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Community | The Digital Ledger">
+  <meta name="twitter:description" content="Join thousands of finance professionals transforming how finance operates.">
+  <meta name="twitter:image" content="${defaultImageUrl}">
+  <meta name="twitter:image:alt" content="The Digital Ledger Finance Community">
+  <meta name="twitter:url" content="${escapedBaseUrl}/community">
+  <meta name="twitter:site" content="@thedigitalledger">
   
   <script type="application/ld+json">
-${JSON.stringify(jsonLd, null, 2)}
+${serializeJsonForHtml(jsonLd)}
   </script>
   
   <style>
@@ -1396,13 +1797,13 @@ ${JSON.stringify(jsonLd, null, 2)}
   </main>
   
   <nav>
-    <p><a href="${baseUrl}">← Back to The Digital Ledger</a></p>
+    <p><a href="${escapedBaseUrl}">← Back to The Digital Ledger</a></p>
   </nav>
 </body>
 </html>`;
     
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Cache-Control', 'no-store');
     return res.send(html);
   } catch (error) {
     console.error('Error serving bot-friendly community page:', error);

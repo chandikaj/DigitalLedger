@@ -419,6 +419,10 @@ export default function Resources() {
                       src={resource.imageUrl} 
                       alt={resource.title}
                       className="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      width="800"
+                      height="384"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}

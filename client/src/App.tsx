@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
+import { RouteSeoMetadata } from "@/components/SeoMetadata";
 
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
@@ -96,6 +97,7 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
+          <RouteSeoMetadata />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

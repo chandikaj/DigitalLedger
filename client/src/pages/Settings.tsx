@@ -203,7 +203,7 @@ export default function Settings() {
             <CardContent className="space-y-6">
               <div className="flex items-center space-x-4">
                 <Avatar className="h-16 w-16" data-testid="avatar-settings">
-                  <AvatarImage src={userData?.profileImageUrl || ""} />
+                  <AvatarImage src={userData?.profileImageUrl || ""} alt="" />
                   <AvatarFallback className="bg-gradient-to-br from-accent to-primary text-white text-xl font-semibold">
                     {userData?.firstName?.[0] || "U"}{userData?.lastName?.[0] || ""}
                   </AvatarFallback>
