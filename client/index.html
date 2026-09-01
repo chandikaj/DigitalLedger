@@ -14,11 +14,13 @@
           script.src = 'https://www.googletagmanager.com/gtag/js?id=G-4LKX5YM8KM';
           document.head.appendChild(script);
         };
-        if ('requestIdleCallback' in window) {
-          window.requestIdleCallback(loadAnalytics, { timeout: 3000 });
-        } else {
-          window.setTimeout(loadAnalytics, 2000);
-        }
+        window.setTimeout(function () {
+          if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(loadAnalytics, { timeout: 3000 });
+          } else {
+            loadAnalytics();
+          }
+        }, 8000);
       }, { once: true });
     </script>
     <meta charset="UTF-8" />

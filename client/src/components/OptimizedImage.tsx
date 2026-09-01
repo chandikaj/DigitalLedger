@@ -1,6 +1,6 @@
 import { useEffect, useState, type ImgHTMLAttributes } from "react";
 
-const widths = [200, 400, 800, 1600] as const;
+const widths = [200, 400, 720, 800, 1600] as const;
 
 export function getOptimizedImageUrl(source: string, width: (typeof widths)[number]): string | null {
   try {
@@ -47,9 +47,10 @@ export function OptimizedImage({ src, sizes = "100vw", onError, ...props }: Opti
     ? optimized.map(([width, url]) => `${url} ${width}w`).join(", ")
     : undefined;
   const usingOptimizer = !!srcSet && !useOriginal;
+  const defaultOptimizedUrl = optimized.find(([width]) => width === 800)?.[1];
   return (
     <img
-      src={usingOptimizer ? optimized[2][1]! : source}
+      src={usingOptimizer ? defaultOptimizedUrl! : source}
       srcSet={usingOptimizer ? srcSet : undefined}
       sizes={usingOptimizer ? sizes : undefined}
       onError={(event) => {

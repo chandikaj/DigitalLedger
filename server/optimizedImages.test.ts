@@ -19,6 +19,10 @@ assert.deepEqual(
   parseOptimizedImagePath("200", "objects/article-imports/photo.jpg"),
   { width: 200, sourcePath: "/objects/article-imports/photo.jpg" },
 );
+assert.deepEqual(
+  parseOptimizedImagePath("720", "objects/article-imports/photo.jpg"),
+  { width: 720, sourcePath: "/objects/article-imports/photo.jpg" },
+);
 assert.equal(parseOptimizedImagePath("801", "objects/photo.jpg"), null);
 assert.equal(parseOptimizedImagePath("800", "../objects/photo.jpg"), null);
 assert.equal(parseOptimizedImagePath("800", "objects/%2e%2e/private.jpg"), null);

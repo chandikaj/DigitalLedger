@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import sharp from "sharp";
 import { ObjectStorageService } from "./objectStorage";
 
-export const OPTIMIZED_IMAGE_WIDTHS = [200, 400, 800, 1600] as const;
+export const OPTIMIZED_IMAGE_WIDTHS = [200, 400, 720, 800, 1600] as const;
 const MAX_SOURCE_BYTES = 8 * 1024 * 1024;
 const MAX_INPUT_PIXELS = 20_000_000;
 const MAX_ASPECT_RATIO = 20;
