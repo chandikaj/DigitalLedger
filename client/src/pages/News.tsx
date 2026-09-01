@@ -419,7 +419,7 @@ export default function News() {
                       decoding="async"
                       width="800"
                       height="450"
-                      sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                      sizes="(min-width: 1280px) 384px, (min-width: 1024px) calc((100vw - 8rem) / 3), (min-width: 768px) calc((100vw - 5rem) / 2), calc(100vw - 2rem)"
                     />
                   </div>
                 </Link>
@@ -467,7 +467,7 @@ export default function News() {
                   </Link>
                   
                   <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3" data-testid={`excerpt-${article.id}`}>
-                    {article.excerpt || article.content?.substring(0, 150) + '...'}
+                    {article.excerpt || "Read the full article for more details."}
                   </p>
                   
                   {article.sourceName && (

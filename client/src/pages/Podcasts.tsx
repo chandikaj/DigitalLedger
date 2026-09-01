@@ -362,29 +362,18 @@ export default function Podcasts() {
             {filteredEpisodes.map((episode: any) => (
               <Card
                 key={episode.id}
-                className="overflow-hidden hover:shadow-lg transition-shadow duration-300 relative cursor-pointer"
+                className="overflow-hidden hover:shadow-lg transition-shadow duration-300 relative"
                 data-testid={`episode-card-${episode.id}`}
-                role="link"
-                tabIndex={0}
-                onClick={() => setLocation(`/podcasts/${episode.id}`)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    setLocation(`/podcasts/${episode.id}`);
-                  }
-                }}
               >
                 {(userRole === 'editor' || userRole === 'admin') && (
-                  <div onClick={(event) => event.stopPropagation()}>
-                    <Link href={`/podcasts/${episode.id}/edit`}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2 z-10 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800"
-                        data-testid={`button-edit-podcast-${episode.id}`}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                  <div>
+                    <Link
+                      href={`/podcasts/${episode.id}/edit`}
+                      className="absolute top-2 right-2 z-10 inline-flex h-10 w-10 items-center justify-center rounded-md bg-white/90 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:bg-gray-800/90 dark:hover:bg-gray-800"
+                      aria-label={`Edit ${episode.title}`}
+                      data-testid={`button-edit-podcast-${episode.id}`}
+                    >
+                      <Pencil className="h-4 w-4" />
                     </Link>
                   </div>
                 )}
@@ -398,7 +387,7 @@ export default function Podcasts() {
                       decoding="async"
                       width="800"
                       height="450"
-                      sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                      sizes="(min-width: 1280px) 384px, (min-width: 1024px) calc((100vw - 8rem) / 3), (min-width: 768px) calc((100vw - 5rem) / 2), calc(100vw - 2rem)"
                     />
                   </div>
                 </Link>
@@ -472,11 +461,7 @@ export default function Podcasts() {
                         size="sm"
                         className="text-white bg-red-500 hover:bg-red-600"
                         data-testid={`watch-youtube-${episode.id}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                           e.stopPropagation();
-                           setLocation(`/podcasts/${episode.id}`);
-                        }}
+                         onClick={() => setLocation(`/podcasts/${episode.id}`)}
                       >
                         <PlayCircle className="h-4 w-4" />
                         <span>Listen Now</span>

@@ -288,7 +288,7 @@ export default function Landing() {
                         decoding="async"
                         width="800"
                         height="450"
-                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                        sizes="(min-width: 1280px) 384px, (min-width: 1024px) calc((100vw - 8rem) / 3), (min-width: 768px) calc((100vw - 5rem) / 2), calc(100vw - 2rem)"
                         {...(index === 0
                           ? ({ fetchpriority: "high" } as React.ImgHTMLAttributes<HTMLImageElement>)
                           : {})}
@@ -342,7 +342,7 @@ export default function Landing() {
                         data-testid={`excerpt-${article.id}`}
                       >
                         {article.excerpt ||
-                          article.content?.substring(0, 150) + "..."}
+                          "Read the full article for more details."}
                       </p>
 
                       {article.sourceName && (
@@ -430,17 +430,8 @@ export default function Landing() {
                 latestPodcasts.map((podcast: any, index: number) => (
                   <Card
                     key={podcast.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    className="hover:shadow-md transition-shadow"
                     data-testid={`podcast-card-${index}`}
-                    role="link"
-                    tabIndex={0}
-                    onClick={() => setLocation(`/podcasts/${podcast.id}`)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        setLocation(`/podcasts/${podcast.id}`);
-                      }
-                    }}
                   >
                     <Link href={`/podcasts/${podcast.id}`}>
                       <div className="aspect-video w-full overflow-hidden rounded-t-lg">
@@ -455,7 +446,7 @@ export default function Landing() {
                           decoding="async"
                           width="800"
                           height="450"
-                          sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                          sizes="(min-width: 1280px) 384px, (min-width: 1024px) calc((100vw - 8rem) / 3), (min-width: 768px) calc((100vw - 5rem) / 2), calc(100vw - 2rem)"
                         />
                       </div>
                     </Link>
@@ -495,10 +486,7 @@ export default function Landing() {
                           <Button
                             className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center space-x-2"
                             data-testid={`button-listen-now-${index}`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setLocation(`/podcasts/${podcast.id}`);
-                            }}
+                            onClick={() => setLocation(`/podcasts/${podcast.id}`)}
                           >
                             <PlayCircle className="h-5 w-5" />
                             <span>Listen Now</span>

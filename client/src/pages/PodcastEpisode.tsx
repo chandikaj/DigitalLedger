@@ -373,7 +373,7 @@ export default function PodcastEpisode() {
                   src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0`}
                   title={episode.title}
                   className="h-full w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                   data-testid="podcast-video-player"
                 />

@@ -661,7 +661,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.set("Cache-Control", "no-cache, no-store, must-revalidate");
       res.set("Pragma", "no-cache");
       res.set("Expires", "0");
-      res.json(articles);
+      const responseArticles = canViewArchived
+        ? articles
+        : articles.map(({ content: _content, ...article }) => article);
+      res.json(responseArticles);
     } catch (error) {
       console.error("Error fetching news:", error);
       res.status(500).json({ message: "Failed to fetch news" });

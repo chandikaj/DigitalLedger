@@ -49,7 +49,7 @@ export function VideoPlayerDialog({ open, onOpenChange, videoId, title, onSubscr
               src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`}
               title={title || "Video player"}
               className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               data-testid="video-player-iframe"
             />

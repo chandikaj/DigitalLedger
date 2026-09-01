@@ -1,0 +1,291 @@
+PageSpeed Insights logo
+PageSpeed Insights
+Report from Sep 1, 2026, 1:28:42 PM
+https://thedigitalledger.org/
+Enter a valid URL
+
+
+smartphone
+Mobile
+
+computer
+Desktop
+
+Discover what your real users are experiencing
+No Data
+
+Diagnose performance issues
+89
+Performance
+96
+Accessibility
+96
+Best Practices
+100
+SEO
+2/2
+Agentic Browsing
+89
+FCP
++7
+LCP
++20
+TBT
++29
+CLS
++25
+SI
++8
+Performance
+Values are estimated and may vary. The performance score is calculated directly from these metrics.See calculator.
+0–49
+50–89
+90–100
+Final Screenshot
+
+Metrics
+Expand view
+First Contentful Paint
+1.2 s
+Largest Contentful Paint
+1.5 s
+Total Blocking Time
+110 ms
+Cumulative Layout Shift
+0.054
+Speed Index
+1.6 s
+Captured at Sep 1, 2026, 1:28 PM GMT+5:30
+Emulated Desktop with Lighthouse 13.4.1
+Single page session
+Initial page load
+Custom throttling
+Using HeadlessChromium 151.0.7922.71 with lr
+View Treemap
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Show audits relevant to:
+
+All
+
+FCP
+
+LCP
+
+TBT
+
+CLS
+Insights
+Improve image delivery Est savings of 336 KiB
+Reducing the download time of images can improve the perceived load time of the page and LCP. Learn more about optimizing image sizeLCPFCPUnscored
+URL
+Resource Size
+Est Savings
+thedigitalledger.org 1st party
+381.4 KiB	336.1 KiB
+The Digital Ledger
+<img src="/assets/Logo_v2_1764111424626-DlZFRSC-.png" alt="The Digital Ledger" class="h-14 w-auto" width="802" height="429">
+/assets/Logo_v2_1….png(thedigitalledger.org)
+190.0 KiB
+189.1 KiB
+Using a modern image format (WebP, AVIF) or increasing the image compression could improve this image's download size.
+134.1 KiB
+This image file is larger than it needs to be (802x429) for its displayed dimensions (105x56). Use responsive images to reduce the image download size.
+186.8 KiB
+Beyond the Core Ledger: U.S. GAAP Taxonomy Demands Extreme Revenue and Expense …
+<img src="/optimized-images/800/objects/article-imports/b3178562-716a-40bd-a2f9-793c…" srcset="/optimized-images/400/objects/article-imports/b3178562-716a-40bd-a2f9-793c…" sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" alt="Beyond the Core Ledger: U.S. GAAP Taxonomy Demands Extreme Revenue and Exp…" class="w-full h-full object-cover hover:scale-105 transition-transform duration-3…" loading="lazy" decoding="async" width="800" height="450">
+…article-imports/b3178562-716a-40bd-a2f9-793ceea5547e.jpg(thedigitalledger.org)
+41.4 KiB
+31.8 KiB
+This image file is larger than it needs to be (796x447) for its displayed dimensions (385x215). Use responsive images to reduce the image download size.
+31.8 KiB
+Why Standard Monthly Reporting Is a Quiet Cash Flow Trap for Private EMS
+<img src="/optimized-images/800/objects/article-imports/a29e1b04-98ab-47e2-ae32-77f6…" srcset="/optimized-images/400/objects/article-imports/a29e1b04-98ab-47e2-ae32-77f6…" sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" alt="Why Standard Monthly Reporting Is a Quiet Cash Flow Trap for Private EMS" class="w-full h-full object-cover hover:scale-105 transition-transform duration-3…" loading="lazy" decoding="async" width="800" height="450">
+…article-imports/a29e1b04-98ab-47e2-ae32-77f6fd65022f.jpg(thedigitalledger.org)
+32.7 KiB
+25.1 KiB
+This image file is larger than it needs to be (796x447) for its displayed dimensions (385x215). Use responsive images to reduce the image download size.
+25.1 KiB
+The Death of Q1 and Q3? Why Accounting Groups Are Ringing the Alarm on the SEC'…
+<img src="/optimized-images/800/objects/article-imports/adcdce0b-08e8-417b-92ae-5256…" srcset="/optimized-images/400/objects/article-imports/adcdce0b-08e8-417b-92ae-5256…" sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" alt="The Death of Q1 and Q3? Why Accounting Groups Are Ringing the Alarm on the…" class="w-full h-full object-cover hover:scale-105 transition-transform duration-3…" loading="eager" decoding="async" width="800" height="450" fetchpriority="high">
+…article-imports/adcdce0b-08e8-417b-92ae-5256fad9ef3c.jpg(thedigitalledger.org)
+31.9 KiB
+24.5 KiB
+This image file is larger than it needs to be (796x447) for its displayed dimensions (385x215). Use responsive images to reduce the image download size.
+24.5 KiB
+AI Doesn't Change What You Own
+<img src="/optimized-images/800/objects/uploads/1befa6f6-e322-44f2-b2bb-aa9e9984c156" srcset="/optimized-images/400/objects/uploads/1befa6f6-e322-44f2-b2bb-aa9e9984c156…" sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" alt="AI Doesn't Change What You Own" class="w-full h-full object-cover" loading="lazy" decoding="async" width="800" height="450">
+…uploads/1befa6f6-e322-44f2-b2bb-aa9e9984c156(thedigitalledger.org)
+29.8 KiB
+22.9 KiB
+This image file is larger than it needs to be (800x451) for its displayed dimensions (382x218). Use responsive images to reduce the image download size.
+22.9 KiB
+AI Is Giving Small Firms Something They Can’t Hire
+<img src="/optimized-images/800/objects/uploads/ca4e1c96-d827-41e4-9124-03ea178f5d2d" srcset="/optimized-images/400/objects/uploads/ca4e1c96-d827-41e4-9124-03ea178f5d2d…" sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" alt="AI Is Giving Small Firms Something They Can’t Hire" class="w-full h-full object-cover" loading="lazy" decoding="async" width="800" height="450">
+…uploads/ca4e1c96-d827-41e4-9124-03ea178f5d2d(thedigitalledger.org)
+28.1 KiB
+21.6 KiB
+This image file is larger than it needs to be (800x451) for its displayed dimensions (382x218). Use responsive images to reduce the image download size.
+21.6 KiB
+How AI Is Giving Small Accounting Firms a Big-Firm Advantage
+<img src="/optimized-images/800/objects/uploads/1bc840db-3ada-4899-b687-8dfadce90ac3" srcset="/optimized-images/400/objects/uploads/1bc840db-3ada-4899-b687-8dfadce90ac3…" sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" alt=" How AI Is Giving Small Accounting Firms a Big-Firm Advantage" class="w-full h-full object-cover" loading="lazy" decoding="async" width="800" height="450">
+…uploads/1bc840db-3ada-4899-b687-8dfadce90ac3(thedigitalledger.org)
+27.5 KiB
+21.1 KiB
+This image file is larger than it needs to be (800x451) for its displayed dimensions (382x218). Use responsive images to reduce the image download size.
+21.1 KiB
+Render-blocking requests Est savings of 40 ms
+Requests are blocking the page's initial render, which may delay LCP. Deferring or inlining can move these network requests out of the critical path.LCPFCPUnscored
+URL
+Transfer Size
+Duration
+thedigitalledger.org 1st party
+140.8 KiB	430 ms
+/assets/index-D74yAjk3.css(thedigitalledger.org)
+140.8 KiB
+430 ms
+LCP breakdown
+LCP request discovery
+Optimize LCP by making the LCP image discoverable from the HTML immediately, and avoiding lazy-loadingLCPUnscored
+LCP resources should not use loading=lazy
+fetchpriority=high should be applied
+Request is discoverable in initial document
+The Death of Q1 and Q3? Why Accounting Groups Are Ringing the Alarm on the SEC'…
+<img src="/optimized-images/800/objects/article-imports/adcdce0b-08e8-417b-92ae-5256…" srcset="/optimized-images/400/objects/article-imports/adcdce0b-08e8-417b-92ae-5256…" sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw" alt="The Death of Q1 and Q3? Why Accounting Groups Are Ringing the Alarm on the…" class="w-full h-full object-cover hover:scale-105 transition-transform duration-3…" loading="eager" decoding="async" width="800" height="450" fetchpriority="high">
+Network dependency tree
+Avoid chaining critical requests by reducing the length of chains, reducing the download size of resources, or deferring the download of unnecessary resources to improve page load.LCPUnscored
+Maximum critical path latency: 1,744 ms
+Initial Navigation
+https://thedigitalledger.org - 394 ms, 3.58 KiB
+/assets/index-pN0AxEGz.js(thedigitalledger.org) - 940 ms, 365.11 KiB
+…auth/user(thedigitalledger.org) - 1,469 ms, 0.43 KiB
+/api/menu-settings(thedigitalledger.org) - 1,497 ms, 1.35 KiB
+/api/podcasts?limit=3(thedigitalledger.org) - 1,592 ms, 8.71 KiB
+/api/news?limit=3(thedigitalledger.org) - 1,744 ms, 48.84 KiB
+/assets/index-D74yAjk3.css(thedigitalledger.org) - 943 ms, 140.77 KiB
+Preconnected origins
+preconnect hints help the browser establish a connection earlier in the page load, saving time when the first request for that origin is made. The following are the origins that the page preconnected to.
+Origin
+Source
+https://fonts.googleapis.com/
+head > link
+<link rel="preconnect" href="https://fonts.googleapis.com">
+https://fonts.gstatic.com/
+head > link
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+Preconnect candidates
+Add preconnect hints to your most important origins, but try to use no more than 4.
+No additional origins are good candidates for preconnecting
+Document request latency Est savings of 2 KiB
+Your first network request is the most important. Reduce its latency by avoiding redirects, ensuring a fast server response, and enabling text compression.LCPFCPUnscored
+Avoids redirects
+Server responds quickly (observed 1 ms)
+No compression applied
+Layout shift culprits
+Optimize DOM size
+3rd parties
+These insights are also available in the Chrome DevTools Performance Panel - record a trace to view more detailed information.
+Diagnostics
+Reduce unused JavaScript Est savings of 227 KiB
+Reduce unused JavaScript and defer loading scripts until they are required to decrease bytes consumed by network activity. Learn how to reduce unused JavaScript.LCPFCPUnscored
+URL
+Transfer Size
+Est Savings
+thedigitalledger.org 1st party
+364.6 KiB	159.0 KiB
+/assets/index-pN0AxEGz.js(thedigitalledger.org)
+364.6 KiB
+159.0 KiB
+Google Tag Manager tag-manager 
+166.0 KiB	68.3 KiB
+/gtag/js?id=G-4LKX5YM8KM(www.googletagmanager.com)
+166.0 KiB
+68.3 KiB
+Reduce unused CSS Est savings of 129 KiB
+Reduce unused rules from stylesheets and defer CSS not used for above-the-fold content to decrease bytes consumed by network activity. Learn how to reduce unused CSS.LCPFCPUnscored
+URL
+Transfer Size
+Est Savings
+thedigitalledger.org 1st party
+140.3 KiB	129.0 KiB
+/assets/index-D74yAjk3.css(thedigitalledger.org)
+140.3 KiB
+129.0 KiB
+Avoid long main-thread tasks 6 long tasks found
+More information about the performance of your application. These numbers don't directly affect the Performance score.
+Passed audits (15)
+Show
+96
+Accessibility
+These checks highlight opportunities to improve the accessibility of your web app. Automatic detection can only detect a subset of issues and does not guarantee the accessibility of your web app, so manual testing is also encouraged.
+Contrast
+Background and foreground colors do not have a sufficient contrast ratio.
+These are opportunities to improve the legibility of your content.
+Best practices
+Identical links have the same purpose.
+These items highlight common accessibility best practices.
+Additional items to manually check (10)
+Show
+These items address areas which an automated testing tool cannot cover. Learn more in our guide on conducting an accessibility review.
+Passed audits (23)
+Show
+Not applicable (38)
+Show
+96
+Best Practices
+General
+Browser errors were logged to the console
+Trust and Safety
+Ensure CSP is effective against XSS attacks
+Use a strong HSTS policy
+Ensure proper origin isolation with COOP
+Mitigate clickjacking with XFO or CSP
+Mitigate DOM-based XSS with Trusted Types
+Browser Compatibility
+Baseline Features
+Passed audits (12)
+Show
+Not applicable (2)
+Show
+100
+SEO
+These checks ensure that your page is following basic search engine optimization advice. There are many additional factors Lighthouse does not score here that may affect your search ranking, including performance on Core Web Vitals. Learn more about Google Search Essentials.
+Additional items to manually check (1)
+Hide
+Structured data is valid
+Run these additional validators on your site to check additional SEO best practices.
+Passed audits (10)
+Show
+2/2
+Agentic Browsing
+These checks ensure high-quality, browsable websites for AI agents and validate the correctness of WebMCP integrations. This category is still under development and subject to change.
+Passed audits (2)
+Show
+Not applicable (4)
+Show
+More on PageSpeed Insights
+What's new
+Documentation
+Learn about Web Performance
+Ask questions on Stack Overflow
+Mailing list
+Related Content
+Updates
+Web Fundamentals
+Case Studies
+Podcasts
+Connect
+Twitter
+Youtube
+Google Developers Logo
+Chrome
+Firebase
+All products
+Terms and Privacy Policy
+For details, see the Google Developers Site Policies.

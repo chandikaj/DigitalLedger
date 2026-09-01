@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import logoImage from "@assets/Logo_v2_1764111424626.png";
 
 interface MenuSetting {
   id: string;
@@ -82,11 +81,11 @@ export function Navigation() {
           <Link href="/" data-testid="link-home">
             <div className="flex items-center space-x-3">
               <img 
-                src={logoImage} 
+                src="/logo-210.webp"
                 alt="The Digital Ledger" 
                 className="h-14 w-auto"
-                 width="802"
-                 height="429"
+                width="210"
+                height="112"
               />
             </div>
           </Link>
@@ -145,6 +144,7 @@ export function Navigation() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setLocation("/settings")}
+                  aria-label="Open settings"
                   data-testid="button-settings"
                   className="hidden sm:inline-flex"
                   title="Settings"
@@ -178,6 +178,9 @@ export function Navigation() {
               size="icon"
               className="md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-navigation"
               data-testid="button-mobile-menu"
             >
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -187,7 +190,7 @@ export function Navigation() {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-gray-700 py-4" data-testid="mobile-menu">
+          <div id="mobile-navigation" className="md:hidden border-t border-gray-200 dark:border-gray-700 py-4" data-testid="mobile-menu">
             <div className="flex flex-col space-y-2">
               {navigation.map((item) => (
                 <Link

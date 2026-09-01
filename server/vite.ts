@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import compression from "compression";
 import fs from "fs";
 import path from "path";
 import { createServer as createViteServer, createLogger } from "vite";
@@ -147,6 +148,17 @@ export function serveStatic(app: Express) {
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );
   }
+
+  // Compress only public, content-hashed build assets. API/auth responses are
+  // intentionally excluded to avoid applying compression to secret-bearing
+  // dynamic responses.
+  const compressStaticAssets = compression({ threshold: 1024 });
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/assets/")) {
+      return compressStaticAssets(req, res, next);
+    }
+    next();
+  });
 
   app.use(
     express.static(distPath, {
