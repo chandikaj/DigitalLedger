@@ -859,8 +859,10 @@ export default function Article() {
               <div className="flex items-center justify-between pt-6 border-t">
                 <div className="flex items-center space-x-6">
                   <button
-                    className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 transition-colors hover:text-red-500"
+                     type="button"
+                     className="flex min-h-11 min-w-11 items-center justify-center space-x-2 rounded-md px-2 text-gray-600 dark:text-gray-300 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                     onClick={handleLike}
+                     aria-label={`Like ${article.title}`}
                     data-testid={`like-${article.id}`}
                   >
                     <Heart className="h-5 w-5" />

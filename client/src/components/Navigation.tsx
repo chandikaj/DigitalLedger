@@ -85,6 +85,8 @@ export function Navigation() {
                 src={logoImage} 
                 alt="The Digital Ledger" 
                 className="h-14 w-auto"
+                 width="802"
+                 height="429"
               />
             </div>
           </Link>
@@ -115,6 +117,8 @@ export function Navigation() {
               variant="ghost"
               size="icon"
               onClick={toggleTheme}
+               aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+               title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
               data-testid="button-theme-toggle"
               className="rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
             >
@@ -162,7 +166,7 @@ export function Navigation() {
               <Button
                 onClick={() => setLocation("/login")}
                 data-testid="button-login"
-                className="bg-primary hover:bg-blue-700 text-white"
+               className="bg-blue-700 hover:bg-blue-800 text-white"
               >
                 Login
               </Button>
@@ -203,7 +207,7 @@ export function Navigation() {
               ))}
 
               {/* Mobile auth buttons */}
-              {isAuthenticated && user && (
+              {isAuthenticated && Boolean(user) && (
                 <>
                   <Link
                     href="/settings"

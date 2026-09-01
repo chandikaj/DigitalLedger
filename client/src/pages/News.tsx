@@ -428,8 +428,8 @@ export default function News() {
                         <Badge 
                           key={cat.id}
                           variant="secondary" 
-                          className="capitalize"
-                          style={{ backgroundColor: cat.color + '20', color: cat.color }}
+                           className="capitalize text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                           style={{ backgroundColor: cat.color + '20' }}
                           data-testid={`category-${article.id}-${cat.slug}`}
                         >
                           {cat.name}
@@ -477,30 +477,36 @@ export default function News() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                       <button 
-                        className="flex items-center space-x-1 transition-colors hover:text-red-500"
+                         type="button"
+                         className="flex min-h-11 min-w-11 items-center justify-center space-x-1 rounded-md px-2 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                         onClick={(e) => {
                           e.preventDefault();
                           handleLike(article.id);
                         }}
+                         aria-label={`Like ${article.title}`}
                         data-testid={`like-${article.id}`}
                       >
                         <Heart className="h-4 w-4" />
                         <span>{getOptimisticLikeCount(article)}</span>
                       </button>
                       <button 
-                        className="flex items-center space-x-1 hover:text-blue-500 transition-colors" 
+                         type="button"
+                         className="flex min-h-11 min-w-11 items-center justify-center space-x-1 rounded-md px-2 hover:text-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                         onClick={(e) => handleCommentClick(e, article.id)}
+                         aria-label={`View comments for ${article.title}`}
                         data-testid={`comment-${article.id}`}
                       >
                         <MessageCircle className="h-4 w-4" />
                         <span>{article.commentCount || 0}</span>
                       </button>
                       <button 
-                        className="flex items-center space-x-1 hover:text-green-500 transition-colors" 
+                         type="button"
+                         className="flex min-h-11 min-w-11 items-center justify-center space-x-1 rounded-md px-2 hover:text-green-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                         onClick={(e) => {
                           e.preventDefault();
                           handleShare(article);
                         }}
+                         aria-label={`Share ${article.title}`}
                         data-testid={`share-${article.id}`}
                       >
                         <Share className="h-4 w-4" />

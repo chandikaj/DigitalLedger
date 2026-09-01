@@ -268,12 +268,13 @@ export default function Landing() {
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {latestArticles.map((article: any) => (
-                <Link key={article.id} href={`/news/${article.id}`}>
-                  <Card
-                    className="hover:shadow-lg transition-shadow duration-300 relative"
-                    data-testid={`news-card-${article.id}`}
-                  >
+              {latestArticles.map((article: any, index: number) => (
+                <Card
+                  key={article.id}
+                  className="hover:shadow-lg transition-shadow duration-300 relative"
+                  data-testid={`news-card-${article.id}`}
+                >
+                  <Link href={`/news/${article.id}`}>
                     <div className="aspect-video w-full overflow-hidden rounded-t-lg cursor-pointer">
                       <img
                         src={
@@ -282,12 +283,16 @@ export default function Landing() {
                         }
                         alt={article.title}
                         className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
+                        loading={index === 0 ? "eager" : "lazy"}
                         decoding="async"
                         width="800"
                         height="450"
+                        {...(index === 0
+                          ? ({ fetchpriority: "high" } as React.ImgHTMLAttributes<HTMLImageElement>)
+                          : {})}
                       />
                     </div>
+                  </Link>
                     <CardContent className="p-6">
                       <div className="flex items-center gap-2 mb-3 flex-wrap">
                         {article.categories && article.categories.length > 0 ? (
@@ -295,10 +300,9 @@ export default function Landing() {
                             <Badge
                               key={cat.id}
                               variant="secondary"
-                              className="capitalize"
+                              className="capitalize text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                               style={{
                                 backgroundColor: cat.color + "20",
-                                color: cat.color,
                               }}
                               data-testid={`category-${article.id}-${cat.slug}`}
                             >
@@ -322,12 +326,14 @@ export default function Landing() {
                         </span>
                       </div>
 
-                      <h3
-                        className="text-xl font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2 hover:text-primary dark:hover:text-ai-teal transition-colors cursor-pointer"
-                        data-testid={`title-${article.id}`}
-                      >
-                        {article.title}
-                      </h3>
+                      <Link href={`/news/${article.id}`}>
+                        <h3
+                          className="text-xl font-semibold text-gray-900 dark:text-white mb-3 line-clamp-2 hover:text-blue-700 dark:hover:text-cyan-300 transition-colors cursor-pointer"
+                          data-testid={`title-${article.id}`}
+                        >
+                          {article.title}
+                        </h3>
+                      </Link>
 
                       <p
                         className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-3"
@@ -349,8 +355,10 @@ export default function Landing() {
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                           <button
-                            className="flex items-center space-x-1 transition-colors hover:text-red-500"
+                            type="button"
+                            className="flex min-h-11 min-w-11 items-center justify-center space-x-1 rounded-md px-2 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                             onClick={(e) => handleArticleLike(e, article.id)}
+                            aria-label={`Like ${article.title}`}
                             data-testid={`like-${article.id}`}
                           >
                             <Heart className="h-4 w-4" />
@@ -368,13 +376,15 @@ export default function Landing() {
                           </span>
                         </div>
 
-                        <span className="text-sm font-medium text-primary dark:text-ai-teal cursor-pointer">
+                        <Link
+                          href={`/news/${article.id}`}
+                          className="text-sm font-medium text-blue-700 hover:text-blue-900 dark:text-cyan-300 dark:hover:text-cyan-200"
+                        >
                           Read More →
-                        </span>
+                        </Link>
                       </div>
                     </CardContent>
-                  </Card>
-                </Link>
+                </Card>
               ))}
             </div>
 
