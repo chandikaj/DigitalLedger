@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 interface ObjectUploaderProps {
   maxNumberOfFiles?: number;
   maxFileSize?: number;
-  onGetUploadParameters: () => Promise<{
+  onGetUploadParameters: (file: { type?: string }) => Promise<{
     method: "PUT";
     url: string;
   }>;

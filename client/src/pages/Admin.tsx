@@ -330,8 +330,11 @@ export default function Admin() {
     },
   });
 
-  const handleGetUploadParameters = async () => {
-    const response = await apiRequest("/api/objects/upload", "POST") as { uploadURL: string };
+  const handleGetUploadParameters = async (file: { type?: string }) => {
+    const purpose = file.type?.startsWith("audio/") ? "audio" : "image";
+    const response = await apiRequest("/api/objects/upload", "POST", {
+      purpose,
+    }) as { uploadURL: string };
     return {
       method: "PUT" as const,
       url: response.uploadURL,

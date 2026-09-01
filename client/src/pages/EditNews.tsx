@@ -435,7 +435,9 @@ export default function EditNews() {
                                         setIsUploadingImage(true);
                                         
                                         // Get upload URL from backend
-                                        const uploadParams = await apiRequest("/api/objects/upload", "POST");
+                                        const uploadParams = await apiRequest("/api/objects/upload", "POST", {
+                                          purpose: "image",
+                                        });
 
                                         // Upload file to cloud storage
                                         const uploadResponse = await fetch(uploadParams.uploadURL, {

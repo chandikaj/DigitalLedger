@@ -1,7 +1,13 @@
 import { Storage, File } from "@google-cloud/storage";
 import { Response } from "express";
-import { randomUUID } from "crypto";
-import { createHash } from "crypto";
+import {
+  createHash,
+  createHmac,
+  randomUUID,
+  timingSafeEqual,
+} from "crypto";
+import { Transform, type Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import type {
   ObjectAclPolicy,
 } from "./objectAcl";
@@ -13,6 +19,93 @@ import {
 } from "./objectAcl";
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
+export type OwnedUploadPurpose = "image" | "audio";
+const OWNED_UPLOAD_PREFIX = "uploads/v3";
+const OWNED_UPLOAD_TTL_MS = 15 * 60 * 1000;
+const OWNED_UPLOAD_PATTERN =
+  /^\/objects\/uploads\/v3\/(image|audio)\/([0-9]{10})\.([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.([A-Za-z0-9_-]{43})$/;
+
+function getUploadSigningSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) throw new Error("SESSION_SECRET is required for secure uploads");
+  return secret;
+}
+
+function signOwnedUploadId(
+  owner: string,
+  purpose: OwnedUploadPurpose,
+  expiresAt: number,
+  objectId: string,
+  secret: string,
+): string {
+  return createHmac("sha256", secret)
+    .update(`${owner}\0${purpose}\0${expiresAt}\0${objectId}`)
+    .digest("base64url");
+}
+
+export function createOwnedUploadObjectPath(
+  owner: string,
+  purpose: OwnedUploadPurpose,
+  objectId: string = randomUUID(),
+  secret: string = getUploadSigningSecret(),
+  expiresAt: number = Date.now() + OWNED_UPLOAD_TTL_MS,
+): string {
+  const expiresAtSeconds = Math.floor(expiresAt / 1000);
+  if (
+    !owner ||
+    !/^[0-9a-f-]{36}$/i.test(objectId) ||
+    !Number.isSafeInteger(expiresAtSeconds)
+  ) {
+    throw new Error("Invalid upload identity");
+  }
+  const signature = signOwnedUploadId(
+    owner,
+    purpose,
+    expiresAtSeconds,
+    objectId,
+    secret,
+  );
+  return `/objects/${OWNED_UPLOAD_PREFIX}/${purpose}/${expiresAtSeconds}.${objectId}.${signature}`;
+}
+
+export function isOwnedUploadObjectPath(
+  objectPath: string,
+  owner: string,
+  purpose: OwnedUploadPurpose,
+  secret: string = getUploadSigningSecret(),
+  now: number = Date.now(),
+): boolean {
+  if (!owner) return false;
+  const match = OWNED_UPLOAD_PATTERN.exec(objectPath);
+  if (!match || match[1] !== purpose) return false;
+  const expiresAtSeconds = Number(match[2]);
+  if (
+    !Number.isSafeInteger(expiresAtSeconds) ||
+    expiresAtSeconds * 1000 < now
+  ) {
+    return false;
+  }
+  const actual = Buffer.from(match[4], "utf8");
+  const expected = Buffer.from(
+    signOwnedUploadId(
+      owner,
+      purpose,
+      expiresAtSeconds,
+      match[3],
+      secret,
+    ),
+    "utf8",
+  );
+  return (
+    actual.length === expected.length &&
+    timingSafeEqual(actual, expected)
+  );
+}
+
+export type OwnedUploadConstraints = {
+  allowedContentTypes: ReadonlySet<string>;
+  maxBytes: number;
+};
 
 // The object storage client is used to interact with the object storage service.
 export const objectStorageClient = new Storage({
@@ -38,6 +131,14 @@ export class ObjectNotFoundError extends Error {
     super("Object not found");
     this.name = "ObjectNotFoundError";
     Object.setPrototypeOf(this, ObjectNotFoundError.prototype);
+  }
+}
+
+export class OwnedUploadValidationError extends Error {
+  constructor() {
+    super("Invalid owned upload");
+    this.name = "OwnedUploadValidationError";
+    Object.setPrototypeOf(this, OwnedUploadValidationError.prototype);
   }
 }
 
@@ -134,28 +235,72 @@ export class ObjectStorageService {
     }
   }
 
-  // Gets the upload URL for an object entity.
-  async getObjectEntityUploadURL(): Promise<string> {
-    const privateObjectDir = this.getPrivateObjectDir();
-    if (!privateObjectDir) {
-      throw new Error(
-        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
-      );
+  createOwnedUploadTarget(
+    owner: string,
+    purpose: OwnedUploadPurpose,
+  ): { objectPath: string; uploadURL: string } {
+    const objectPath = createOwnedUploadObjectPath(owner, purpose);
+    const uploadId = objectPath.slice(
+      `/objects/${OWNED_UPLOAD_PREFIX}/${purpose}/`.length,
+    );
+    return {
+      objectPath,
+      uploadURL: `/api/objects/upload/${purpose}/${uploadId}`,
+    };
+  }
+
+  async storeOwnedUpload({
+    objectPath,
+    owner,
+    purpose,
+    source,
+    contentType,
+    maxBytes,
+  }: {
+    objectPath: string;
+    owner: string;
+    purpose: OwnedUploadPurpose;
+    source: Readable;
+    contentType: string;
+    maxBytes: number;
+  }): Promise<void> {
+    if (!isOwnedUploadObjectPath(objectPath, owner, purpose)) {
+      throw new OwnedUploadValidationError();
     }
-
-    const objectId = randomUUID();
-    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
-
-    const { bucketName, objectName } = parseObjectPath(fullPath);
-
-    // Sign URL for PUT method with TTL
-    return signObjectURL({
-      bucketName,
-      objectName,
-      method: "PUT",
-      ttlSec: 900,
+    const objectFile = this.getObjectEntityFileReference(objectPath);
+    const [alreadyExists] = await objectFile.exists();
+    if (alreadyExists) throw new OwnedUploadValidationError();
+    let received = 0;
+    const limiter = new Transform({
+      transform(chunk: Buffer, _encoding, callback) {
+        received += chunk.length;
+        callback(
+          received <= maxBytes
+            ? null
+            : new OwnedUploadValidationError(),
+          received <= maxBytes ? chunk : undefined,
+        );
+      },
     });
+    const destination = objectFile.createWriteStream({
+      resumable: false,
+      validation: "crc32c",
+      preconditionOpts: { ifGenerationMatch: 0 },
+      metadata: {
+        contentType,
+        cacheControl: "private, no-store",
+      },
+    });
+    try {
+      await pipeline(source, limiter, destination);
+      if (received < 1) throw new OwnedUploadValidationError();
+    } catch (error) {
+      const status = Number((error as { code?: unknown }).code);
+      if (status !== 412) {
+        await objectFile.delete({ ignoreNotFound: true }).catch(() => undefined);
+      }
+      throw status === 412 ? new OwnedUploadValidationError() : error;
+    }
   }
 
   async uploadPublicObject({
@@ -200,8 +345,7 @@ export class ObjectStorageService {
     }
   }
 
-  // Gets the object entity file from the object path.
-  async getObjectEntityFile(objectPath: string): Promise<File> {
+  private getObjectEntityFileReference(objectPath: string): File {
     if (!objectPath.startsWith("/objects/")) {
       throw new ObjectNotFoundError();
     }
@@ -219,7 +363,12 @@ export class ObjectStorageService {
     const objectEntityPath = `${entityDir}${entityId}`;
     const { bucketName, objectName } = parseObjectPath(objectEntityPath);
     const bucket = objectStorageClient.bucket(bucketName);
-    const objectFile = bucket.file(objectName);
+    return bucket.file(objectName);
+  }
+
+  // Gets an existing object entity file from the object path.
+  async getObjectEntityFile(objectPath: string): Promise<File> {
+    const objectFile = this.getObjectEntityFileReference(objectPath);
     const [exists] = await objectFile.exists();
     if (!exists) {
       throw new ObjectNotFoundError();
@@ -309,6 +458,17 @@ export class ObjectStorageService {
   normalizeObjectEntityPath(
     rawPath: string,
   ): string {
+    try {
+      const uploadEndpoint = new URL(rawPath, "https://upload.invalid");
+      const match = uploadEndpoint.pathname.match(
+        /^\/api\/objects\/upload\/(image|audio)\/([0-9]{10}\.[0-9a-f-]{36}\.[A-Za-z0-9_-]{43})$/,
+      );
+      if (match) {
+        return `/objects/${OWNED_UPLOAD_PREFIX}/${match[1]}/${match[2]}`;
+      }
+    } catch {
+      return rawPath;
+    }
     if (!rawPath.startsWith("https://storage.googleapis.com/")) {
       return rawPath;
     }
@@ -331,18 +491,37 @@ export class ObjectStorageService {
     return `/objects/${entityId}`;
   }
 
-  // Tries to set the ACL policy for the object entity and return the normalized path.
-  async trySetObjectEntityAclPolicy(
+  // Promotes only a freshly issued upload belonging to this authenticated owner.
+  async promoteOwnedUploadToPublic(
     rawPath: string,
-    aclPolicy: ObjectAclPolicy
+    owner: string,
+    purpose: OwnedUploadPurpose,
+    constraints: OwnedUploadConstraints,
   ): Promise<string> {
     const normalizedPath = this.normalizeObjectEntityPath(rawPath);
-    if (!normalizedPath.startsWith("/")) {
-      return normalizedPath;
+    if (!isOwnedUploadObjectPath(normalizedPath, owner, purpose)) {
+      throw new OwnedUploadValidationError();
     }
 
     const objectFile = await this.getObjectEntityFile(normalizedPath);
-    await setObjectAclPolicy(objectFile, aclPolicy);
+    const [metadata] = await objectFile.getMetadata();
+    const size = Number(metadata.size);
+    const contentType = String(metadata.contentType || "")
+      .split(";", 1)[0]
+      .trim()
+      .toLowerCase();
+    if (
+      !Number.isSafeInteger(size) ||
+      size < 1 ||
+      size > constraints.maxBytes ||
+      !constraints.allowedContentTypes.has(contentType)
+    ) {
+      throw new OwnedUploadValidationError();
+    }
+    await setObjectAclPolicy(objectFile, {
+      owner,
+      visibility: "public",
+    });
     return normalizedPath;
   }
 
@@ -419,42 +598,4 @@ function parseObjectPath(path: string): {
     bucketName,
     objectName,
   };
-}
-
-async function signObjectURL({
-  bucketName,
-  objectName,
-  method,
-  ttlSec,
-}: {
-  bucketName: string;
-  objectName: string;
-  method: "GET" | "PUT" | "DELETE" | "HEAD";
-  ttlSec: number;
-}): Promise<string> {
-  const request = {
-    bucket_name: bucketName,
-    object_name: objectName,
-    method,
-    expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
-  };
-  const response = await fetch(
-    `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-    }
-  );
-  if (!response.ok) {
-    throw new Error(
-      `Failed to sign object URL, errorcode: ${response.status}, ` +
-        `make sure you're running on Replit`
-    );
-  }
-
-  const { signed_url: signedURL } = await response.json();
-  return signedURL;
 }

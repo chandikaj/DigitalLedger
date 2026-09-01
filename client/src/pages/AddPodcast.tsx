@@ -416,7 +416,9 @@ export default function AddPodcast() {
                                       }
                                       try {
                                         setIsUploadingImage(true);
-                                        const uploadParams = await apiRequest("/api/objects/upload", "POST");
+                                        const uploadParams = await apiRequest("/api/objects/upload", "POST", {
+                                          purpose: "image",
+                                        });
                                         const uploadResponse = await fetch(uploadParams.uploadURL, {
                                           method: "PUT",
                                           body: file,

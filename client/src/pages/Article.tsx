@@ -1081,7 +1081,9 @@ export default function Article() {
                                         console.log("Starting upload for:", file.name);
                                         
                                         // Get upload URL from backend
-                                        const uploadParams = await apiRequest("/api/objects/upload", "POST");
+                                        const uploadParams = await apiRequest("/api/objects/upload", "POST", {
+                                          purpose: "image",
+                                        });
                                         console.log("Got upload URL:", uploadParams);
 
                                         // Upload file to cloud storage

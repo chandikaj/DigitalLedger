@@ -16,7 +16,11 @@ import {
 import { getSession } from "./replitAuth"; // Keep session config
 import passport from "passport";
 import { setupGoogleAuth } from "./googleAuth";
-import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import {
+  ObjectStorageService,
+  ObjectNotFoundError,
+  OwnedUploadValidationError,
+} from "./objectStorage";
 import {
   optimizedImageDiscoveryHandler,
   optimizedImageVersionedHandler,
@@ -43,6 +47,86 @@ import {
 import { seedDatabase } from "./seed";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const IMAGE_UPLOAD_CONTENT_TYPES = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+  ]);
+  const AUDIO_UPLOAD_CONTENT_TYPES = new Set([
+    "audio/mpeg",
+    "audio/mp4",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/aac",
+    "audio/ogg",
+  ]);
+  const MAX_IMAGE_UPLOAD_BYTES = 10 * 1024 * 1024;
+  const MAX_AUDIO_UPLOAD_BYTES = 200 * 1024 * 1024;
+  const MAX_UPLOAD_URLS_PER_USER_PER_HOUR = 30;
+  const MAX_IMAGE_PUTS_PER_USER_PER_HOUR = 30;
+  const MAX_AUDIO_PUTS_PER_USER_PER_HOUR = 10;
+  const MAX_UPLOAD_RATE_LIMIT_USERS = 10_000;
+  const uploadUrlBuckets = new Map<
+    string,
+    { count: number; resetAt: number }
+  >();
+  const uploadPutBuckets = new Map<
+    string,
+    { count: number; resetAt: number }
+  >();
+  const activeUploadUsers = new Set<string>();
+
+  const allowUploadUrl = (userId: string): boolean => {
+    const now = Date.now();
+    for (const [id, bucket] of Array.from(uploadUrlBuckets)) {
+      if (bucket.resetAt <= now) uploadUrlBuckets.delete(id);
+    }
+    while (uploadUrlBuckets.size >= MAX_UPLOAD_RATE_LIMIT_USERS) {
+      const oldest = uploadUrlBuckets.keys().next().value as
+        | string
+        | undefined;
+      if (!oldest) break;
+      uploadUrlBuckets.delete(oldest);
+    }
+    const bucket = uploadUrlBuckets.get(userId);
+    if (!bucket) {
+      uploadUrlBuckets.set(userId, { count: 1, resetAt: now + 3_600_000 });
+      return true;
+    }
+    bucket.count++;
+    return bucket.count <= MAX_UPLOAD_URLS_PER_USER_PER_HOUR;
+  };
+
+  const allowUploadPut = (
+    userId: string,
+    purpose: "image" | "audio",
+  ): boolean => {
+    const now = Date.now();
+    for (const [id, bucket] of Array.from(uploadPutBuckets)) {
+      if (bucket.resetAt <= now) uploadPutBuckets.delete(id);
+    }
+    while (uploadPutBuckets.size >= MAX_UPLOAD_RATE_LIMIT_USERS) {
+      const oldest = uploadPutBuckets.keys().next().value as
+        | string
+        | undefined;
+      if (!oldest) break;
+      uploadPutBuckets.delete(oldest);
+    }
+    const key = `${userId}:${purpose}`;
+    const limit =
+      purpose === "image"
+        ? MAX_IMAGE_PUTS_PER_USER_PER_HOUR
+        : MAX_AUDIO_PUTS_PER_USER_PER_HOUR;
+    const bucket = uploadPutBuckets.get(key);
+    if (!bucket) {
+      uploadPutBuckets.set(key, { count: 1, resetAt: now + 3_600_000 });
+      return true;
+    }
+    bucket.count++;
+    return bucket.count <= limit;
+  };
+
   const safeKeyCompare = (provided: string, expected: string): boolean => {
     const a = Buffer.from(provided);
     const b = Buffer.from(expected);
@@ -57,6 +141,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!userId) return undefined;
     const user = await storage.getUser(userId);
     return user?.isActive ? user : undefined;
+  };
+
+  const getAuthenticatedPrincipalId = (req: any): string | null => {
+    const userId = req.user?.id || req.user?.claims?.sub;
+    return typeof userId === "string" && userId.length > 0 ? userId : null;
   };
 
   const canViewPrivateContent = (user: any): boolean =>
@@ -2065,11 +2154,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // The endpoint for getting the upload URL for an object entity.
-  app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
+  app.post("/api/objects/upload", isAuthenticated, async (req: any, res) => {
+    const userId = getAuthenticatedPrincipalId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    const purpose = req.body?.purpose;
+    if (purpose !== "image" && purpose !== "audio") {
+      return res.status(400).json({ error: "Upload purpose is required" });
+    }
+    if (
+      purpose === "audio" &&
+      req.user?.role !== "editor" &&
+      req.user?.role !== "admin"
+    ) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    if (!allowUploadUrl(userId)) {
+      return res
+        .status(429)
+        .set("Retry-After", "3600")
+        .json({ error: "Upload limit exceeded" });
+    }
     const objectStorageService = new ObjectStorageService();
-    const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+    const { uploadURL } = objectStorageService.createOwnedUploadTarget(
+      userId,
+      purpose,
+    );
     res.json({ uploadURL });
   });
+
+  app.put(
+    "/api/objects/upload/:purpose(image|audio)/:uploadId",
+    isAuthenticated,
+    async (req: any, res) => {
+      const userId = getAuthenticatedPrincipalId(req);
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      const purpose = req.params.purpose as "image" | "audio";
+      if (
+        purpose === "audio" &&
+        req.user?.role !== "editor" &&
+        req.user?.role !== "admin"
+      ) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      if (!allowUploadPut(userId, purpose)) {
+        return res
+          .status(429)
+          .set("Retry-After", "3600")
+          .json({ error: "Upload limit exceeded" });
+      }
+      if (activeUploadUsers.has(userId)) {
+        return res
+          .status(429)
+          .set("Retry-After", "5")
+          .json({ error: "Another upload is in progress" });
+      }
+      const allowedContentTypes =
+        purpose === "image"
+          ? IMAGE_UPLOAD_CONTENT_TYPES
+          : AUDIO_UPLOAD_CONTENT_TYPES;
+      const maxBytes =
+        purpose === "image"
+          ? MAX_IMAGE_UPLOAD_BYTES
+          : MAX_AUDIO_UPLOAD_BYTES;
+      const contentType = String(req.headers["content-type"] || "")
+        .split(";", 1)[0]
+        .trim()
+        .toLowerCase();
+      const contentLength = Number(req.headers["content-length"]);
+      if (
+        !allowedContentTypes.has(contentType) ||
+        (Number.isFinite(contentLength) &&
+          (contentLength < 1 || contentLength > maxBytes))
+      ) {
+        return res.status(415).json({ error: "Upload type or size is not allowed" });
+      }
+      const objectPath =
+        `/objects/uploads/v3/${purpose}/${req.params.uploadId}`;
+      activeUploadUsers.add(userId);
+      try {
+        const objectStorageService = new ObjectStorageService();
+        await objectStorageService.storeOwnedUpload({
+          objectPath,
+          owner: userId,
+          purpose,
+          source: req,
+          contentType,
+          maxBytes,
+        });
+        res.status(200).json({ success: true });
+      } catch (error) {
+        if (error instanceof OwnedUploadValidationError) {
+          return res.status(400).json({ error: "Invalid upload" });
+        }
+        console.error("Error storing owned upload:", error);
+        res.status(500).json({ error: "Internal server error" });
+      } finally {
+        activeUploadUsers.delete(userId);
+      }
+    },
+  );
 
   // Article image upload endpoint
   app.put("/api/articles/images", isAuthenticated, async (req: any, res) => {
@@ -2077,49 +2260,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ error: "imageURL is required" });
     }
 
-    const userId = req.user?.claims?.sub;
+    const userId = getAuthenticatedPrincipalId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     try {
       const objectStorageService = new ObjectStorageService();
-      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+      const objectPath = await objectStorageService.promoteOwnedUploadToPublic(
         req.body.imageURL,
+        userId,
+        "image",
         {
-          owner: userId,
-          visibility: "public",
-        },
+          allowedContentTypes: IMAGE_UPLOAD_CONTENT_TYPES,
+          maxBytes: MAX_IMAGE_UPLOAD_BYTES,
+        }
       );
 
       res.status(200).json({
         objectPath: objectPath,
       });
     } catch (error) {
+      if (error instanceof OwnedUploadValidationError) {
+        return res.status(400).json({ error: "Invalid uploaded image" });
+      }
       console.error("Error setting article image:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
   // Podcast audio upload endpoint
-  app.put("/api/podcasts/audio", isAuthenticated, async (req: any, res) => {
+  app.put("/api/podcasts/audio", isEditorOrAdmin, async (req: any, res) => {
     if (!req.body.audioURL) {
       return res.status(400).json({ error: "audioURL is required" });
     }
 
-    const userId = req.user?.claims?.sub;
+    const userId = getAuthenticatedPrincipalId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     try {
       const objectStorageService = new ObjectStorageService();
-      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+      const objectPath = await objectStorageService.promoteOwnedUploadToPublic(
         req.body.audioURL,
+        userId,
+        "audio",
         {
-          owner: userId,
-          visibility: "public",
-        },
+          allowedContentTypes: AUDIO_UPLOAD_CONTENT_TYPES,
+          maxBytes: MAX_AUDIO_UPLOAD_BYTES,
+        }
       );
 
       res.status(200).json({
         objectPath: objectPath,
       });
     } catch (error) {
+      if (error instanceof OwnedUploadValidationError) {
+        return res.status(400).json({ error: "Invalid uploaded audio" });
+      }
       console.error("Error setting podcast audio:", error);
       res.status(500).json({ error: "Internal server error" });
     }
@@ -2430,22 +2625,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ error: "imageURL is required" });
     }
 
-    const userId = req.user?.claims?.sub || req.user?.id;
+    const userId = getAuthenticatedPrincipalId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     try {
       const objectStorageService = new ObjectStorageService();
-      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+      const objectPath = await objectStorageService.promoteOwnedUploadToPublic(
         req.body.imageURL,
+        userId,
+        "image",
         {
-          owner: userId,
-          visibility: "public",
-        },
+          allowedContentTypes: IMAGE_UPLOAD_CONTENT_TYPES,
+          maxBytes: MAX_IMAGE_UPLOAD_BYTES,
+        }
       );
 
       res.status(200).json({
         objectPath: objectPath,
       });
     } catch (error) {
+      if (error instanceof OwnedUploadValidationError) {
+        return res.status(400).json({ error: "Invalid uploaded image" });
+      }
       console.error("Error setting toolbox image:", error);
       res.status(500).json({ error: "Internal server error" });
     }

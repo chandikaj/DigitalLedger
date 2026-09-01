@@ -212,7 +212,9 @@ export default function Toolbox() {
     setIsUploadingImage(true);
 
     try {
-      const uploadResponse = await apiRequest("/api/objects/upload", "POST") as { uploadURL: string };
+      const uploadResponse = await apiRequest("/api/objects/upload", "POST", {
+        purpose: "image",
+      }) as { uploadURL: string };
       const uploadURL = uploadResponse.uploadURL;
 
       await fetch(uploadURL, {
