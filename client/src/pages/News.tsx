@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatArticleDate } from "@/lib/articleDate";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 interface NewsCategory {
   id: string;
@@ -410,7 +411,7 @@ export default function News() {
               <Card key={article.id} className="hover:shadow-lg transition-shadow duration-300 relative" data-testid={`news-card-${article.id}`}>
                 <Link href={`/news/${article.id}`}>
                   <div className="aspect-video w-full overflow-hidden rounded-t-lg cursor-pointer">
-                    <img 
+                    <OptimizedImage
                       src={article.imageUrl || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop&q=80"}
                       alt={article.title}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
@@ -418,6 +419,7 @@ export default function News() {
                       decoding="async"
                       width="800"
                       height="450"
+                      sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
                     />
                   </div>
                 </Link>

@@ -18,6 +18,10 @@ import passport from "passport";
 import { setupGoogleAuth } from "./googleAuth";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import {
+  optimizedImageDiscoveryHandler,
+  optimizedImageVersionedHandler,
+} from "./optimizedImages";
+import {
   insertNewsArticleSchema,
   insertForumCategorySchema,
   insertForumDiscussionSchema,
@@ -2016,6 +2020,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Object Storage routes
+  app.get(
+    "/optimized-images/:width/v/:version/:filePath(*)",
+    optimizedImageVersionedHandler,
+  );
+  app.get("/optimized-images/:width/:filePath(*)", optimizedImageDiscoveryHandler);
+
   app.get("/public-objects/:filePath(*)", async (req, res) => {
     const filePath = req.params.filePath;
     const objectStorageService = new ObjectStorageService();

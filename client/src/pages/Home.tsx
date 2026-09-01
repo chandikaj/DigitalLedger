@@ -20,9 +20,14 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { formatArticleDate } from "@/lib/articleDate";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 export default function Home() {
   const { user } = useAuth();
+  const firstName =
+    user && typeof user === "object" && "firstName" in user
+      ? String(user.firstName || "")
+      : "";
 
   const { data: news } = useQuery({
     queryKey: ["/api/news"],
@@ -55,7 +60,7 @@ export default function Home() {
         {/* Welcome Section */}
         <div className="mb-8" data-testid="welcome-section">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="welcome-title">
-            Welcome back, {user?.firstName || 'Member'}!
+            Welcome back, {firstName || 'Member'}!
           </h1>
           <p className="text-gray-600 dark:text-gray-300" data-testid="welcome-subtitle">
             Stay updated with the latest in AI accounting and connect with your professional community
@@ -143,7 +148,7 @@ export default function Home() {
                     <Card className="hover:shadow-md transition-shadow cursor-pointer" data-testid={`news-item-${article.id}`}>
                       <CardContent className="p-6">
                         <div className="flex items-start space-x-4">
-                          <img 
+                          <OptimizedImage
                             src={article.imageUrl || "https://images.unsplash.com/photo-1551434678-e076c223a692?w=100&h=100&fit=crop"}
                             alt={article.title}
                             className="w-20 h-20 rounded-lg object-cover"
@@ -151,6 +156,7 @@ export default function Home() {
                             decoding="async"
                             width="80"
                             height="80"
+                            sizes="80px"
                           />
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
@@ -253,7 +259,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <img 
+                    <OptimizedImage
                       src={featuredPodcast.imageUrl || "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=300&h=200&fit=crop"}
                       alt={featuredPodcast.title}
                       className="w-full h-32 rounded-lg object-cover"
@@ -261,6 +267,7 @@ export default function Home() {
                       decoding="async"
                       width="300"
                       height="128"
+                      sizes="300px"
                     />
                     <div>
                       <Badge variant="secondary" className="mb-2">

@@ -27,6 +27,7 @@ import { useEngagementTracking } from '@/hooks/useEngagementTracking';
 import type { PopupTrigger } from '@/lib/tracking';
 import { formatArticleDate, getArticleDate } from "@/lib/articleDate";
 import { getSeoOrigin, useSeoMetadata } from "@/components/SeoMetadata";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 const SANITIZE_OPTIONS = {
   ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'span', 'div', 'a', 'img', 'blockquote', 'code', 'pre', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'colgroup', 'col'],
@@ -776,7 +777,7 @@ export default function Article() {
               </div>
 
               <div className="mb-8 aspect-video w-full overflow-hidden rounded-lg shadow-lg">
-                <img 
+                <OptimizedImage
                   src={article.imageUrl || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop&q=80"}
                   alt={article.title}
                   className="w-full h-full object-cover"
@@ -784,10 +785,13 @@ export default function Article() {
                   decoding="async"
                   width="800"
                   height="450"
+                  sizes="(min-width: 1024px) 960px, 100vw"
                   data-testid="article-image"
                   onError={(e) => {
                     // Fallback to default image if the uploaded image fails to load
-                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop&q=80";
+                    const image = e.target as HTMLImageElement;
+                    image.srcset = "";
+                    image.src = "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop&q=80";
                   }}
                 />
               </div>

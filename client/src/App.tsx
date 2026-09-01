@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -9,40 +10,49 @@ import { RouteSeoMetadata } from "@/components/SeoMetadata";
 
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
-import Login from "@/pages/Login";
-import Logout from "@/pages/Logout";
-import Home from "@/pages/Home";
-import News from "@/pages/News";
-import Article from "@/pages/Article";
-import AddNews from "@/pages/AddNews";
-import EditNews from "@/pages/EditNews";
-import AddPodcast from "@/pages/AddPodcast";
-import EditPodcast from "@/pages/EditPodcast";
-import Forums from "@/pages/Forums";
-import DiscussionDetail from "@/pages/DiscussionDetail";
-import Resources from "@/pages/Resources";
-import Podcasts from "@/pages/Podcasts";
-import PodcastEpisode from "@/pages/PodcastEpisode";
-import Community from "@/pages/Community";
-import About from "@/pages/About";
-import Admin from "@/pages/Admin";
-import UserManagement from "@/pages/UserManagement";
-import MenuSettings from "@/pages/MenuSettings";
-import CategoryManagement from "@/pages/CategoryManagement";
-import MainPageControl from "@/pages/MainPageControl";
-import Settings from "@/pages/Settings";
-import Toolbox from "@/pages/Toolbox";
-import Welcome from "@/pages/Welcome";
-import VerifyEmail from "@/pages/VerifyEmail";
-import ForgotPassword from "@/pages/ForgotPassword";
-import ResetPassword from "@/pages/ResetPassword";
-import Unsubscribe from "@/pages/Unsubscribe";
+
+const Login = lazy(() => import("@/pages/Login"));
+const Logout = lazy(() => import("@/pages/Logout"));
+const News = lazy(() => import("@/pages/News"));
+const Article = lazy(() => import("@/pages/Article"));
+const AddNews = lazy(() => import("@/pages/AddNews"));
+const EditNews = lazy(() => import("@/pages/EditNews"));
+const AddPodcast = lazy(() => import("@/pages/AddPodcast"));
+const EditPodcast = lazy(() => import("@/pages/EditPodcast"));
+const Forums = lazy(() => import("@/pages/Forums"));
+const DiscussionDetail = lazy(() => import("@/pages/DiscussionDetail"));
+const Resources = lazy(() => import("@/pages/Resources"));
+const Podcasts = lazy(() => import("@/pages/Podcasts"));
+const PodcastEpisode = lazy(() => import("@/pages/PodcastEpisode"));
+const Community = lazy(() => import("@/pages/Community"));
+const About = lazy(() => import("@/pages/About"));
+const Admin = lazy(() => import("@/pages/Admin"));
+const UserManagement = lazy(() => import("@/pages/UserManagement"));
+const MenuSettings = lazy(() => import("@/pages/MenuSettings"));
+const CategoryManagement = lazy(() => import("@/pages/CategoryManagement"));
+const MainPageControl = lazy(() => import("@/pages/MainPageControl"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const Toolbox = lazy(() => import("@/pages/Toolbox"));
+const Welcome = lazy(() => import("@/pages/Welcome"));
+const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
-    <Switch>
+    <Suspense
+      fallback={
+        <div
+          className="min-h-screen bg-white dark:bg-dark-bg"
+          role="status"
+          aria-label="Loading page"
+        />
+      }
+    >
+      <Switch>
       {/* Authenticated routes that need to be checked first */}
       {!isLoading && isAuthenticated && (
         <>
@@ -87,7 +97,8 @@ function Router() {
       <Route path="/" component={Landing} />
       
       <Route component={NotFound} />
-    </Switch>
+      </Switch>
+    </Suspense>
   );
 }
 

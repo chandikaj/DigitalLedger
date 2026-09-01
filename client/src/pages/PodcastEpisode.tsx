@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatArticleDate, getArticleDate } from "@/lib/articleDate";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getSeoOrigin, useSeoMetadata } from "@/components/SeoMetadata";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 const DEFAULT_IMAGE =
   "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=675";
@@ -379,7 +380,7 @@ export default function PodcastEpisode() {
               </div>
             ) : hasDirectAudio ? (
               <div className="relative flex min-h-80 items-center justify-center overflow-hidden p-6 sm:p-10">
-                <img
+                <OptimizedImage
                   src={imageUrl}
                   alt=""
                   className="absolute inset-0 h-full w-full object-cover opacity-40"
@@ -387,6 +388,7 @@ export default function PodcastEpisode() {
                   decoding="async"
                   width="1200"
                   height="675"
+                  sizes="(min-width: 1024px) 1024px, 100vw"
                 />
                 <div className="relative z-10 w-full max-w-2xl rounded-xl bg-black/75 p-5 text-center backdrop-blur-sm">
                   <p className="mb-4 font-medium text-white">{episode.title}</p>
@@ -403,7 +405,7 @@ export default function PodcastEpisode() {
               </div>
             ) : (
               <div className="relative aspect-video w-full">
-                <img
+                <OptimizedImage
                   src={imageUrl}
                   alt={episode.title}
                   className="h-full w-full object-cover opacity-70"
@@ -411,6 +413,7 @@ export default function PodcastEpisode() {
                   decoding="async"
                   width="1200"
                   height="675"
+                  sizes="(min-width: 1024px) 1024px, 100vw"
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
                   {mediaUrl ? (

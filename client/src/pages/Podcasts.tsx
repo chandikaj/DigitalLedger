@@ -27,6 +27,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 interface NewsCategory {
   id: string;
@@ -389,7 +390,7 @@ export default function Podcasts() {
                 )}
                 <Link href={`/podcasts/${episode.id}`}>
                   <div className="aspect-video w-full overflow-hidden">
-                    <img
+                    <OptimizedImage
                       src={episode.imageUrl || "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=300"}
                       alt={episode.title}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
@@ -397,6 +398,7 @@ export default function Podcasts() {
                       decoding="async"
                       width="800"
                       height="450"
+                      sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
                     />
                   </div>
                 </Link>

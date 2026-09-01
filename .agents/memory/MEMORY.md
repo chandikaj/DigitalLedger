@@ -2,3 +2,4 @@
 - [beehiiv embed protocol](beehiiv-embed-protocol.md) — success message arrives as a parent-page postMessage toast, not inside the iframe; headless submits are bot-blocked.
 - [Durable test identifiers](durable-test-identifiers.md) — CodeExecution may reject clock/UUID helpers; use fixed test-only IDs with cleanup before and after.
 - [SEO origin and crawler caching](seo-origin-crawler-cache.md) — pin all SEO URLs to the verified public origin and never cache mutable crawler HTML.
+- [Secure image derivatives](secure-image-derivatives.md) — optimize only ACL-approved local objects via bounded transforms and versioned immutable outputs.

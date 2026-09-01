@@ -1,6 +1,7 @@
 import { Storage, File } from "@google-cloud/storage";
 import { Response } from "express";
 import { randomUUID } from "crypto";
+import { createHash } from "crypto";
 import type {
   ObjectAclPolicy,
 } from "./objectAcl";
@@ -224,6 +225,85 @@ export class ObjectStorageService {
       throw new ObjectNotFoundError();
     }
     return objectFile;
+  }
+
+  // Derivatives are deliberately addressed by a hash, rather than user input,
+  // and remain in this project's object-storage namespace.
+  async getOptimizedImageFile(
+    sourcePath: string,
+    width: number,
+    sourceVersion: string,
+  ): Promise<File | null> {
+    const derivative = this.getOptimizedImageDerivativeFile(
+      sourcePath,
+      width,
+      sourceVersion,
+    );
+    const [exists] = await derivative.exists();
+    return exists ? derivative : null;
+  }
+
+  async saveOptimizedImage(
+    sourcePath: string,
+    width: number,
+    sourceVersion: string,
+    data: Buffer,
+  ): Promise<void> {
+    const derivative = this.getOptimizedImageDerivativeFile(
+      sourcePath,
+      width,
+      sourceVersion,
+    );
+    try {
+      await derivative.save(data, {
+        resumable: false,
+        validation: "crc32c",
+        metadata: {
+          contentType: "image/webp",
+          cacheControl: "public, max-age=31536000, immutable",
+        },
+      });
+      await setObjectAclPolicy(derivative, {
+        owner: "optimized-images",
+        visibility: "public",
+      });
+    } catch (error) {
+      await derivative.delete({ ignoreNotFound: true }).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async downloadOptimizedImage(file: File, res: Response): Promise<void> {
+    const [metadata] = await file.getMetadata();
+    res.set({
+      "Content-Type": "image/webp",
+      "Content-Length": metadata.size,
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "public, max-age=31536000, immutable",
+    });
+    file.createReadStream()
+      .on("error", (error) => {
+        console.error("Optimized image stream failed:", error);
+        if (!res.headersSent) res.status(404).end();
+        else res.destroy();
+      })
+      .pipe(res);
+  }
+
+  private getOptimizedImageDerivativeFile(
+    sourcePath: string,
+    width: number,
+    sourceVersion: string,
+  ): File {
+    const sourceHash = createHash("sha256")
+      .update(`${sourcePath}:${sourceVersion}`)
+      .digest("hex");
+    let entityDir = this.getPrivateObjectDir();
+    if (!entityDir.endsWith("/")) entityDir += "/";
+    const { bucketName, objectName } = parseObjectPath(
+      `${entityDir}optimized-images/${sourceHash}/${width}.webp`,
+    );
+    return objectStorageClient.bucket(bucketName).file(objectName);
   }
 
   normalizeObjectEntityPath(

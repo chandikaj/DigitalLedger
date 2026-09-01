@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { PopupTrigger } from "@/lib/tracking";
 import { formatArticleDate } from "@/lib/articleDate";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import {
   Brain,
   Podcast,
@@ -276,7 +277,7 @@ export default function Landing() {
                 >
                   <Link href={`/news/${article.id}`}>
                     <div className="aspect-video w-full overflow-hidden rounded-t-lg cursor-pointer">
-                      <img
+                      <OptimizedImage
                         src={
                           article.imageUrl ||
                           "https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400"
@@ -287,6 +288,7 @@ export default function Landing() {
                         decoding="async"
                         width="800"
                         height="450"
+                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
                         {...(index === 0
                           ? ({ fetchpriority: "high" } as React.ImgHTMLAttributes<HTMLImageElement>)
                           : {})}
@@ -442,7 +444,7 @@ export default function Landing() {
                   >
                     <Link href={`/podcasts/${podcast.id}`}>
                       <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-                        <img
+                        <OptimizedImage
                           src={
                             podcast.imageUrl ||
                             "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400"
@@ -453,6 +455,7 @@ export default function Landing() {
                           decoding="async"
                           width="800"
                           height="450"
+                          sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
                         />
                       </div>
                     </Link>
