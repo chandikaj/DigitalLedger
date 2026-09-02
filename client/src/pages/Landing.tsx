@@ -302,9 +302,9 @@ export default function Landing() {
                             <Badge
                               key={cat.id}
                               variant="secondary"
-                              className="capitalize text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                              className="border bg-gray-100 capitalize text-gray-900 dark:bg-slate-800 dark:text-slate-100"
                               style={{
-                                backgroundColor: cat.color + "20",
+                                borderColor: cat.color || undefined,
                               }}
                               data-testid={`category-${article.id}-${cat.slug}`}
                             >
@@ -314,14 +314,14 @@ export default function Landing() {
                         ) : (
                           <Badge
                             variant="secondary"
-                            className="capitalize"
+                            className="border border-gray-300 bg-gray-100 capitalize text-gray-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                             data-testid={`category-${article.id}`}
                           >
                             General
                           </Badge>
                         )}
                         <span
-                          className="text-gray-500 dark:text-gray-400 text-sm"
+                          className="text-gray-500 dark:text-slate-300 text-sm"
                           data-testid={`time-${article.id}`}
                         >
                           {formatArticleDate(article)}
@@ -347,7 +347,7 @@ export default function Landing() {
 
                       {article.sourceName && (
                         <p
-                          className="text-sm text-gray-500 dark:text-gray-400 mb-4"
+                          className="text-sm text-gray-500 dark:text-slate-300 mb-4"
                           data-testid={`source-${article.id}`}
                         >
                           Source: {article.sourceName}
@@ -355,7 +355,7 @@ export default function Landing() {
                       )}
 
                       <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-slate-300">
                           <button
                             type="button"
                             className="flex min-h-11 min-w-11 items-center justify-center space-x-1 rounded-md px-2 transition-colors hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
