@@ -30,7 +30,7 @@ function buildTableHTML(rows: string[][]): string {
       return `<tr>${cells}</tr>`;
     })
     .join('');
-  return `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRowsHTML}</tbody></table>`;
+  return `<table class="article-table"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRowsHTML}</tbody></table>`;
 }
 
 function isSeparatorLine(line: string): boolean {
@@ -40,7 +40,7 @@ function isSeparatorLine(line: string): boolean {
 }
 
 export function hasPipeTableContent(text: string): boolean {
-  const lines = text.split('\n');
+  const lines = normalizeTableLines(text).split('\n');
   for (let i = 1; i < lines.length; i++) {
     if (
       isSeparatorLine(lines[i]) &&
@@ -54,7 +54,7 @@ export function hasPipeTableContent(text: string): boolean {
 }
 
 export function buildMixedHTML(text: string): string {
-  const lines = text.split('\n');
+  const lines = normalizeTableLines(text).split('\n');
   let html = '';
   let i = 0;
 
@@ -99,9 +99,37 @@ export function buildMixedHTML(text: string): string {
   return html;
 }
 
+// Rich-text pastes sometimes collapse the newline between "| ... |" rows.
+function normalizeTableLines(text: string): string {
+  return text.replace(/\r\n?/g, '\n').split('\n').map(line => {
+    // Require a full collapsed header/separator boundary, not an empty cell
+    // in an otherwise ordinary multiline table.
+    if (!/\|[ \t]*\|[ \t]*:?-{3,}:?[ \t]*\|/.test(line)) return line;
+    return line.replace(/\|[ \t]*\|/g, '|\n|');
+  }).join('\n');
+}
+
 export function convertPipeTablesToHTML(content: string): string {
-  if (!hasPipeTableContent(content)) return content;
-  return buildMixedHTML(content);
+  if (!/<[a-z][\s\S]*>/i.test(content)) {
+    return hasPipeTableContent(content) ? buildMixedHTML(content) : content;
+  }
+  if (typeof DOMParser === 'undefined') return content;
+  const doc = new DOMParser().parseFromString(content, 'text/html');
+  // Only replace table-containing paragraphs, never escape the entire article
+  // or reinterpret existing tables/code as Markdown.
+  for (const paragraph of Array.from(doc.body.querySelectorAll('p'))) {
+    if (paragraph.closest('table, pre, code')) continue;
+    const text = paragraph.innerHTML
+      .replace(/<br\s*\/?>/gi, '\n');
+    const holder = doc.createElement('div');
+    holder.innerHTML = text.replace(/\n/g, '\u0001');
+    const plain = (holder.textContent || '').replace(/\u0001/g, '\n');
+    if (!hasPipeTableContent(plain)) continue;
+    const replacement = doc.createElement('div');
+    replacement.innerHTML = buildMixedHTML(plain);
+    paragraph.replaceWith(...Array.from(replacement.childNodes));
+  }
+  return doc.body.innerHTML;
 }
 
 const URL_REGEX = /(?:https?:\/\/|www\.)[^\s<>"'`]+/gi;

@@ -14,7 +14,7 @@ import { Link } from '@tiptap/extension-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { hasPipeTableContent, buildMixedHTML, linkifyHTML } from '@/lib/tableUtils';
+import { hasPipeTableContent, buildMixedHTML, linkifyHTML, convertPipeTablesToHTML } from '@/lib/tableUtils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Bold,
@@ -115,7 +115,7 @@ export function RichTextEditor({
         },
       }),
     ],
-    content: hasPipeTableContent(content) ? buildMixedHTML(content) : content,
+    content: convertPipeTablesToHTML(content),
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
@@ -124,7 +124,7 @@ export function RichTextEditor({
         class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none min-h-[300px] max-w-none p-4',
       },
       transformPastedHTML(html) {
-        return linkifyHTML(html);
+        return linkifyHTML(convertPipeTablesToHTML(html));
       },
     },
   });
