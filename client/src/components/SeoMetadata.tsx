@@ -195,6 +195,11 @@ const routeMetadata: Record<string, Pick<SeoMetadata, "title" | "description">> 
     description:
       "Learn about The Digital Ledger, a weekly brief and community for corporate finance and accounting leaders.",
   },
+  "/editorial-policy": {
+    title: "Editorial Policy | The Digital Ledger",
+    description:
+      "Read The Digital Ledger's standards for sourcing, AI-assisted editorial work, publication dates, corrections, author information, and professional guidance.",
+  },
 };
 
 function isPrivateOrUtilityRoute(pathname: string) {

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { SubscribeDialog } from "@/components/SubscribeDialog";
+import { Link } from "wouter";
 
 export default function About() {
   const [showSubscribe, setShowSubscribe] = useState(false);
@@ -38,9 +39,9 @@ export default function About() {
             Who we are
           </h2>
           <p className="text-lg text-[#3D3D3D] dark:text-gray-300 leading-relaxed" data-testid="text-who-we-are-content">
-            A small editorial team. Finance and accounting people, mostly. We
-            read a lot. We think about what's changing before it's named. We
-            write for readers who do the same.
+            The Digital Ledger is an independent publication and community. Its
+            editorial team follows corporate finance and accounting closely and
+            writes for readers doing the same.
           </p>
         </section>
 
@@ -103,14 +104,21 @@ export default function About() {
             Editorial standards
           </h2>
           <p className="text-lg text-[#3D3D3D] dark:text-gray-300 mb-4 leading-relaxed" data-testid="text-editorial-standards-content">
-            We care about the work. Every piece is read, questioned, and edited
-            before it goes out. Sources are credited. Quotes are honored. Ideas
-            that aren't ours are treated as belonging to the people who had
-            them first.
+            Our standards call for clear sourcing, accurate publication and
+            update dates, responsible use of AI-assisted tools, and a visible
+            path for corrections. Editors remain responsible for what we
+            publish.
           </p>
           <p className="text-lg text-[#3D3D3D] dark:text-gray-300 leading-relaxed" data-testid="text-editorial-standards-content-2">
-            We think publishing is a small act of trust between us and the
-            reader. We try to be worth that trust every Wednesday.
+            Read our{" "}
+            <Link
+              href="/editorial-policy"
+              className="font-semibold text-[#1F2A44] underline underline-offset-4 hover:text-[#34476f] dark:text-ai-teal"
+            >
+              Editorial Policy
+            </Link>{" "}
+            for details about these standards, corrections, author information,
+            and the limits of our content.
           </p>
         </section>
       </div>

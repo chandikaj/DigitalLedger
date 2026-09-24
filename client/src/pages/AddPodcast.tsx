@@ -36,6 +36,22 @@ const podcastFormSchema = z.object({
   hostName: z.string().optional(),
   guestName: z.string().optional(),
   guestTitle: z.string().optional(),
+  episodeNotes: z
+    .string()
+    .max(20000, "Episode notes must be 20,000 characters or fewer")
+    .refine(
+      (value) => new TextEncoder().encode(value).byteLength <= 20000,
+      "Episode notes must be 20,000 UTF-8 bytes or fewer",
+    )
+    .optional(),
+  transcript: z
+    .string()
+    .max(60000, "Transcript must be 60,000 characters or fewer")
+    .refine(
+      (value) => new TextEncoder().encode(value).byteLength <= 60000,
+      "Transcript must be 60,000 UTF-8 bytes or fewer",
+    )
+    .optional(),
   status: z.enum(['draft', 'published']).default('draft'),
 });
 
@@ -66,6 +82,8 @@ export default function AddPodcast() {
       hostName: "",
       guestName: "",
       guestTitle: "",
+      episodeNotes: "",
+      transcript: "",
       status: "draft",
     },
   });
@@ -149,7 +167,7 @@ export default function AddPodcast() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description (Optional)</FormLabel>
+                        <FormLabel>Episode Summary (Optional)</FormLabel>
                         <FormControl>
                           <Textarea 
                             placeholder="Episode summary and key topics discussed..." 
@@ -161,7 +179,53 @@ export default function AddPodcast() {
                           />
                         </FormControl>
                         <FormDescription>
-                          A detailed description of the episode content.
+                          A concise public summary used in previews and search results. Keep it faithful to the episode.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={podcastForm.control}
+                    name="episodeNotes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Episode Notes (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder={"Key topics, resources, and timestamps discussed in this episode.\n\n00:00 Introduction\n05:30 Topic name"}
+                            rows={8}
+                            {...field}
+                            value={field.value || ""}
+                            data-testid="input-podcast-episode-notes"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Public notes displayed with the episode, up to 20,000 UTF-8 bytes. Include accurate names, links, and timestamps only.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={podcastForm.control}
+                    name="transcript"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Transcript (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Paste the verified plain-text transcript. Do not add a generated transcript unless it has been reviewed."
+                            rows={14}
+                            {...field}
+                            value={field.value || ""}
+                            data-testid="input-podcast-transcript"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Plain text only, up to 60,000 UTF-8 bytes. It will be published verbatim.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

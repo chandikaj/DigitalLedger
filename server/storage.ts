@@ -111,7 +111,7 @@ export interface IStorage {
   
   // News operations
   getNewsArticles(categoryIds?: string[], limit?: number, userRole?: string, archivedOnly?: boolean): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number })[]>;
-  getNewsArticle(id: string): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number }) | undefined>;
+  getNewsArticle(id: string): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number; author: Pick<User, "firstName" | "lastName"> | null }) | undefined>;
   createNewsArticle(article: InsertNewsArticle, categoryIds: string[]): Promise<NewsArticle & { categories: NewsCategory[] }>;
   getAutomationNewsDraft(
     externalId: string,
@@ -607,7 +607,7 @@ export class DatabaseStorage implements IStorage {
     return articlesWithCategories;
   }
 
-  async getNewsArticle(id: string): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number }) | undefined> {
+  async getNewsArticle(id: string): Promise<(NewsArticle & { categories: NewsCategory[]; commentCount: number; author: Pick<User, "firstName" | "lastName"> | null }) | undefined> {
     const [article] = await db
       .select()
       .from(newsArticles)
@@ -622,11 +622,21 @@ export class DatabaseStorage implements IStorage {
       .where(eq(articleCategories.articleId, article.id));
 
     const commentCount = await this.getArticleCommentCount(article.id);
+    const [author] = article.authorId
+      ? await db
+          .select({
+            firstName: users.firstName,
+            lastName: users.lastName,
+          })
+          .from(users)
+          .where(eq(users.id, article.authorId))
+      : [];
 
     return {
       ...article,
       categories: categoryResults.map(r => r.category),
       commentCount,
+      author: author || null,
     };
   }
 
@@ -764,7 +774,7 @@ export class DatabaseStorage implements IStorage {
 
       const [updated] = await tx
         .update(newsArticles)
-        .set({ ...updates, ...publicationUpdates })
+        .set({ ...updates, ...publicationUpdates, updatedAt: new Date() })
         .where(eq(newsArticles.id, articleId))
         .returning();
 
@@ -1384,7 +1394,10 @@ export class DatabaseStorage implements IStorage {
     return await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(podcastEpisodes)
-        .values(episode)
+        .values({
+          ...episode,
+          publishedAt: episode.status === "draft" ? null : episode.publishedAt,
+        })
         .returning();
 
       if (categoryIds.length > 0) {
@@ -1428,9 +1441,22 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
+      const [current] = await tx
+        .select({ status: podcastEpisodes.status })
+        .from(podcastEpisodes)
+        .where(eq(podcastEpisodes.id, episodeId));
+      if (!current) return undefined;
+
+      const publicationUpdates: Partial<InsertPodcastEpisode> = {};
+      if (updates.status === "draft") {
+        publicationUpdates.publishedAt = null;
+      } else if (updates.status === "published" && current.status !== "published") {
+        publicationUpdates.publishedAt = new Date();
+      }
+
       const [updated] = await tx
         .update(podcastEpisodes)
-        .set(updates)
+        .set({ ...updates, ...publicationUpdates, updatedAt: new Date() })
         .where(eq(podcastEpisodes.id, episodeId))
         .returning();
 
@@ -1473,9 +1499,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async togglePodcastEpisodeStatus(episodeId: string, status: 'published' | 'draft'): Promise<PodcastEpisode | undefined> {
+    const [current] = await db
+      .select({ status: podcastEpisodes.status })
+      .from(podcastEpisodes)
+      .where(eq(podcastEpisodes.id, episodeId));
+    if (!current) return undefined;
     const [updated] = await db
       .update(podcastEpisodes)
-      .set({ status })
+      .set({
+        status,
+        updatedAt: new Date(),
+        ...(status === "draft"
+          ? { publishedAt: null }
+          : current.status !== "published"
+            ? { publishedAt: new Date() }
+            : {}),
+      })
       .where(eq(podcastEpisodes.id, episodeId))
       .returning();
     return updated;

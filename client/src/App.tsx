@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { RouteSeoMetadata } from "@/components/SeoMetadata";
+import { Footer } from "@/components/Footer";
 
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
@@ -26,6 +27,7 @@ const Podcasts = lazy(() => import("@/pages/Podcasts"));
 const PodcastEpisode = lazy(() => import("@/pages/PodcastEpisode"));
 const Community = lazy(() => import("@/pages/Community"));
 const About = lazy(() => import("@/pages/About"));
+const EditorialPolicy = lazy(() => import("@/pages/EditorialPolicy"));
 const Admin = lazy(() => import("@/pages/Admin"));
 const UserManagement = lazy(() => import("@/pages/UserManagement"));
 const MenuSettings = lazy(() => import("@/pages/MenuSettings"));
@@ -80,6 +82,7 @@ function Router() {
       <Route path="/toolbox" component={Toolbox} />
       <Route path="/community" component={Community} />
       <Route path="/about" component={About} />
+      <Route path="/editorial-policy" component={EditorialPolicy} />
       <Route path="/login" component={Login} />
       <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/forgot-password" component={ForgotPassword} />
@@ -110,6 +113,7 @@ function App() {
           <Toaster />
           <RouteSeoMetadata />
           <Router />
+          <Footer />
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

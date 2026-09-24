@@ -150,7 +150,7 @@ export default function PodcastEpisode() {
               name: episode.title,
               description: episodeDescription,
               url: new URL(episodeUrl, seoOrigin).toString(),
-              image: imageUrl,
+              image: new URL(imageUrl, seoOrigin).toString(),
               datePublished: episodeDate?.toISOString(),
               dateModified:
                 episodeModifiedDate && !Number.isNaN(episodeModifiedDate.getTime())
@@ -168,6 +168,14 @@ export default function PodcastEpisode() {
                 : { "@type": "Organization", name: "The Digital Ledger" },
               contributor: episode.guestName
                 ? { "@type": "Person", name: episode.guestName }
+                : undefined,
+              transcript: episode.transcript || undefined,
+              hasPart: episode.episodeNotes
+                ? {
+                    "@type": "CreativeWork",
+                    name: "Episode notes",
+                    text: episode.episodeNotes,
+                  }
                 : undefined,
               associatedMedia: mediaUrl
                 ? {
@@ -445,8 +453,19 @@ export default function PodcastEpisode() {
             <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
               <span className="inline-flex items-center gap-1.5">
                 <Calendar className="h-4 w-4" />
-                {formatArticleDate(episode)}
+                {episodeDate
+                  ? `Published ${formatArticleDate(episode)}`
+                  : "Not published"}
               </span>
+              {episodeModifiedDate && episodeDate && episodeModifiedDate.getTime() - episodeDate.getTime() > 60_000 && (
+                <span className="inline-flex items-center gap-1.5">
+                  Updated {episodeModifiedDate.toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </span>
+              )}
               {duration && (
                 <span className="inline-flex items-center gap-1.5">
                   <Clock className="h-4 w-4" />
@@ -483,10 +502,44 @@ export default function PodcastEpisode() {
           </div>
 
           {episode.description && (
-            <section className="mx-auto mb-10 max-w-4xl text-center">
+            <section className="mx-auto mb-10 max-w-4xl text-center" aria-labelledby="episode-summary-heading">
+              <h2 id="episode-summary-heading" className="mb-4 text-2xl font-semibold text-gray-900 dark:text-white">
+                Episode summary
+              </h2>
               <p className="text-lg leading-8 text-gray-600 dark:text-gray-300">
                 {episode.description}
               </p>
+            </section>
+          )}
+
+          {episode.episodeNotes && (
+            <section className="mx-auto mb-10 max-w-4xl" aria-labelledby="episode-notes-heading">
+              <h2 id="episode-notes-heading" className="mb-4 text-2xl font-semibold text-gray-900 dark:text-white">
+                Episode notes
+              </h2>
+              <div
+                className="whitespace-pre-wrap rounded-xl border bg-gray-50 p-6 leading-7 text-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                data-testid="podcast-episode-notes"
+              >
+                {episode.episodeNotes}
+              </div>
+            </section>
+          )}
+
+          {episode.transcript && (
+            <section className="mx-auto mb-10 max-w-4xl" aria-labelledby="episode-transcript-heading">
+              <h2 id="episode-transcript-heading" className="mb-2 text-2xl font-semibold text-gray-900 dark:text-white">
+                Transcript
+              </h2>
+              <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+                This transcript is provided as plain text and may include speaker labels.
+              </p>
+              <div
+                className="whitespace-pre-wrap rounded-xl border p-6 leading-7 text-gray-700 dark:text-gray-200"
+                data-testid="podcast-transcript"
+              >
+                {episode.transcript}
+              </div>
             </section>
           )}
 

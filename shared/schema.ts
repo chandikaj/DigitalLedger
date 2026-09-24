@@ -122,6 +122,7 @@ export const newsArticles = pgTable("news_articles", {
   isFeatured: boolean("is_featured").default(false), // Featured on main page
   status: varchar("status").default("published").notNull(), // 'published' or 'draft'
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
 });
 
 // Idempotency/audit ledger for the server-to-server article draft importer.
@@ -220,6 +221,8 @@ export const podcastEpisodes = pgTable("podcast_episodes", {
   hostName: varchar("host_name"),
   guestName: varchar("guest_name"),
   guestTitle: varchar("guest_title"),
+  episodeNotes: text("episode_notes"),
+  transcript: text("transcript"),
   playCount: integer("play_count").default(0),
   likes: integer("likes").default(0),
   isArchived: boolean("is_archived").default(false),
@@ -227,6 +230,7 @@ export const podcastEpisodes = pgTable("podcast_episodes", {
   publishedAt: timestamp("published_at").defaultNow(),
   status: varchar("status").default("published").notNull(), // 'published' or 'draft'
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
 });
 
 // Junction table: Article Categories (many-to-many)
@@ -650,11 +654,33 @@ export const insertNewsCategorySchema = createInsertSchema(newsCategories).omit(
   updatedAt: true,
 });
 
-export const insertNewsArticleSchema = createInsertSchema(newsArticles).omit({
-  id: true,
-  createdAt: true,
-  likes: true,
-});
+const optionalContentUrlSchema = z
+  .string()
+  .trim()
+  .max(2048)
+  .refine((value) => {
+    if (!value) return true;
+    try {
+      const url = new URL(value);
+      return url.protocol === "https:" || url.protocol === "http:";
+    } catch {
+      return false;
+    }
+  }, "Must be a valid HTTP(S) URL");
+
+export const insertNewsArticleSchema = createInsertSchema(newsArticles)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    likes: true,
+  })
+  .extend({
+    excerpt: z.string().trim().max(1_000, "Excerpt must be 1,000 characters or fewer").optional().nullable(),
+    sourceName: z.string().trim().max(300, "Source name must be 300 characters or fewer").optional().nullable(),
+    sourceUrl: optionalContentUrlSchema.optional().nullable(),
+    status: z.enum(["draft", "published"]).optional(),
+  });
 
 export const insertNewsCommentSchema = createInsertSchema(newsComments).omit({
   id: true,
@@ -703,16 +729,38 @@ const podcastMediaUrlSchema = z.string().trim().refine((value) => {
   }
 }, "Media URL must be an HTTP(S) URL or a site-relative path");
 
+const podcastTranscriptSchema = z
+  .string()
+  .trim()
+  .max(60_000, "Transcript must be 60,000 characters or fewer")
+  .refine(
+    (value) => new TextEncoder().encode(value).byteLength <= 60_000,
+    "Transcript must be 60,000 UTF-8 bytes or fewer",
+  );
+
+const podcastEpisodeNotesSchema = z
+  .string()
+  .trim()
+  .max(20_000, "Episode notes must be 20,000 characters or fewer")
+  .refine(
+    (value) => new TextEncoder().encode(value).byteLength <= 20_000,
+    "Episode notes must be 20,000 UTF-8 bytes or fewer",
+  );
+
 export const insertPodcastEpisodeSchema = createInsertSchema(podcastEpisodes)
   .omit({
     id: true,
     createdAt: true,
+    updatedAt: true,
     playCount: true,
     likes: true,
   })
   .extend({
     audioUrl: podcastMediaUrlSchema.optional().nullable(),
     imageUrl: podcastMediaUrlSchema.optional().nullable(),
+    episodeNotes: podcastEpisodeNotesSchema.optional().nullable(),
+    transcript: podcastTranscriptSchema.optional().nullable(),
+    status: z.enum(["draft", "published"]).optional(),
   });
 
 export const insertPollSchema = createInsertSchema(polls).omit({

@@ -6,6 +6,14 @@ import { db } from "./db";
 import { users, newsArticles, podcastEpisodes, forumDiscussions } from "@shared/schema";
 import { storage } from "./storage";
 import sanitizeHtml from "sanitize-html";
+import {
+  convertPipeTablesForCrawler,
+  filterPublicContent,
+  getConfiguredPublicOrigin,
+  isPublicContent,
+  isRecognizedCrawler,
+  renderLlmsTxt,
+} from "./shared/seo";
 
 // ============================================
 // SEO & Bot Detection Utilities
@@ -47,47 +55,9 @@ function escapeXml(text: string): string {
 
 const UNSAFE_ORIGIN_CHARACTERS = /[\u0000-\u001f\u007f<>"'`\\]/;
 
-function getPublicOrigin(req: Request): string {
-  for (const configuredOrigin of [
-    process.env.PUBLIC_ORIGIN,
-    process.env.SITE_URL,
-  ]) {
-    if (!configuredOrigin || UNSAFE_ORIGIN_CHARACTERS.test(configuredOrigin)) {
-      continue;
-    }
-    try {
-      const url = new URL(configuredOrigin.trim());
-      if (
-        url.protocol === "https:" &&
-        !url.username &&
-        !url.password &&
-        url.origin !== "null"
-      ) {
-        return url.origin.replace(/\/+$/, "");
-      }
-    } catch {
-      // Try the next configured origin, then the validated request origin.
-    }
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("A valid HTTPS PUBLIC_ORIGIN or SITE_URL is required in production");
-  }
-
-  const requestOrigin = `${req.protocol}://${req.get("host") || ""}`;
-  if (UNSAFE_ORIGIN_CHARACTERS.test(requestOrigin)) {
-    throw new Error("Invalid request origin");
-  }
-  const url = new URL(requestOrigin);
-  if (
-    (url.protocol !== "https:" && url.protocol !== "http:") ||
-    url.username ||
-    url.password ||
-    url.origin === "null"
-  ) {
-    throw new Error("Invalid request origin");
-  }
-  return url.origin.replace(/\/+$/, "");
+function getPublicOrigin(_req: Request): string {
+  // Canonical output must never trust a request Host header or preview alias.
+  return getConfiguredPublicOrigin();
 }
 
 function resolveSafeHttpUrl(value: string | null | undefined, baseUrl: string): string | null {
@@ -191,29 +161,8 @@ function calculateReadingTime(content: string): number {
   return Math.max(1, Math.ceil(wordCount / wordsPerMinute));
 }
 
-// Comprehensive bot/crawler detection patterns
-const botPatterns = [
-  // AI Assistants
-  'chatgpt', 'gptbot', 'chatgpt-user', 'oai-searchbot',
-  'anthropic', 'claude', 'claudebot',
-  'perplexity', 'perplexitybot',
-  'google-extended', 'bard',
-  // Search Engines
-  'googlebot', 'bingbot', 'yandexbot', 'baiduspider', 'duckduckbot',
-  'slurp', 'sogou', 'exabot', 'ia_archiver',
-  // Social Media
-  'facebookexternalhit', 'facebot', 'fb_iab',
-  'linkedinbot', 'twitterbot', 'x-bot',
-  'whatsapp', 'telegrambot', 'discordbot', 'slackbot',
-  'pinterest', 'redditbot', 'tumblr',
-  // Other Crawlers
-  'applebot', 'mj12bot', 'semrushbot', 'ahrefsbot', 'dotbot',
-  'bot', 'crawler', 'spider', 'scraper', 'fetcher'
-];
-
 function isBot(userAgent: string): boolean {
-  const ua = userAgent.toLowerCase();
-  return botPatterns.some(pattern => ua.includes(pattern));
+  return isRecognizedCrawler(userAgent);
 }
 
 const app = express();
@@ -227,7 +176,7 @@ app.set("trust proxy", 1);
 app.use((req, res, next) => {
   const noIndexPath =
     /^\/api(?:\/|$)/.test(req.path) ||
-    /^\/(?:login|logout|signup|register|settings|welcome|verify-email|forgot-password|reset-password|unsubscribe|admin|editor)(?:\/|$)/.test(req.path) ||
+    /^\/(?:login|logout|signup|register|settings|account|welcome|verify-email|forgot-password|reset-password|unsubscribe|admin|editor)(?:\/|$)/.test(req.path) ||
     /^\/news\/(?:add|[^/]+\/edit)\/?$/.test(req.path) ||
     /^\/podcasts\/(?:add|[^/]+\/edit)\/?$/.test(req.path);
   if (noIndexPath) {
@@ -242,6 +191,7 @@ app.use((req, res, next) => {
 app.get('/robots.txt', (req, res) => {
   const baseUrl = getPublicOrigin(req);
   res.type('text/plain');
+  res.setHeader("Cache-Control", "no-store");
   res.send(`# The Digital Ledger - Robots.txt
 # Welcome crawlers! We want our content indexed and shared.
 
@@ -260,11 +210,21 @@ Allow: /
 User-agent: OAI-SearchBot
 Allow: /
 
+# Perplexity retrieval crawler
+User-agent: PerplexityBot
+Allow: /
+
 # Anthropic Crawlers
 User-agent: ClaudeBot
 Allow: /
 
 User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
 Allow: /
 
 # Search Engines
@@ -295,17 +255,34 @@ Sitemap: ${baseUrl}/sitemap.xml
 `);
 });
 
+// A concise, bounded discovery document for answer engines. It deliberately
+// lists only public records and is uncached so unpublishing takes effect at once.
+app.get('/llms.txt', async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  try {
+    const baseUrl = getPublicOrigin(req);
+    const [articles, podcasts] = await Promise.all([
+      storage.getNewsArticles(undefined, 100),
+      storage.getPodcastEpisodes(undefined, 100),
+    ]);
+    res.type('text/plain');
+    res.send(renderLlmsTxt(baseUrl, articles, podcasts));
+  } catch (error) {
+    console.error('Error generating llms.txt:', error);
+    res.status(500).type("text/plain").send("Error generating discovery document");
+  }
+});
+
 // ============================================
 // Dynamic XML Sitemap for Google indexing
 // ============================================
 app.get('/sitemap.xml', async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
   try {
     const baseUrl = getPublicOrigin(req);
     const xmlBaseUrl = escapeXml(baseUrl);
-    const articles = await storage.getNewsArticles();
-    const podcasts = await storage.getPodcastEpisodes();
-    
-    const now = new Date().toISOString();
+    const articles = await storage.getNewsArticles(undefined, 5000);
+    const podcasts = await storage.getPodcastEpisodes(undefined, 5000);
     
     let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
@@ -315,7 +292,6 @@ app.get('/sitemap.xml', async (req, res) => {
   <!-- Homepage -->
   <url>
     <loc>${xmlBaseUrl}/</loc>
-    <lastmod>${escapeXml(now)}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -327,14 +303,17 @@ app.get('/sitemap.xml', async (req, res) => {
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>${xmlBaseUrl}/editorial-policy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>${xmlBaseUrl}/news</loc>
-    <lastmod>${escapeXml(now)}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>${xmlBaseUrl}/podcasts</loc>
-    <lastmod>${escapeXml(now)}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -361,37 +340,41 @@ app.get('/sitemap.xml', async (req, res) => {
 `;
 
     // Add news articles
-    for (const article of articles.filter(a => !a.isArchived && a.status === 'published')) {
-      const lastMod = article.publishedAt ? new Date(article.publishedAt).toISOString() : now;
+    for (const article of filterPublicContent(articles)) {
+      const lastMod = article.updatedAt
+        ? new Date(article.updatedAt).toISOString()
+        : null;
       const imageUrl = resolveSafeHttpUrl(article.imageUrl, baseUrl);
       const articleLoc = `${baseUrl}/news/${encodeURIComponent(article.id)}`;
       
       sitemap += `
   <url>
     <loc>${escapeXml(articleLoc)}</loc>
-    <lastmod>${escapeXml(lastMod)}</lastmod>
+    ${lastMod ? `<lastmod>${escapeXml(lastMod)}</lastmod>` : ""}
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <news:news>
+    ${article.publishedAt ? `<news:news>
       <news:publication>
         <news:name>The Digital Ledger</news:name>
         <news:language>en</news:language>
       </news:publication>
-      <news:publication_date>${escapeXml(lastMod)}</news:publication_date>
+      <news:publication_date>${escapeXml(new Date(article.publishedAt).toISOString())}</news:publication_date>
       <news:title>${escapeXml(article.title)}</news:title>
-    </news:news>
+    </news:news>` : ""}
     ${imageUrl ? `<image:image><image:loc>${escapeXml(imageUrl)}</image:loc><image:title>${escapeXml(article.title)}</image:title></image:image>` : ''}
   </url>`;
     }
 
     // Add podcast episodes
-    for (const podcast of podcasts.filter(p => !p.isArchived && p.status === 'published')) {
-      const lastMod = podcast.publishedAt ? new Date(podcast.publishedAt).toISOString() : now;
+    for (const podcast of filterPublicContent(podcasts)) {
+      const lastMod = podcast.updatedAt
+        ? new Date(podcast.updatedAt).toISOString()
+        : null;
       const podcastLoc = `${baseUrl}/podcasts/${encodeURIComponent(podcast.id)}`;
       sitemap += `
   <url>
     <loc>${escapeXml(podcastLoc)}</loc>
-    <lastmod>${escapeXml(lastMod)}</lastmod>
+    ${lastMod ? `<lastmod>${escapeXml(lastMod)}</lastmod>` : ""}
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>`;
@@ -408,6 +391,85 @@ app.get('/sitemap.xml', async (req, res) => {
   }
 });
 
+// The matching public SPA route is implemented client-side. Crawlers receive a
+// semantic version rather than an empty application shell.
+app.get('/editorial-policy', (req, res, next) => {
+  const userAgent = req.headers['user-agent'] || '';
+  const signatureAgent = req.headers['signature-agent'] as string || '';
+  if (!isRecognizedCrawler(userAgent, signatureAgent)) return next();
+
+  const baseUrl = getPublicOrigin(req);
+  const canonical = `${baseUrl}/editorial-policy`;
+  const editorialPolicyJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Editorial Policy",
+    "url": canonical,
+    "description": "The editorial standards and corrections policy of The Digital Ledger.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "The Digital Ledger",
+      "url": baseUrl,
+    },
+  };
+  res.setHeader("Cache-Control", "no-store");
+  res.type("text/html").send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editorial Policy | The Digital Ledger</title>
+  <meta name="description" content="Read The Digital Ledger&#39;s standards for sourcing, AI-assisted editorial work, publication dates, corrections, author information, and professional guidance.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="${escapeHtml(canonical)}">
+  <script type="application/ld+json">${serializeJsonForHtml(editorialPolicyJsonLd)}</script>
+</head>
+<body>
+  <main>
+    <article>
+      <h1>Editorial Policy</h1>
+      <p>These standards guide how The Digital Ledger develops, reviews, and maintains editorial content about corporate finance and accounting.</p>
+      <section>
+        <h2>Scope and editorial responsibility</h2>
+        <p>The Digital Ledger is the publication responsible for content on this site. Editors are accountable for editorial decisions, including work created with assistance from research, transcription, or generative AI tools. Community posts and linked third-party materials represent their respective authors or publishers unless we clearly state otherwise.</p>
+      </section>
+      <section>
+        <h2>Sourcing and attribution</h2>
+        <p>Our standard is to rely on primary sources when they are available, including regulatory filings, legislation, standards, official data, company disclosures, original research, and direct interviews. Secondary reporting may be used for context and should be attributed.</p>
+        <p>Material claims should be supported by sources readers can identify or by a clear description of the basis for the claim. Quotations and ideas from others should be credited. Anonymous sourcing should be exceptional and explained when source protection permits.</p>
+      </section>
+      <section>
+        <h2>Reporting, analysis, and guidance</h2>
+        <p>News and factual reporting should be distinguished from our interpretation or analysis. Practical examples, forecasts, and recommendations are guidance, not statements of fact, and should make important assumptions and limitations clear.</p>
+      </section>
+      <section>
+        <h2>Publication and update dates</h2>
+        <p>Articles should display the date they were first published. When a substantive change is made, the displayed update date should reflect that change. Minor copy edits, formatting changes, or link repairs do not necessarily require a new update date. We do not change dates merely to make older work appear current.</p>
+      </section>
+      <section>
+        <h2>AI-assisted editorial work</h2>
+        <p>Our team may use AI-assisted tools for tasks such as research organization, transcription, outlining, or drafting. Under this policy, an editor must review AI-assisted editorial material before publication and remains responsible for its accuracy, attribution, clarity, and originality. AI output is not treated as a source.</p>
+        <p>Editors should verify consequential claims against reliable sources, check quotations and citations, and avoid entering confidential, private, or user-account information into public AI systems. Material use of synthetic media or AI that affects how a reasonable reader understands a piece should be disclosed in the content.</p>
+      </section>
+      <section>
+        <h2>Authors and expertise</h2>
+        <p>Author names and biographies should use verified, publicly available professional information. We do not infer or invent credentials, affiliations, licenses, or subject-matter expertise, and we do not use private user-account records to create public author profiles. A team byline means The Digital Ledger accepts editorial responsibility; it is not a claim that every team member has a particular credential.</p>
+      </section>
+      <section>
+        <h2>Corrections and feedback</h2>
+        <p>If you believe something is inaccurate, incomplete, or improperly attributed, reply to a Digital Ledger email with the article title or URL and a description of the issue. We will assess the supporting information. Substantive confirmed errors should be corrected promptly and, when useful to readers, accompanied by a correction or update note.</p>
+      </section>
+      <section>
+        <h2>No financial, legal, tax, or accounting advice</h2>
+        <p>The Digital Ledger provides general information and editorial analysis. It is not financial, investment, legal, tax, or accounting advice and is not a substitute for advice from a qualified professional familiar with your circumstances. Readers remain responsible for evaluating information and decisions.</p>
+      </section>
+    </article>
+    <nav><a href="${escapeHtml(baseUrl)}/news">News</a> | <a href="${escapeHtml(baseUrl)}/about">About The Digital Ledger</a></nav>
+  </main>
+</body>
+</html>`);
+});
+
 // ============================================
 // Bot-friendly article pages for ChatGPT, social media, and search engines
 // Must be FIRST middleware to intercept before Vite
@@ -415,25 +477,34 @@ app.get('/sitemap.xml', async (req, res) => {
 app.use(async (req, res, next) => {
   // Only handle /news/:id routes (supports both numeric and UUID IDs)
   const match = req.path.match(/^\/news\/([a-zA-Z0-9-]+)$/);
-  if (!match) {
+  if (!match || match[1] === "add") {
     return next();
   }
   
   try {
     const articleId = match[1];
     const article = await storage.getNewsArticle(articleId);
-    if (!article || article.status !== "published" || article.isArchived) {
+    const userAgent = req.headers['user-agent'] || '';
+    const signatureAgent = req.headers['signature-agent'] as string || '';
+    if (!article) {
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      return res.status(404).send("Article not found");
+    }
+    if (!isPublicContent(article)) {
+      if (!isRecognizedCrawler(userAgent, signatureAgent)) {
+        // Sessions are installed later with the API routes. Let the SPA load so
+        // its session-aware API can authorize editor/admin preview; that API
+        // still returns a non-revealing 404 to every unauthorized requester.
+        return next();
+      }
       res.setHeader("Cache-Control", "no-store");
       res.setHeader("X-Robots-Tag", "noindex, nofollow");
       return res.status(404).send("Article not found");
     }
 
-    const userAgent = req.headers['user-agent'] || '';
-    const signatureAgent = req.headers['signature-agent'] as string || '';
-    const isChatGPTAgent = signatureAgent.includes('chatgpt.com');
-    // Valid browser requests remain SPA-rendered, after the public visibility
-    // check above has prevented SPA soft-404s for private content.
-    if (!isBot(userAgent) && !isChatGPTAgent) {
+    // Valid browser requests remain SPA-rendered.
+    if (!isRecognizedCrawler(userAgent, signatureAgent)) {
       return next();
     }
     
@@ -443,12 +514,12 @@ app.use(async (req, res, next) => {
     const categoryNames: string[] = [];
     
     // Get author info
-    let authorName = 'The Digital Ledger Team';
+    let authorName: string | null = null;
     if (article.authorId) {
       try {
         const author = await storage.getUser(article.authorId);
         if (author) {
-          authorName = `${author.firstName || ''} ${author.lastName || ''}`.trim() || 'The Digital Ledger Team';
+          authorName = `${author.firstName || ''} ${author.lastName || ''}`.trim() || null;
         }
       } catch (e) {
         // Author optional
@@ -482,13 +553,22 @@ app.use(async (req, res, next) => {
     const readingTime = calculateReadingTime(article.content || '');
     
     // Date formatting
-    const publishedAt = article.publishedAt ? new Date(article.publishedAt) : new Date();
-    const publishedAtISO = publishedAt.toISOString();
-    const publishDateFormatted = publishedAt.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    const publishedAt = article.publishedAt
+      ? new Date(article.publishedAt)
+      : article.createdAt
+        ? new Date(article.createdAt)
+        : null;
+    const publishedAtISO = publishedAt?.toISOString() || null;
+    const updatedAtISO = article.updatedAt
+      ? new Date(article.updatedAt).toISOString()
+      : null;
+    const publishDateFormatted = publishedAt
+      ? publishedAt.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      : null;
     
     // JSON-LD Structured Data for Google Rich Snippets
     const jsonLd = {
@@ -497,13 +577,14 @@ app.use(async (req, res, next) => {
       "headline": article.title,
       "description": description,
       "image": [imageUrl],
-      "datePublished": publishedAtISO,
-      "dateModified": publishedAtISO,
-      "author": {
-        "@type": "Person",
-        "name": authorName,
-        "url": baseUrl
-      },
+      ...(publishedAtISO ? { "datePublished": publishedAtISO } : {}),
+      ...(updatedAtISO ? { "dateModified": updatedAtISO } : {}),
+      ...(authorName ? {
+        "author": {
+          "@type": "Person",
+          "name": authorName
+        }
+      } : {}),
       "publisher": {
         "@type": "Organization",
         "name": "The Digital Ledger",
@@ -527,7 +608,7 @@ app.use(async (req, res, next) => {
     
     // Clean article content - keep HTML structure for readability
     const articleContent = sanitizeHtml(
-      article.content || "",
+      convertPipeTablesForCrawler(article.content || ""),
       ARTICLE_CONTENT_SANITIZE_OPTIONS,
     );
     const hasEmbeddedSources = (article.content || '').includes('data-article-sources="true"');
@@ -548,7 +629,7 @@ app.use(async (req, res, next) => {
   <meta name="title" content="${escapeHtml(article.title)} | The Digital Ledger">
   <meta name="description" content="${escapeHtml(description)}">
   <meta name="keywords" content="${escapedKeywords}">
-  <meta name="author" content="${escapeHtml(authorName)}">
+  ${authorName ? `<meta name="author" content="${escapeHtml(authorName)}">` : ""}
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <meta name="googlebot" content="index, follow">
   <link rel="canonical" href="${escapedArticleUrl}">
@@ -566,9 +647,9 @@ app.use(async (req, res, next) => {
   <meta property="og:locale" content="en_US">
   
   <!-- Article-specific Open Graph -->
-  <meta property="article:published_time" content="${publishedAtISO}">
-  <meta property="article:modified_time" content="${publishedAtISO}">
-  <meta property="article:author" content="${escapeHtml(authorName)}">
+  ${publishedAtISO ? `<meta property="article:published_time" content="${escapeHtml(publishedAtISO)}">` : ""}
+  ${updatedAtISO ? `<meta property="article:modified_time" content="${escapeHtml(updatedAtISO)}">` : ""}
+  ${authorName ? `<meta property="article:author" content="${escapeHtml(authorName)}">` : ""}
   <meta property="article:section" content="${categoryNames.length > 0 ? escapeHtml(categoryNames[0]) : 'Finance'}">
   ${categoryNames.map(cat => `<meta property="article:tag" content="${escapeHtml(cat)}">`).join('\n  ')}
   
@@ -610,11 +691,12 @@ ${serializeJsonForHtml(jsonLd)}
     <header>
       <h1 itemprop="headline">${escapeHtml(article.title)}</h1>
       <div class="meta">
-        <span itemprop="author" itemscope itemtype="https://schema.org/Person">
+        ${authorName ? `<span itemprop="author" itemscope itemtype="https://schema.org/Person">
           By <span itemprop="name">${escapeHtml(authorName)}</span>
         </span>
-        &bull; 
-        <time itemprop="datePublished" datetime="${escapeHtml(publishedAtISO)}">${escapeHtml(publishDateFormatted)}</time>
+        &bull;` : ""}
+        ${publishedAtISO && publishDateFormatted ? `<time itemprop="datePublished" datetime="${escapeHtml(publishedAtISO)}">${escapeHtml(publishDateFormatted)}</time>` : ""}
+        ${updatedAtISO ? `&bull; Updated <time itemprop="dateModified" datetime="${escapeHtml(updatedAtISO)}">${escapeHtml(new Date(updatedAtISO).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }))}</time>` : ""}
         &bull; 
         ${readingTime} min read
         ${categoryNames.length > 0 ? `&bull; ${categoryNames.map(c => escapeHtml(c)).join(', ')}` : ''}
@@ -665,21 +747,31 @@ ${serializeJsonForHtml(jsonLd)}
 app.use(async (req, res, next) => {
   // Handle /podcasts/:id routes
   const match = req.path.match(/^\/podcasts\/([a-zA-Z0-9-]+)$/);
-  if (!match) {
+  if (!match || match[1] === "add") {
     return next();
   }
   
   try {
     const podcastId = match[1];
     const podcast = await storage.getPodcastEpisode(podcastId);
-    if (!podcast || podcast.isArchived || podcast.status !== "published") {
+    const userAgent = req.headers['user-agent'] || '';
+    const signatureAgent = req.headers['signature-agent'] as string || '';
+    if (!podcast) {
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      return res.status(404).type("text/plain").send("Podcast episode not found");
+    }
+    if (!isPublicContent(podcast)) {
+      if (!isRecognizedCrawler(userAgent, signatureAgent)) {
+        // The session-aware detail API remains the authorization boundary for
+        // browser previews and does not expose private episode data publicly.
+        return next();
+      }
       res.setHeader("Cache-Control", "no-store");
       res.setHeader("X-Robots-Tag", "noindex, nofollow");
       return res.status(404).type("text/plain").send("Podcast episode not found");
     }
 
-    const userAgent = req.headers['user-agent'] || '';
-    const signatureAgent = req.headers['signature-agent'] as string || '';
     const isChatGPTAgent = signatureAgent.includes('chatgpt.com');
     if (!isBot(userAgent) && !isChatGPTAgent) {
       return next();
@@ -703,15 +795,26 @@ app.use(async (req, res, next) => {
     const audioUrl = resolveSafeHttpUrl(podcast.audioUrl, baseUrl);
     const escapedImageUrl = escapeHtml(imageUrl);
     const escapedAudioUrl = audioUrl ? escapeHtml(audioUrl) : null;
+    const episodeNotes = podcast.episodeNotes?.trim() || "";
+    const transcript = podcast.transcript?.trim() || "";
     
     const keywords = extractKeywords(podcast.title, podcast.description || '', []);
     keywords.push('podcast', 'audio', 'episode');
     
-    const publishedAt = podcast.publishedAt ? new Date(podcast.publishedAt) : new Date();
-    const publishedAtISO = publishedAt.toISOString();
-    const publishDateFormatted = publishedAt.toLocaleDateString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric'
-    });
+    const publishedAt = podcast.publishedAt
+      ? new Date(podcast.publishedAt)
+      : podcast.createdAt
+        ? new Date(podcast.createdAt)
+        : null;
+    const publishedAtISO = publishedAt?.toISOString() || null;
+    const updatedAtISO = podcast.updatedAt
+      ? new Date(podcast.updatedAt).toISOString()
+      : null;
+    const publishDateFormatted = publishedAt
+      ? publishedAt.toLocaleDateString('en-US', {
+          year: 'numeric', month: 'long', day: 'numeric'
+        })
+      : null;
     
     const jsonLd = {
       "@context": "https://schema.org",
@@ -719,9 +822,12 @@ app.use(async (req, res, next) => {
       "name": podcast.title,
       "description": description,
       "image": imageUrl,
-      "datePublished": publishedAtISO,
+      ...(publishedAtISO ? { "datePublished": publishedAtISO } : {}),
+      ...(updatedAtISO ? { "dateModified": updatedAtISO } : {}),
       "url": podcastUrl,
       "duration": podcast.duration || undefined,
+      ...(episodeNotes ? { "abstract": episodeNotes } : {}),
+      ...(transcript ? { "transcript": transcript } : {}),
       "partOfSeries": {
         "@type": "PodcastSeries",
         "name": "The Digital Ledger Podcast",
@@ -773,6 +879,7 @@ ${serializeJsonForHtml(jsonLd)}
     .meta { color: #666; font-size: 0.9em; margin-bottom: 1.5em; }
     img { max-width: 100%; height: auto; border-radius: 8px; }
     .description { margin: 1.5em 0; }
+    .plain-text { white-space: pre-wrap; }
     .listen-link { display: inline-block; background: #dc2626; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 1em; }
   </style>
 </head>
@@ -781,7 +888,8 @@ ${serializeJsonForHtml(jsonLd)}
     <header>
       <h1 itemprop="name">${escapeHtml(podcast.title)}</h1>
       <div class="meta">
-        <time itemprop="datePublished" datetime="${escapeHtml(publishedAtISO)}">${escapeHtml(publishDateFormatted)}</time>
+        ${publishedAtISO && publishDateFormatted ? `<time itemprop="datePublished" datetime="${escapeHtml(publishedAtISO)}">${escapeHtml(publishDateFormatted)}</time>` : ""}
+        ${updatedAtISO ? `&bull; Updated <time itemprop="dateModified" datetime="${escapeHtml(updatedAtISO)}">${escapeHtml(new Date(updatedAtISO).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }))}</time>` : ""}
         ${podcast.duration ? `&bull; ${escapeHtml(podcast.duration)}` : ''}
         ${podcast.hostName ? `&bull; Host: ${escapeHtml(podcast.hostName)}` : ''}
         ${podcast.guestName ? `&bull; Guest: ${escapeHtml(podcast.guestName)}` : ''}
@@ -795,6 +903,10 @@ ${serializeJsonForHtml(jsonLd)}
     </div>
     
     ${escapedAudioUrl ? `<a href="${escapedAudioUrl}" class="listen-link" target="_blank" rel="noopener">Listen Now</a>` : ''}
+
+    ${episodeNotes ? `<section><h2>Episode notes</h2><p class="plain-text">${escapeHtml(episodeNotes)}</p></section>` : ''}
+
+    ${transcript ? `<section><h2>Transcript</h2><p class="plain-text" itemprop="transcript">${escapeHtml(transcript)}</p></section>` : ''}
     
     <nav>
       <p><a href="${escapedBaseUrl}/podcasts">← Back to all podcasts</a> | <a href="${escapedBaseUrl}">Visit The Digital Ledger</a></p>
@@ -1819,6 +1931,16 @@ app.use((req, res, next) => {
     req.method === "POST" &&
     req.path === "/api/automation/news/drafts"
   ) {
+    return next();
+  }
+  // Episode notes and transcripts can legitimately exceed Express's default
+  // 100 KB limit. Keep the increased budget scoped to authenticated podcast
+  // create/update handlers; crawler output HTML-escapes both plain-text fields.
+  if (
+    (req.method === "POST" && req.path === "/api/podcasts") ||
+    (req.method === "PATCH" && /^\/api\/podcasts\/[a-zA-Z0-9-]+$/.test(req.path))
+  ) {
+    // The route installs its bounded parser after editor authentication.
     return next();
   }
   return defaultJsonParser(req, res, next);

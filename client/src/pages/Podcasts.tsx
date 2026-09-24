@@ -27,6 +27,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatArticleDate } from "@/lib/articleDate";
 import { OptimizedImage } from "@/components/OptimizedImage";
 
 interface NewsCategory {
@@ -451,7 +452,7 @@ export default function Podcasts() {
                   )}
                   
                   <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
-                    <span>{new Date(episode.publishedAt).toLocaleDateString()}</span>
+                    <span>{formatArticleDate(episode)}</span>
                   </div>
                   
                   <div className="flex justify-center mb-3">

@@ -5,23 +5,30 @@
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-4LKX5YM8KM');
-      window.addEventListener('load', function () {
-        var loadAnalytics = function () {
-          var script = document.createElement('script');
-          script.async = true;
-          script.src = 'https://www.googletagmanager.com/gtag/js?id=G-4LKX5YM8KM';
-          document.head.appendChild(script);
-        };
-        window.setTimeout(function () {
-          if ('requestIdleCallback' in window) {
-            window.requestIdleCallback(loadAnalytics, { timeout: 3000 });
-          } else {
-            loadAnalytics();
-          }
-        }, 8000);
-      }, { once: true });
+      var privacySignalEnabled =
+        navigator.globalPrivacyControl === true ||
+        navigator.doNotTrack === '1' ||
+        (navigator.doNotTrack && navigator.doNotTrack.toLowerCase() === 'yes') ||
+        window.doNotTrack === '1';
+      if (!privacySignalEnabled) {
+        gtag('js', new Date());
+        gtag('config', 'G-4LKX5YM8KM');
+        window.addEventListener('load', function () {
+          var loadAnalytics = function () {
+            var script = document.createElement('script');
+            script.async = true;
+            script.src = 'https://www.googletagmanager.com/gtag/js?id=G-4LKX5YM8KM';
+            document.head.appendChild(script);
+          };
+          window.setTimeout(function () {
+            if ('requestIdleCallback' in window) {
+              window.requestIdleCallback(loadAnalytics, { timeout: 3000 });
+            } else {
+              loadAnalytics();
+            }
+          }, 8000);
+        }, { once: true });
+      }
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />

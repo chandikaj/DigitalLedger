@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { identifyUser } from "@/lib/tracking";
+import { useAiReferralTracking } from "@/hooks/useAiReferralTracking";
 
 export function useAuth() {
+  useAiReferralTracking();
+
   const { data: user, isLoading } = useQuery({
     queryKey: ["/api/auth/user"],
     retry: false,

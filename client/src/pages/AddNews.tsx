@@ -31,8 +31,8 @@ const articleFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   content: z.string().min(1, "Content is required"),
   categoryIds: z.array(z.string()).min(1, "At least one category is required"),
-  excerpt: z.string().optional(),
-  sourceUrl: z.string().optional(),
+  excerpt: z.string().max(1000, "Excerpt must be 1,000 characters or fewer").optional(),
+  sourceUrl: z.union([z.literal(""), z.string().url("Enter a valid source URL")]).optional(),
   sourceName: z.string().optional(),
   imageUrl: z.string().optional(),
   status: z.enum(['draft', 'published']).default('draft'),
@@ -158,7 +158,7 @@ export default function AddNews() {
                           />
                         </FormControl>
                         <FormDescription>
-                          A short summary that will appear in the article preview.
+                          A concise, factual summary shown prominently on the article and in search previews. Do not introduce facts not supported by the article.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -179,7 +179,7 @@ export default function AddNews() {
                           />
                         </FormControl>
                         <FormDescription>
-                          Use the toolbar to format your content with bold, italics, headings, and more.
+                          Use clear headings. For regulatory topics, identify the jurisdiction, effective date, and scope in the article, and verify them against a primary source.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -275,7 +275,7 @@ export default function AddNews() {
                           />
                         </FormControl>
                         <FormDescription>
-                          Link to the original article if you're sharing external content.
+                          Prefer the authoritative primary source (regulator, standard setter, court, or official filing). Confirm its jurisdiction and effective date before publishing.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

@@ -173,6 +173,9 @@ export default function Article() {
 
   const articleDate = article ? getArticleDate(article) : null;
   const modifiedDate = article?.updatedAt ? new Date(article.updatedAt) : null;
+  const articleAuthorName = article?.author
+    ? [article.author.firstName, article.author.lastName].filter(Boolean).join(" ").trim()
+    : "";
   const articleDescription = article
     ? (article.excerpt || article.content?.replace(/<[^>]*>/g, " ") || "")
         .replace(/\s+/g, " ")
@@ -197,7 +200,7 @@ export default function Article() {
               : undefined,
           type: "article",
           image: articleImage,
-          author: "The Digital Ledger",
+          author: articleAuthorName || undefined,
           publishedTime: articleDate?.toISOString(),
           modifiedTime:
             modifiedDate && !Number.isNaN(modifiedDate.getTime())
@@ -216,10 +219,10 @@ export default function Article() {
                 modifiedDate && !Number.isNaN(modifiedDate.getTime())
                   ? modifiedDate.toISOString()
                   : articleDate?.toISOString(),
-              author: {
-                "@type": "Organization",
-                name: "The Digital Ledger",
-              },
+              author: articleAuthorName
+                ? { "@type": "Person", name: articleAuthorName }
+                : undefined,
+              citation: article.sourceUrl || undefined,
               publisher: {
                 "@type": "Organization",
                 name: "The Digital Ledger",
@@ -756,13 +759,24 @@ export default function Article() {
                   <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm">
                     <Calendar className="h-4 w-4 mr-1" />
                     <span data-testid="article-date">
-                      {formatArticleDate(article, {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
+                      {articleDate
+                        ? `Published ${formatArticleDate(article, {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}`
+                        : "Not published"}
                     </span>
                   </div>
+                  {modifiedDate && articleDate && modifiedDate.getTime() - articleDate.getTime() > 60_000 && (
+                    <span className="text-sm text-gray-500 dark:text-gray-400" data-testid="article-updated-date">
+                      Updated {modifiedDate.toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </span>
+                  )}
                 </div>
                 
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4 leading-tight" data-testid="article-title">
@@ -773,6 +787,31 @@ export default function Article() {
                   <p className="text-xl text-gray-600 dark:text-gray-300 mb-6 leading-relaxed" data-testid="article-excerpt">
                     {article.excerpt}
                   </p>
+                )}
+                {(articleAuthorName || article.sourceName) && (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600 dark:text-gray-300">
+                    {articleAuthorName && (
+                      <span data-testid="article-author">
+                        By <span className="font-medium">{articleAuthorName}</span>
+                      </span>
+                    )}
+                    {article.sourceName && article.sourceUrl && (
+                      <a
+                        href={article.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center font-medium text-primary hover:underline"
+                      >
+                        Source: {article.sourceName}
+                        <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                      </a>
+                    )}
+                    {article.sourceName && !article.sourceUrl && (
+                      <span>
+                        Source: <span className="font-medium">{article.sourceName}</span>
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -935,7 +974,7 @@ export default function Article() {
                             />
                           </FormControl>
                           <FormDescription>
-                            A short summary that will appear in the article preview.
+                            A concise, factual summary shown on this page and in search previews. Do not add facts that are not supported by the article.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -956,7 +995,7 @@ export default function Article() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Use the toolbar to format your content with bold, italics, colors, fonts, and more.
+                            Use clear headings. For regulatory topics, identify the jurisdiction, effective date, and scope, then verify them against a primary source.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -1228,6 +1267,9 @@ export default function Article() {
                                 data-testid="input-edit-source-url"
                               />
                             </FormControl>
+                            <FormDescription>
+                              Prefer a regulator, standard setter, court, official filing, or other authoritative primary source.
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}

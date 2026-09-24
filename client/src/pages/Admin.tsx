@@ -26,6 +26,7 @@ import type { UploadResult } from "@uppy/core";
 // Extended schemas for form validation
 const articleFormSchema = insertNewsArticleSchema.extend({
   imageFile: z.string().optional(),
+  category: z.string().optional(),
 }).partial();
 
 const podcastFormSchema = insertPodcastEpisodeSchema.extend({
@@ -79,6 +80,7 @@ export default function Admin() {
       sourceUrl: "",
       sourceName: "",
       imageUrl: "",
+      status: "draft",
     },
   });
 
@@ -94,6 +96,9 @@ export default function Admin() {
       duration: "",
       audioUrl: "",
       imageUrl: "",
+      episodeNotes: "",
+      transcript: "",
+      status: "draft",
     },
   });
 
@@ -651,12 +656,15 @@ export default function Admin() {
                             />
                           </FormControl>
                           <FormDescription>
-                            A short summary that will appear in the article preview.
+                            A concise, factual summary shown on the article and in search previews. Do not add unsupported facts.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      For regulatory coverage, state the jurisdiction, effective date, and scope. Verify those details against a primary source.
+                    </p>
 
                     <FormField
                       control={articleForm.control}
@@ -735,7 +743,7 @@ export default function Admin() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Link to the original article (if applicable).
+                            Prefer an authoritative primary source such as a regulator, standard setter, court, or official filing.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -767,6 +775,31 @@ export default function Admin() {
                         </Badge>
                       )}
                     </div>
+
+                    <FormField
+                      control={articleForm.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Publication Status</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || "draft"}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-admin-article-status">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="draft">Draft — editor preview only</SelectItem>
+                              <SelectItem value="published">Published — public immediately</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Draft content is excluded from public lists and detail pages.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <div className="flex justify-end">
                       <Button 
@@ -874,6 +907,52 @@ export default function Admin() {
                       )}
                     />
 
+                    <FormField
+                      control={podcastForm.control}
+                      name="episodeNotes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Episode Notes</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder={"Key topics, resources, and timestamps.\n\n00:00 Introduction"}
+                              rows={7}
+                              {...field}
+                              value={field.value || ""}
+                              data-testid="input-podcast-episode-notes"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Public notes displayed with the episode, up to 20,000 UTF-8 bytes. Include only accurate links and timestamps.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={podcastForm.control}
+                      name="transcript"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Transcript (Optional)</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Paste a reviewed plain-text transcript. It will be published verbatim."
+                              rows={12}
+                              {...field}
+                              value={field.value || ""}
+                              data-testid="input-podcast-transcript"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Plain text only, up to 60,000 UTF-8 bytes. Do not invent or auto-fill a transcript.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={podcastForm.control}
@@ -969,6 +1048,31 @@ export default function Admin() {
                         </Badge>
                       )}
                     </div>
+
+                    <FormField
+                      control={podcastForm.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Publication Status</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || "draft"}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-admin-podcast-status">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="draft">Draft — editor preview only</SelectItem>
+                              <SelectItem value="published">Published — public immediately</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Draft episodes and their transcripts are not available publicly.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <div className="flex justify-end">
                       <Button 

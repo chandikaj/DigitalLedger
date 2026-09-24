@@ -152,6 +152,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     user?.isActive === true &&
     (user.role === "admin" || user.role === "editor");
 
+  const withoutPodcastLongForm = (episode: any) => {
+    if (!episode) return episode;
+    const { episodeNotes: _episodeNotes, transcript: _transcript, ...summary } =
+      episode;
+    return summary;
+  };
+  // server/index.ts must bypass its default 100 KB parser for these two
+  // authenticated mutation paths so this bounded parser can handle transcripts.
+  const podcastMutationJsonParser = express.json({ limit: "512kb" });
+
   // Session middleware
   app.use(getSession());
 
@@ -1134,8 +1144,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         categoryIdsArray,
       );
       res.json(article);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating news article:", error);
+      if (error?.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid news article", errors: error.errors });
+      }
       res.status(500).json({ message: "Failed to create news article" });
     }
   });
@@ -1175,8 +1188,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Article not found" });
       }
       res.json(updatedArticle);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating news article:", error);
+      if (error?.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid news article", errors: error.errors });
+      }
       res.status(500).json({ message: "Failed to update news article" });
     }
   });
@@ -1216,8 +1232,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Article not found" });
       }
       res.json(updatedArticle);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating news article:", error);
+      if (error?.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid news article", errors: error.errors });
+      }
       res.status(500).json({ message: "Failed to update news article" });
     }
   });
@@ -1805,7 +1824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(
         `[GET /api/podcasts] Returning ${episodes.length} episodes, userRole: ${userRole}, archivedOnly: ${archivedOnly}, statuses: ${episodes.map((e) => e.status).join(", ")}`,
       );
-      res.json(episodes);
+      res.json(episodes.map(withoutPodcastLongForm));
     } catch (error) {
       console.error("Error fetching podcast episodes:", error);
       res.status(500).json({ message: "Failed to fetch podcast episodes" });
@@ -1815,7 +1834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/podcasts/featured", async (req, res) => {
     try {
       const episode = await storage.getFeaturedPodcastEpisode();
-      res.json(episode);
+      res.json(withoutPodcastLongForm(episode));
     } catch (error) {
       console.error("Error fetching featured podcast:", error);
       res.status(500).json({ message: "Failed to fetch featured podcast" });
@@ -1840,6 +1859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Podcast episode not found" });
       }
 
+      res.set("Cache-Control", "no-store");
       res.json(episode);
     } catch (error) {
       console.error("Error fetching podcast episode:", error);
@@ -1847,59 +1867,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/podcasts", isEditorOrAdmin, async (req: any, res) => {
-    try {
-      const { categoryIds, ...episodeFields } = req.body;
-      const categoryIdsArray = categoryIds || [];
-      const episodeData = insertPodcastEpisodeSchema.parse(episodeFields);
-      const episode = await storage.createPodcastEpisode(
-        episodeData,
-        categoryIdsArray,
-      );
-      res.json(episode);
-    } catch (error) {
-      console.error("Error creating podcast episode:", error);
-      res.status(500).json({ message: "Failed to create podcast episode" });
-    }
-  });
+  app.post(
+    "/api/podcasts",
+    isEditorOrAdmin,
+    podcastMutationJsonParser,
+    async (req: any, res) => {
+      try {
+        const { categoryIds, ...episodeFields } = req.body;
+        const categoryIdsArray = categoryIds || [];
+        const episodeData = insertPodcastEpisodeSchema.parse(episodeFields);
+        const episode = await storage.createPodcastEpisode(
+          episodeData,
+          categoryIdsArray,
+        );
+        res.json(episode);
+      } catch (error: any) {
+        console.error("Error creating podcast episode:", error);
+        if (error?.name === "ZodError") {
+          return res.status(400).json({ message: "Invalid podcast episode", errors: error.errors });
+        }
+        res.status(500).json({ message: "Failed to create podcast episode" });
+      }
+    },
+  );
 
-  app.patch("/api/podcasts/:id", isEditorOrAdmin, async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const { categoryIds, ...episodeFields } = req.body;
-      const categoryIdsArray = categoryIds || undefined;
-      const episodeData = insertPodcastEpisodeSchema
-        .partial()
-        .parse(episodeFields);
+  app.patch(
+    "/api/podcasts/:id",
+    isEditorOrAdmin,
+    podcastMutationJsonParser,
+    async (req: any, res) => {
+      try {
+        const { id } = req.params;
+        const { categoryIds, ...episodeFields } = req.body;
+        const categoryIdsArray = categoryIds || undefined;
+        const episodeData = insertPodcastEpisodeSchema
+          .partial()
+          .parse(episodeFields);
 
       // If imageUrl is being updated, delete the old image
-      if (episodeData.imageUrl) {
-        const existingEpisode = await storage.getPodcastEpisode(id);
-        if (
-          existingEpisode?.imageUrl &&
-          existingEpisode.imageUrl !== episodeData.imageUrl
-        ) {
-          const objectStorageService = new ObjectStorageService();
-          await objectStorageService.deleteObjectEntity(
-            existingEpisode.imageUrl,
-          );
+        if (episodeData.imageUrl) {
+          const existingEpisode = await storage.getPodcastEpisode(id);
+          if (
+            existingEpisode?.imageUrl &&
+            existingEpisode.imageUrl !== episodeData.imageUrl
+          ) {
+            const objectStorageService = new ObjectStorageService();
+            await objectStorageService.deleteObjectEntity(
+              existingEpisode.imageUrl,
+            );
+          }
         }
-      }
 
-      const episode = await storage.updatePodcastEpisode(
-        id,
-        episodeData,
-        categoryIdsArray,
-      );
-      if (!episode) {
-        return res.status(404).json({ message: "Podcast episode not found" });
+        const episode = await storage.updatePodcastEpisode(
+          id,
+          episodeData,
+          categoryIdsArray,
+        );
+        if (!episode) {
+          return res.status(404).json({ message: "Podcast episode not found" });
+        }
+        res.json(episode);
+      } catch (error: any) {
+        console.error("Error updating podcast episode:", error);
+        if (error?.name === "ZodError") {
+          return res.status(400).json({ message: "Invalid podcast episode", errors: error.errors });
+        }
+        res.status(500).json({ message: "Failed to update podcast episode" });
       }
-      res.json(episode);
-    } catch (error) {
-      console.error("Error updating podcast episode:", error);
-      res.status(500).json({ message: "Failed to update podcast episode" });
-    }
-  });
+    },
+  );
 
   app.delete("/api/podcasts/:id", isEditorOrAdmin, async (req: any, res) => {
     try {
