@@ -64,6 +64,19 @@ export function buildMixedHTML(text: string): string {
     const trimmed = lines[i].trim();
     const nextTrimmed = i + 1 < lines.length ? lines[i + 1].trim() : '';
 
+    // A boxed ASCII table can include a top border immediately before its
+    // header row. Treat it as part of the table rather than article prose.
+    if (
+      /^[+\-=\s]+$/.test(trimmed) &&
+      trimmed.includes('+') &&
+      nextTrimmed.includes('|') &&
+      i + 2 < lines.length &&
+      isSeparatorLine(lines[i + 2])
+    ) {
+      i++;
+      continue;
+    }
+
     // Detect start of a real markdown pipe table: header row + separator row
     if (
       (trimmed.includes('|') || trimmed.includes('+')) &&
