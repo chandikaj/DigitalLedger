@@ -132,6 +132,227 @@ export function convertPipeTablesToHTML(content: string): string {
   return doc.body.innerHTML;
 }
 
+type VisualRow = { label: string; value: string; numericValue: number };
+type VisualMatch = { html: string; start?: number; end: number };
+
+const BAR_TOKEN = /([^:[\]]+?)\s*:\s*([$€£]?\s*\d[\d,.]*\s*(?:billion|million|thousand|%|x)?(?:\s*(?:USD|EUR|GBP))?)\s*\[([^\]]*)\]/gi;
+const BAR_CHARACTERS = /^[\s█▉▊▋▌▍▎▏▓▒░■□#=|.·•_-]*$/;
+const ASCII_DIVIDER = /^[+\-|=\s]{4,}$/;
+
+function parseBarLine(line: string): VisualRow[] | null {
+  const rows: VisualRow[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  BAR_TOKEN.lastIndex = 0;
+  while ((match = BAR_TOKEN.exec(line)) !== null) {
+    if (line.slice(lastIndex, match.index).trim() || !BAR_CHARACTERS.test(match[3])) return null;
+    const numericValue = Number(match[2].replace(/[^\d.]/g, ''));
+    if (!Number.isFinite(numericValue)) return null;
+    rows.push({
+      label: match[1].trim(),
+      value: match[2].trim(),
+      numericValue,
+    });
+    lastIndex = BAR_TOKEN.lastIndex;
+  }
+  if (!rows.length || line.slice(lastIndex).trim()) return null;
+  return rows;
+}
+
+function escapeVisualText(value: string): string {
+  return escapeHTML(value);
+}
+
+function buildBarVisual(rows: VisualRow[], title: string | null): string {
+  const max = Math.max(...rows.map(row => row.numericValue), 1);
+  const bars = rows.map(row => {
+    const width = Math.max(2, (row.numericValue / max) * 100);
+    return `<div class="article-bar-row"><div class="article-bar-label">${escapeVisualText(row.label)}</div><div class="article-bar-value">${escapeVisualText(row.value)}</div><div class="article-bar-track" aria-hidden="true"><span style="width:${width.toFixed(2)}%"></span></div></div>`;
+  }).join('');
+  const heading = title ? `<figcaption>${escapeVisualText(title)}</figcaption>` : '';
+  return `<figure class="article-visual article-bar-visual">${heading}<div class="article-bar-list">${bars}</div></figure>`;
+}
+
+function splitDiagramCells(line: string): string[] | null {
+  const cells = line.split('|').map(cell => cell.trim());
+  return cells.length === 2 && cells.every(Boolean) ? cells : null;
+}
+
+function buildFinOpsVisual(lines: string[], start: number): VisualMatch | null {
+  if (!/finops\s+architectures/i.test(lines[start])) return null;
+  let headerIndex = start + 1;
+  while (headerIndex < lines.length && (!lines[headerIndex].trim() || ASCII_DIVIDER.test(lines[headerIndex].trim()))) headerIndex++;
+  const headings = lines[headerIndex] ? splitDiagramCells(lines[headerIndex]) : null;
+  if (!headings) return null;
+
+  let detailsIndex = headerIndex + 1;
+  while (detailsIndex < lines.length && (!lines[detailsIndex].trim() || ASCII_DIVIDER.test(lines[detailsIndex].trim()))) detailsIndex++;
+  let details = lines[detailsIndex] ? splitDiagramCells(lines[detailsIndex]) : null;
+  let detailsEnd = detailsIndex;
+  if (details && !details[1].trim().endsWith(')') && detailsIndex + 1 < lines.length) {
+    const continuation = lines[detailsIndex + 1].match(/^\s*\|\s*(.+?)\s*$/);
+    if (continuation) {
+      details[1] = `${details[1]} ${continuation[1]}`;
+      detailsEnd++;
+    }
+  }
+  if (!details || !details.every(cell => /^\(.*\)$/.test(cell.trim()))) return null;
+
+  const featureRows: [string, string][] = [];
+  let end = detailsEnd + 1;
+  while (end < lines.length) {
+    const line = lines[end].trim();
+    if (!line) break;
+    if (ASCII_DIVIDER.test(line)) {
+      end++;
+      break;
+    }
+    const cells = splitDiagramCells(line);
+    if (!cells) break;
+    featureRows.push(cells.map(cell => cell.replace(/^[•*-]\s*/, '')) as [string, string]);
+    end++;
+  }
+  if (featureRows.length < 2) return null;
+
+  const columns = headings.map((heading, columnIndex) => {
+    const features = featureRows.map(row => `<li>${escapeVisualText(row[columnIndex])}</li>`).join('');
+    return `<section class="article-comparison-card"><h3>${escapeVisualText(heading)}</h3><p class="article-comparison-detail">${escapeVisualText(details[columnIndex].replace(/^\(|\)$/g, ''))}</p><ul>${features}</ul></section>`;
+  }).join('');
+  return {
+    html: `<section class="article-visual article-comparison-visual"><h2>${escapeVisualText(lines[start].trim())}</h2><div class="article-comparison-columns">${columns}</div></section>`,
+    end: end - 1,
+  };
+}
+
+function buildBarVisualAt(lines: string[], start: number): VisualMatch | null {
+  const firstLineRows = parseBarLine(lines[start]);
+  if (!firstLineRows) return null;
+
+  let rows = [...firstLineRows];
+  let end = start;
+  if (firstLineRows.length === 1) {
+    while (end + 1 < lines.length) {
+      const next = parseBarLine(lines[end + 1]);
+      if (!next || next.length !== 1) break;
+      rows.push(next[0]);
+      end++;
+    }
+    if (rows.length < 3) return null;
+  } else if (
+    firstLineRows.length < 2 ||
+    !firstLineRows.every(row => /^\d{4}$/.test(row.label) && /[$€£]/.test(row.value))
+  ) {
+    return null;
+  }
+
+  let title: string | null = null;
+  let visualStart = start;
+  let lookback = start - 1;
+  while (lookback >= 0 && !lines[lookback].trim() && start - lookback <= 2) lookback--;
+  if (lookback >= 0 && ASCII_DIVIDER.test(lines[lookback].trim())) {
+    visualStart = lookback;
+    lookback--;
+    while (lookback >= 0 && !lines[lookback].trim() && start - lookback <= 4) lookback--;
+  }
+  if (lookback >= 0 && /(?:spending|forecast|prioritization|workflow|inference)/i.test(lines[lookback])) {
+    title = lines[lookback].replace(/[\s-]{3,}$/, '').trim();
+    visualStart = lookback;
+  }
+
+  return { html: buildBarVisual(rows, title), start: visualStart, end };
+}
+
+function findArticleVisual(lines: string[], start: number): VisualMatch | null {
+  const finOps = buildFinOpsVisual(lines, start);
+  if (finOps) return finOps;
+  const directBar = buildBarVisualAt(lines, start);
+  if (directBar) return directBar;
+
+  if (!/(?:spending|forecast|prioritization|workflow|inference)/i.test(lines[start])) return null;
+  let rowIndex = start + 1;
+  while (rowIndex < lines.length && rowIndex <= start + 2 &&
+    (!lines[rowIndex].trim() || ASCII_DIVIDER.test(lines[rowIndex].trim()))) rowIndex++;
+  const titledBar = rowIndex < lines.length ? buildBarVisualAt(lines, rowIndex) : null;
+  return titledBar ? { ...titledBar, start } : null;
+}
+
+/**
+ * Convert only the article's known text-chart and FinOps ASCII-diagram patterns.
+ * Plain text outside a match is left untouched; existing rich HTML is inspected
+ * only in simple paragraphs and never inside tables, code, or preformatted blocks.
+ */
+export function convertArticleVisualsToHTML(content: string): string {
+  if (!content) return content;
+  if (!/<[a-z][\s\S]*>/i.test(content)) {
+    const lines = content.replace(/\r\n?/g, '\n').split('\n');
+    const chunks: string[] = [];
+    let plainStart = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const visual = findArticleVisual(lines, i);
+      if (!visual) continue;
+      const visualStart = visual.start ?? i;
+      if (plainStart < visualStart) chunks.push(lines.slice(plainStart, visualStart).join('\n'));
+      chunks.push(visual.html);
+      i = visual.end;
+      plainStart = i + 1;
+    }
+    if (!chunks.length) return content;
+    if (plainStart < lines.length) chunks.push(lines.slice(plainStart).join('\n'));
+    return chunks.length === 1 && chunks[0] === content
+      ? content
+      : chunks.filter(Boolean).join('\n');
+  }
+
+  if (typeof DOMParser === 'undefined') return content;
+  const doc = new DOMParser().parseFromString(content, 'text/html');
+  const paragraphs = Array.from(doc.body.querySelectorAll('p')).filter(paragraph => {
+    if (paragraph.closest('table, pre, code')) return false;
+    return Array.from(paragraph.childNodes).every(node =>
+      node.nodeType === Node.TEXT_NODE ||
+      (node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'BR')
+    );
+  });
+  const lines: string[] = [];
+  const lineParagraphs: number[] = [];
+  paragraphs.forEach((paragraph, paragraphIndex) => {
+    const holder = doc.createElement('div');
+    holder.innerHTML = paragraph.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+    const paragraphLines = (holder.textContent || '').split('\n');
+    paragraphLines.forEach(line => {
+      lines.push(line);
+      lineParagraphs.push(paragraphIndex);
+    });
+  });
+
+  const replacements: { first: number; last: number; html: string }[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const visual = findArticleVisual(lines, i);
+    if (!visual) continue;
+    const visualStart = visual.start ?? i;
+    const first = lineParagraphs[visualStart];
+    const last = lineParagraphs[visual.end];
+    const firstLineOfParagraph = lineParagraphs.findIndex(index => index === first);
+    const lastLineOfParagraph = lineParagraphs.lastIndexOf(last);
+    // Do not discard prose sharing a paragraph with the chart.
+    if (firstLineOfParagraph !== visualStart || lastLineOfParagraph !== visual.end) continue;
+    const affected = paragraphs.slice(first, last + 1);
+    if (!affected.length || affected.some(paragraph => paragraph.parentElement !== affected[0].parentElement)) continue;
+    replacements.push({ first, last, html: visual.html });
+    i = visual.end;
+  }
+
+  for (const replacement of replacements.reverse()) {
+    const affected = paragraphs.slice(replacement.first, replacement.last + 1);
+    const first = affected[0];
+    if (!first?.parentNode) continue;
+    const holder = doc.createElement('div');
+    holder.innerHTML = replacement.html;
+    first.replaceWith(...Array.from(holder.childNodes));
+    affected.slice(1).forEach(paragraph => paragraph.remove());
+  }
+  return doc.body.innerHTML;
+}
+
 const URL_REGEX = /(?:https?:\/\/|www\.)[^\s<>"'`]+/gi;
 const TRAILING_PUNCT = /[.,;:!?)\]>}'"]+$/;
 

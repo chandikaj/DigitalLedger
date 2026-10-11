@@ -292,6 +292,141 @@
   background-color: hsl(220, 18%, 16%);
 }
 
+/* Published article visuals for recognized plain-text comparisons */
+.prose .article-visual {
+  margin: 1.75rem 0;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid hsl(201, 30%, 85%);
+  border-radius: 0.6rem;
+  background: hsl(210, 20%, 99%);
+  color: hsl(210, 25%, 18%);
+  font-size: 0.9em;
+}
+
+.dark .prose .article-visual {
+  border-color: hsl(210, 10%, 28%);
+  background: hsl(220, 18%, 15%);
+  color: hsl(200, 10%, 88%);
+}
+
+.prose .article-bar-visual figcaption,
+.prose .article-comparison-visual > h2 {
+  margin: 0 0 1rem;
+  color: inherit;
+  font-size: 1.05em;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.prose .article-bar-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.prose .article-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.3rem 1rem;
+  align-items: baseline;
+}
+
+.prose .article-bar-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.prose .article-bar-value {
+  color: hsl(210, 18%, 42%);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dark .prose .article-bar-value {
+  color: hsl(200, 10%, 72%);
+}
+
+.prose .article-bar-track {
+  grid-column: 1 / -1;
+  height: 0.55rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: hsl(210, 18%, 88%);
+}
+
+.dark .prose .article-bar-track {
+  background: hsl(220, 12%, 27%);
+}
+
+.prose .article-bar-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: hsl(207, 70%, 42%);
+}
+
+.dark .prose .article-bar-track > span {
+  background: hsl(205, 75%, 62%);
+}
+
+.prose .article-comparison-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.prose .article-comparison-card {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid hsl(201, 25%, 87%);
+  border-radius: 0.45rem;
+  background: hsl(0, 0%, 100%);
+}
+
+.dark .prose .article-comparison-card {
+  border-color: hsl(210, 10%, 28%);
+  background: hsl(220, 16%, 19%);
+}
+
+.prose .article-comparison-card h3 {
+  margin: 0 0 0.65rem;
+  color: inherit;
+  font-size: 0.98em;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.prose .article-comparison-card .article-comparison-detail {
+  margin: 0 0 0.8rem;
+  color: hsl(210, 18%, 42%);
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+
+.dark .prose .article-comparison-card .article-comparison-detail {
+  color: hsl(200, 10%, 72%);
+}
+
+.prose .article-comparison-card ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.prose .article-comparison-card li {
+  margin: 0.45rem 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .prose .article-visual {
+    padding: 0.9rem;
+  }
+
+  .prose .article-comparison-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Tiptap table selected cell highlight */
 .prose table.article-table td,
 .prose table.article-table th {

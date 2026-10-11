@@ -22,7 +22,7 @@ import { ObjectUploader } from "@/components/ObjectUploader";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { z } from "zod";
 import DOMPurify from 'dompurify';
-import { convertPipeTablesToHTML } from '@/lib/tableUtils';
+import { convertArticleVisualsToHTML, convertPipeTablesToHTML } from '@/lib/tableUtils';
 import { useEngagementTracking } from '@/hooks/useEngagementTracking';
 import type { PopupTrigger } from '@/lib/tracking';
 import { formatArticleDate, getArticleDate } from "@/lib/articleDate";
@@ -30,7 +30,7 @@ import { getSeoOrigin, useSeoMetadata } from "@/components/SeoMetadata";
 import { OptimizedImage } from "@/components/OptimizedImage";
 
 const SANITIZE_OPTIONS = {
-  ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'span', 'div', 'a', 'img', 'blockquote', 'code', 'pre', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'colgroup', 'col'],
+  ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'span', 'div', 'section', 'figure', 'figcaption', 'a', 'img', 'blockquote', 'code', 'pre', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'colgroup', 'col'],
   ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel', 'src', 'alt', 'title', 'colspan', 'rowspan', 'scope'],
   ALLOW_DATA_ATTR: false,
 };
@@ -570,7 +570,10 @@ export default function Article() {
   }
 
   const sanitizedContent = article.content
-    ? DOMPurify.sanitize(convertPipeTablesToHTML(article.content), SANITIZE_OPTIONS)
+    ? DOMPurify.sanitize(
+        convertArticleVisualsToHTML(convertPipeTablesToHTML(article.content)),
+        SANITIZE_OPTIONS
+      )
     : "";
   const trailingSourcesSplit = splitOffTrailingSources(sanitizedContent);
   const sourcesSplit = !user ? trailingSourcesSplit : null;
