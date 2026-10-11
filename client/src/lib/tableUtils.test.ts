@@ -67,4 +67,29 @@ assert.match(convertedFinOps, /Pre-execution hard spend caps/);
 const ordinaryProse = 'Ordinary prose stays exactly as it was.';
 assert.equal(convertArticleVisualsToHTML(ordinaryProse), ordinaryProse);
 assert.match(convertPipeTablesToHTML(multiline), /class="article-table"/);
+
+const boxedAsciiTable = [
+  'Audit Readiness: Strong Support vs. Common Failures',
+  '+-------------+--------------------+---------------------+',
+  '| Audit Area  | Strong Support     | Common Failure     |',
+  '+-------------+--------------------+---------------------+',
+  '| Ownership   | Wallet register    | Mixed assets       |',
+  '| Existence   | Explorer balances  | Missing logs       |',
+  '+-------------+--------------------+---------------------+',
+].join('\n');
+const convertedBoxedTable = convertPipeTablesToHTML(boxedAsciiTable);
+assert.match(convertedBoxedTable, /class="article-table"/);
+assert.match(convertedBoxedTable, /Strong Support/);
+assert.match(convertedBoxedTable, /Explorer balances/);
+assert.doesNotMatch(convertedBoxedTable, /\+-------------/);
+
+const wrappedFinanceMetrics = [
+  'Finance Leader AI Prioritization by Workflow -------------------------',
+  'Planning & Forecasting: 51% [████████████] Financial Reporting: 42% [██████████]',
+  'Liquidity & Cash Flow: 39% [█████████] Invoice Processing: 30% [███████] Capital Allocation: 24% [█████]',
+].join('\n');
+const convertedFinanceMetrics = convertArticleVisualsToHTML(wrappedFinanceMetrics);
+assert.match(convertedFinanceMetrics, /class="article-visual article-bar-visual"/);
+assert.match(convertedFinanceMetrics, /Planning &amp; Forecasting/);
+assert.match(convertedFinanceMetrics, /Capital Allocation/);
 console.log('Article table and visual conversion tests passed');

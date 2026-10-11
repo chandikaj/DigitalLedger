@@ -35,8 +35,10 @@ function buildTableHTML(rows: string[][]): string {
 
 function isSeparatorLine(line: string): boolean {
   const t = line.trim();
-  if (!t.includes('-') || !t.includes('|')) return false;
-  return /^[\s\-:|]+$/.test(t);
+  if (!t.includes('-')) return false;
+  // Accept Markdown separators and the +---+ borders commonly used in
+  // pasted ASCII tables.
+  return /^[\s\-:+|]+$/.test(t) && (t.includes('|') || t.includes('+'));
 }
 
 export function hasPipeTableContent(text: string): boolean {
@@ -64,7 +66,7 @@ export function buildMixedHTML(text: string): string {
 
     // Detect start of a real markdown pipe table: header row + separator row
     if (
-      trimmed.includes('|') &&
+      (trimmed.includes('|') || trimmed.includes('+')) &&
       !isSeparatorLine(trimmed) &&
       nextTrimmed &&
       isSeparatorLine(nextTrimmed)
@@ -74,12 +76,13 @@ export function buildMixedHTML(text: string): string {
       let j = i + 2;
       while (j < lines.length) {
         const l = lines[j].trim();
-        if (l === '' || !l.includes('|')) break;
+        if (l === '' || (!l.includes('|') && !l.includes('+'))) break;
         if (isSeparatorLine(l)) {
           j++;
           continue;
         }
-        bodyRows.push(parseTableRow(l));
+        // Ignore top/bottom box borders; data rows still use pipe-delimited cells.
+        if (l.includes('|')) bodyRows.push(parseTableRow(l));
         j++;
       }
       html += buildTableHTML([headerRow, ...bodyRows]);
@@ -238,11 +241,12 @@ function buildBarVisualAt(lines: string[], start: number): VisualMatch | null {
       end++;
     }
     if (rows.length < 3) return null;
-  } else if (
-    firstLineRows.length < 2 ||
-    !firstLineRows.every(row => /^\d{4}$/.test(row.label) && /[$€£]/.test(row.value))
-  ) {
-    return null;
+  } else {
+    const yearCurrencyChart = firstLineRows.length >= 2 &&
+      firstLineRows.every(row => /^\d{4}$/.test(row.label) && /[$€£]/.test(row.value));
+    const multiMetricChart = firstLineRows.length >= 3 &&
+      firstLineRows.every(row => /%/.test(row.value));
+    if (!yearCurrencyChart && !multiMetricChart) return null;
   }
 
   let title: string | null = null;
@@ -305,13 +309,9 @@ export function convertArticleVisualsToHTML(content: string): string {
 
   if (typeof DOMParser === 'undefined') return content;
   const doc = new DOMParser().parseFromString(content, 'text/html');
-  const paragraphs = Array.from(doc.body.querySelectorAll('p')).filter(paragraph => {
-    if (paragraph.closest('table, pre, code')) return false;
-    return Array.from(paragraph.childNodes).every(node =>
-      node.nodeType === Node.TEXT_NODE ||
-      (node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'BR')
-    );
-  });
+  const paragraphs = Array.from(doc.body.querySelectorAll('p')).filter(paragraph =>
+    !paragraph.closest('table, pre, code')
+  );
   const lines: string[] = [];
   const lineParagraphs: number[] = [];
   paragraphs.forEach((paragraph, paragraphIndex) => {
