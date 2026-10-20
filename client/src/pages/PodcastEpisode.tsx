@@ -599,7 +599,7 @@ export default function PodcastEpisode() {
               className="bg-[#1B2A41] text-[#F1EDE4] hover:bg-[#263a59]"
               onClick={() => setShowSubscribe(true)}
             >
-              Get it Wednesday
+              Subscribe free
             </Button>
           </section>
         </article>

@@ -241,7 +241,7 @@ export default function Landing() {
                 onClick={() => openSubscribe("hero")}
                 data-testid="button-join-community"
               >
-                Get it Wednesday
+                Subscribe free
               </Button>
             </div>
           </div>
@@ -614,7 +614,7 @@ export default function Landing() {
             onClick={() => openSubscribe("hero")}
             data-testid="button-get-started"
           >
-            Get it Wednesday
+            Subscribe free
           </Button>
         </div>
       </section>

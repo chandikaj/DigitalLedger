@@ -71,7 +71,7 @@ export function VideoPlayerDialog({ open, onOpenChange, videoId, title, onSubscr
               className="shrink-0 rounded-md bg-[#1B2A41] px-3 py-1.5 text-xs font-semibold text-[#F1EDE4] hover:opacity-90 transition-opacity"
               data-testid="video-promo-subscribe"
             >
-              Get it Wednesday
+              Subscribe free
             </button>
           </div>
         )}

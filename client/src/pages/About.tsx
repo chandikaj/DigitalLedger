@@ -135,7 +135,7 @@ export default function About() {
             onClick={() => setShowSubscribe(true)}
             data-testid="button-about-get-it-wednesday"
           >
-            Get it Wednesday
+            Subscribe free
           </Button>
         </div>
       </section>

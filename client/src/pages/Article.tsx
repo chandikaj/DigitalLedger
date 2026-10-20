@@ -99,7 +99,7 @@ function GetItWednesdayButton({ size = "default", className = "", onClick }: { s
   return (
     <Button size={size} className={className} onClick={onClick} data-testid="button-get-it-wednesday">
       <Mail className="h-4 w-4 mr-2" />
-      Get it Wednesday
+      Subscribe free
     </Button>
   );
 }
@@ -588,18 +588,18 @@ export default function Article() {
       {/* Subscribe popup with beehiiv form */}
       <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} trigger={subscribeTrigger} />
 
-      {/* Floating "Get it Wednesday" button – only for guests */}
+      {/* Floating subscribe button – only for guests */}
       {!user && (
         <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col items-center">
           <button
             onClick={() => openSubscribe("article_cta")}
             className="animate-wiggle-loop hover:animate-none flex flex-row items-center gap-3 bg-[#1E3A5F] hover:bg-[#162C49] text-white rounded-full shadow-lg px-5 py-3 transition-transform duration-200 hover:scale-105"
-            title="Get it Wednesday"
+            title="Subscribe free"
             data-testid="button-floating-get-it-wednesday"
           >
             <Mail className="h-6 w-6 flex-shrink-0" />
             <span className="text-sm font-bold tracking-wide whitespace-nowrap">
-              Get it Wednesday
+              Subscribe free
             </span>
           </button>
         </div>
@@ -635,7 +635,7 @@ export default function Article() {
                 data-testid="button-exit-popup-subscribe"
               >
                 <Mail className="h-5 w-5 mr-2" />
-                Get it Wednesday
+                Subscribe free
               </Button>
               <Button
                 variant="ghost"
