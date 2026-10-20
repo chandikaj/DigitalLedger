@@ -846,7 +846,7 @@ export default function Article() {
                       {/* Mid-article inline CTA – only for guests */}
                       <div className="not-prose my-10 rounded-md border border-[#EAE5DB] bg-[#F1EDE4] dark:border-[#3A352C] dark:bg-[#26231E] px-6 py-7 flex flex-col sm:flex-row items-center gap-5 sm:justify-between" data-testid="banner-mid-newsletter">
                         <p className="text-xl font-medium text-gray-800 dark:text-gray-100 text-center sm:text-left leading-relaxed">
-                          Once a week. Two articles like this one, plus a podcast. That's <span className="font-semibold">The Digital Ledger</span>.
+                          Most finance news tells you what happened. We focus on what it means for your close, your forecast, and your next board conversation. Free, every Wednesday.
                         </p>
                         <GetItWednesdayButton className="flex-shrink-0 rounded-md bg-[#1E3A5F] hover:bg-[#162C49] text-white px-6 py-2.5 h-auto" onClick={() => openSubscribe("article_cta")} />
                       </div>
@@ -869,7 +869,7 @@ export default function Article() {
                     If this is the kind of read you want in your week:
                   </p>
                   <p className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-5 max-w-2xl mx-auto leading-relaxed">
-                    <span className="font-semibold">The Digital Ledger</span> is a free weekly brief for finance leaders. Two articles and one podcast, every Wednesday morning, on what's actually shifting underneath the headlines.
+                    A new issue of <span className="font-semibold">The Digital Ledger</span> lands in your inbox every Wednesday. Each one looks at what’s actually shifting underneath the headlines in regulation, technology, and capital, then explains what it means for the people running finance. It’s free, and short enough to read before your first meeting.
                   </p>
                   <GetItWednesdayButton className="rounded-md bg-[#1E3A5F] hover:bg-[#162C49] text-white px-6 py-2.5 h-auto" onClick={() => openSubscribe("article_cta")} />
                 </div>
