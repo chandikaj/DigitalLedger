@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>New Article — The Digital Ledger</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:#0f172a;padding:28px 40px;">
+              <img src="http://cdn.mcauto-images-production.sendgrid.net/78d231ba0f636805/e1a876f9-37fe-47bb-8ae3-e42ad5d3baa7/802x429.png" width="400" style="display:block;" />
+            </td>
+          </tr>
+          <!-- Label -->
+          <tr>
+            <td style="background-color:#0f172a;padding:0 40px 20px 40px;">
+              <p style="margin:0;font-size:12px;font-weight:bold;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">New Article</p>
+            </td>
+          </tr>
+          <!-- Article Image (conditional) -->
+          {{#if imageUrl}}
+          <tr>
+            <td>
+              <img src="{{imageUrl}}" width="600" style="display:block;width:100%;max-height:300px;object-fit:cover;" />
+            </td>
+          </tr>
+          {{/if}}
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 40px 32px 40px;color:#1a1a1a;">
+              <!-- Article block -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px 0;border-left:4px solid #0f172a;padding-left:16px;">
+                <tr>
+                  <td>
+                    <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.8px;">The Digital Ledger Article</p>
+                  </td>
+                </tr>
+              </table>
+              <h2 style="margin:0 0 20px 0;font-size:22px;line-height:1.4;color:#0f172a;font-weight:bold;">{{title}}</h2>
+              <p style="margin:0 0 28px 0;font-size:15px;line-height:1.8;color:#374151;">{{preview}}</p>
+              <!-- Read More Button -->
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 32px 0;">
+                <tr>
+                  <td style="background-color:#0f172a;border-radius:6px;">
+                    <a href="{{articleUrl}}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;">Read More →</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0;font-size:14px;line-height:1.7;color:#64748b;">
+                You can also follow us on <a href="https://www.linkedin.com/company/110532681/" style="color:#2563eb;text-decoration:none;">LinkedIn</a> or visit our <a href="https://thedigitalledger.org/" style="color:#2563eb;text-decoration:none;">website</a> for more.
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc;padding:20px 40px;border-top:1px solid #e2e8f0;">
+              <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
+                The Digital Ledger &nbsp;|&nbsp;
+                You are receiving this because you subscribed. &nbsp;|&nbsp;
+                <a href="{{{unsubscribeUrl}}}" style="color:#94a3b8;text-decoration:underline;">Unsubscribe</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -1,0 +1,260 @@
+PageSpeed Insights logo
+PageSpeed Insights
+Report from Sep 1, 2026, 2:30:33 PM
+https://thedigitalledger.org/
+Enter a valid URL
+
+
+smartphone
+Mobile
+
+computer
+Desktop
+
+Discover what your real users are experiencing
+No Data
+
+Diagnose performance issues
+89
+Performance
+96
+Accessibility
+96
+Best Practices
+100
+SEO
+2/2
+Agentic Browsing
+89
+FCP
++6
+LCP
++19
+TBT
++29
+CLS
++25
+SI
++9
+Performance
+Values are estimated and may vary. The performance score is calculated directly from these metrics.See calculator.
+0–49
+50–89
+90–100
+Final Screenshot
+
+Metrics
+Expand view
+First Contentful Paint
+2.6 s
+Largest Contentful Paint
+3.1 s
+Total Blocking Time
+100 ms
+Cumulative Layout Shift
+0
+Speed Index
+3.3 s
+Captured at Sep 1, 2026, 2:30 PM GMT+5:30
+Emulated Moto G Power with Lighthouse 13.4.1
+Single page session
+Initial page load
+Slow 4G throttling
+Using HeadlessChromium 151.0.7922.71 with lr
+View Treemap
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Show audits relevant to:
+
+All
+
+FCP
+
+LCP
+
+TBT
+Insights
+Render-blocking requests Est savings of 150 ms
+Requests are blocking the page's initial render, which may delay LCP. Deferring or inlining can move these network requests out of the critical path.LCPFCPUnscored
+URL
+Transfer Size
+Duration
+thedigitalledger.org 1st party
+19.9 KiB	320 ms
+/assets/index-D74yAjk3.css(thedigitalledger.org)
+19.9 KiB
+320 ms
+Network dependency tree
+Avoid chaining critical requests by reducing the length of chains, reducing the download size of resources, or deferring the download of unnecessary resources to improve page load.LCPUnscored
+Maximum critical path latency: 2,047 ms
+Initial Navigation
+https://thedigitalledger.org - 392 ms, 4.02 KiB
+/assets/index-8ZHQbhFk.js(thedigitalledger.org) - 1,019 ms, 119.93 KiB
+…auth/user(thedigitalledger.org) - 1,399 ms, 0.43 KiB
+/api/menu-settings(thedigitalledger.org) - 1,693 ms, 1.35 KiB
+/api/podcasts?limit=3(thedigitalledger.org) - 1,994 ms, 8.71 KiB
+/api/news?limit=3(thedigitalledger.org) - 2,047 ms, 6.94 KiB
+/assets/index-D74yAjk3.css(thedigitalledger.org) - 889 ms, 19.88 KiB
+Preconnected origins
+preconnect hints help the browser establish a connection earlier in the page load, saving time when the first request for that origin is made. The following are the origins that the page preconnected to.
+Origin
+Source
+https://fonts.googleapis.com/
+head > link
+<link rel="preconnect" href="https://fonts.googleapis.com">
+https://fonts.gstatic.com/
+head > link
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+Preconnect candidates
+Add preconnect hints to your most important origins, but try to use no more than 4.
+No additional origins are good candidates for preconnecting
+Document request latency Est savings of 2 KiB
+Your first network request is the most important. Reduce its latency by avoiding redirects, ensuring a fast server response, and enabling text compression.LCPFCPUnscored
+Avoids redirects
+Server responds quickly (observed 1 ms)
+No compression applied
+Improve image delivery Est savings of 23 KiB
+Reducing the download time of images can improve the perceived load time of the page and LCP. Learn more about optimizing image sizeLCPFCPUnscored
+URL
+Resource Size
+Est Savings
+thedigitalledger.org 1st party
+54.5 KiB	22.7 KiB
+Beyond the Core Ledger: U.S. GAAP Taxonomy Demands Extreme Revenue and Expense …
+<img src="/optimized-images/800/objects/article-imports/b3178562-716a-40bd-a2f9-793c…" srcset="/optimized-images/200/objects/article-imports/b3178562-716a-40bd-a2f9-793c…" sizes="(min-width: 1280px) 384px, (min-width: 1024px) calc((100vw - 8rem) / 3), (…" alt="Beyond the Core Ledger: U.S. GAAP Taxonomy Demands Extreme Revenue and Exp…" class="w-full h-full object-cover hover:scale-105 transition-transform duration-3…" loading="lazy" decoding="async" width="800" height="450">
+…article-imports/b3178562-716a-40bd-a2f9-793ceea5547e.jpg(thedigitalledger.org)
+41.4 KiB
+12.6 KiB
+This image file is larger than it needs to be (796x447) for its displayed dimensions (666x372). Use responsive images to reduce the image download size.
+12.6 KiB
+The Digital Ledger
+<img src="/logo-210.webp" alt="The Digital Ledger" class="h-14 w-auto" width="210" height="112">
+/logo-210.webp(thedigitalledger.org)
+13.1 KiB
+10.2 KiB
+Increasing the image compression factor could improve this image's download size.
+9.3 KiB
+LCP breakdown
+3rd parties
+These insights are also available in the Chrome DevTools Performance Panel - record a trace to view more detailed information.
+Diagnostics
+Reduce unused JavaScript Est savings of 122 KiB
+Reduce unused JavaScript and defer loading scripts until they are required to decrease bytes consumed by network activity. Learn how to reduce unused JavaScript.LCPFCPUnscored
+URL
+Transfer Size
+Est Savings
+Google Tag Manager tag-manager 
+166.1 KiB	70.2 KiB
+/gtag/js?id=G-4LKX5YM8KM(www.googletagmanager.com)
+166.1 KiB
+70.2 KiB
+thedigitalledger.org 1st party
+119.4 KiB	52.0 KiB
+/assets/index-8ZHQbhFk.js(thedigitalledger.org)
+119.4 KiB
+52.0 KiB
+Reduce unused CSS Est savings of 18 KiB
+Reduce unused rules from stylesheets and defer CSS not used for above-the-fold content to decrease bytes consumed by network activity. Learn how to reduce unused CSS.LCPFCPUnscored
+URL
+Transfer Size
+Est Savings
+thedigitalledger.org 1st party
+19.4 KiB	18.0 KiB
+/assets/index-D74yAjk3.css(thedigitalledger.org)
+19.4 KiB
+18.0 KiB
+Avoid long main-thread tasks 3 long tasks found
+Lists the longest tasks on the main thread, useful for identifying worst contributors to input delay. Learn how to avoid long main-thread tasksTBTUnscored
+URL
+Start Time
+Duration
+Google Tag Manager tag-manager 
+159 ms
+/gtag/js?id=G-4LKX5YM8KM(www.googletagmanager.com)
+3,777 ms
+89 ms
+/gtag/js?id=G-4LKX5YM8KM(www.googletagmanager.com)
+3,866 ms
+70 ms
+thedigitalledger.org 1st party
+87 ms
+/assets/index-8ZHQbhFk.js(thedigitalledger.org)
+3,214 ms
+87 ms
+More information about the performance of your application. These numbers don't directly affect the Performance score.
+Passed audits (18)
+Show
+96
+Accessibility
+These checks highlight opportunities to improve the accessibility of your web app. Automatic detection can only detect a subset of issues and does not guarantee the accessibility of your web app, so manual testing is also encouraged.
+Contrast
+Background and foreground colors do not have a sufficient contrast ratio.
+These are opportunities to improve the legibility of your content.
+Best practices
+Identical links have the same purpose.
+These items highlight common accessibility best practices.
+Additional items to manually check (10)
+Show
+These items address areas which an automated testing tool cannot cover. Learn more in our guide on conducting an accessibility review.
+Passed audits (22)
+Show
+Not applicable (39)
+Show
+96
+Best Practices
+General
+Browser errors were logged to the console
+Trust and Safety
+Ensure CSP is effective against XSS attacks
+Use a strong HSTS policy
+Ensure proper origin isolation with COOP
+Mitigate clickjacking with XFO or CSP
+Mitigate DOM-based XSS with Trusted Types
+Browser Compatibility
+Baseline Features
+Passed audits (12)
+Show
+Not applicable (2)
+Show
+100
+SEO
+These checks ensure that your page is following basic search engine optimization advice. There are many additional factors Lighthouse does not score here that may affect your search ranking, including performance on Core Web Vitals. Learn more about Google Search Essentials.
+Additional items to manually check (1)
+Hide
+Structured data is valid
+Run these additional validators on your site to check additional SEO best practices.
+Passed audits (10)
+Show
+2/2
+Agentic Browsing
+These checks ensure high-quality, browsable websites for AI agents and validate the correctness of WebMCP integrations. This category is still under development and subject to change.
+Passed audits (2)
+Show
+Not applicable (4)
+Show
+More on PageSpeed Insights
+What's new
+Documentation
+Learn about Web Performance
+Ask questions on Stack Overflow
+Mailing list
+Related Content
+Updates
+Web Fundamentals
+Case Studies
+Podcasts
+Connect
+Twitter
+Youtube
+Google Developers Logo
+Chrome
+Firebase
+All products
+Terms and Privacy Policy
+For details, see the Google Developers Site Policies.

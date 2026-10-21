@@ -1,0 +1,703 @@
+# Oracle Cloud SMTP Mail Server Setup Guide
+### Complete End-to-End Guide: Build Your Own Mail Server on Oracle Free Tier
+
+---
+
+## What You Will Build
+
+A fully working SMTP mail server on Oracle Cloud Free Tier that:
+- Sends emails from your own domain (e.g. `you@yourcompany.com`)
+- Uses Gmail/Google Workspace as a relay (since Oracle blocks port 25)
+- Accepts connections from external apps (Supabase, Vercel, etc.)
+- Requires no SendGrid, no Mailgun, no paid email service
+
+### Final Architecture
+
+```
+Your App (Vercel / Supabase Edge Function)
+        ↓
+Oracle Server Port 587 (Postfix + SASL Auth)
+        ↓
+Gmail / Google Workspace SMTP Relay
+        ↓
+Recipient Inbox ✅
+```
+
+---
+
+## Prerequisites
+
+- Oracle Cloud account (free tier)
+- A Gmail or Google Workspace account
+- Basic knowledge of terminal/SSH
+- A domain (optional but recommended)
+
+---
+
+## Part 1 — Create Oracle Cloud Instance
+
+### Step 1: Log in to Oracle Cloud
+
+Go to: https://cloud.oracle.com
+
+### Step 2: Navigate to Instances
+
+Click the top-left menu (☰) → **Compute** → **Instances**
+
+### Step 3: Create Instance
+
+Click **Create Instance** and fill in the following:
+
+| Setting | Value |
+|---|---|
+| Name | `mail-server` |
+| Compartment | your root compartment |
+| Availability Domain | AD-1 (try AD-2/AD-3 if capacity error) |
+
+### Step 4: Choose Image
+
+Click **Change Image** and select:
+- **Canonical Ubuntu 20.04** or **22.04**
+
+> ⚠️ Do NOT use Oracle Linux — all commands in this guide are for Ubuntu.
+
+### Step 5: Choose Shape
+
+Click **Change Shape** and select:
+- **VM.Standard.A1.Flex** (Always Free — ARM)
+- OCPU: 1
+- Memory: 6 GB
+
+> If you get "Out of Capacity" error: try a different Availability Domain or use `VM.Standard.E2.1.Micro` as a fallback (1GB RAM, less stable but free).
+
+### Step 6: Networking
+
+Make sure:
+- ✅ Assign Public IPv4 address = YES
+
+### Step 7: SSH Key
+
+- Click **Generate SSH key pair**
+- Download the `.key` file — **keep this safe, you cannot recover it**
+
+### Step 8: Create
+
+Click **Create** and wait 1–2 minutes for status to show **Running**.
+
+Copy your **Public IP address** from the instance details page.
+
+---
+
+## Part 2 — Open Firewall Ports (Oracle Security List)
+
+This is Oracle's network-level firewall — separate from the server's own firewall.
+
+### Step 1: Navigate to Security List
+
+**Networking → Virtual Cloud Networks → your VCN → Subnets → your subnet → Security Lists → Default Security List**
+
+### Step 2: Add Ingress Rules
+
+Click **Add Ingress Rules** and add each of these:
+
+| Source CIDR | Protocol | Destination Port | Purpose |
+|---|---|---|---|
+| 0.0.0.0/0 | TCP | 22 | SSH |
+| 0.0.0.0/0 | TCP | 25 | SMTP |
+| 0.0.0.0/0 | TCP | 587 | SMTP Submission |
+| 0.0.0.0/0 | TCP | 80 | HTTP |
+| 0.0.0.0/0 | TCP | 443 | HTTPS |
+
+---
+
+## Part 3 — Connect to Your Server via SSH
+
+### On Windows (PowerShell / Terminal)
+
+```powershell
+# If your key file has spaces in the name, use quotes
+ssh -i "ssh-key-2026-04-01.key" ubuntu@YOUR_SERVER_IP
+```
+
+If you get a permissions error:
+
+```powershell
+# Move key to .ssh folder
+mkdir %USERPROFILE%\.ssh
+move "ssh-key-2026-04-01.key" %USERPROFILE%\.ssh\oracle.key
+
+# Fix permissions
+icacls %USERPROFILE%\.ssh\oracle.key /inheritance:r
+icacls %USERPROFILE%\.ssh\oracle.key /grant:r %USERNAME%:R
+
+# Connect
+ssh -i %USERPROFILE%\.ssh\oracle.key ubuntu@YOUR_SERVER_IP
+```
+
+### On Mac/Linux
+
+```bash
+chmod 400 your-key.key
+ssh -i your-key.key ubuntu@YOUR_SERVER_IP
+```
+
+You should see: `ubuntu@mailserver:~$`
+
+---
+
+## Part 4 — Initial Server Setup
+
+### Step 1: Update the server
+
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+**What this does:** Updates all installed software. Like Windows Update.
+
+### Step 2: Open firewall ports (UFW — Linux software firewall)
+
+```bash
+sudo ufw allow 22
+sudo ufw allow 25
+sudo ufw allow 587
+sudo ufw allow 80
+sudo ufw allow 443
+sudo ufw enable
+```
+
+Type `y` when prompted.
+
+**What this does:** Opens specific ports in the server's own firewall. Even though Oracle's Security List allows traffic, the server has its own firewall too.
+
+### Step 3: Fix iptables (deeper firewall layer)
+
+Oracle Ubuntu instances have a third firewall layer. Open ports here too:
+
+```bash
+sudo apt install iptables-persistent -y
+sudo iptables -I INPUT -p tcp --dport 587 -j ACCEPT
+sudo iptables -I INPUT -p tcp --dport 25 -j ACCEPT
+sudo netfilter-persistent save
+```
+
+**What this does:** Permanently opens ports in iptables (the kernel-level firewall). Without this, external apps cannot connect even if UFW and Oracle Security List allow it.
+
+### Step 4: Set your hostname
+
+```bash
+sudo hostnamectl set-hostname mail.yourdomain.com
+```
+
+```bash
+sudo nano /etc/hosts
+```
+
+Add this line:
+```
+127.0.0.1 mail.yourdomain.com mail
+```
+
+Save: `Ctrl+X` → `Y` → `Enter`
+
+---
+
+## Part 5 — Install Postfix (Mail Server)
+
+```bash
+sudo apt install postfix mailutils -y
+```
+
+**What this does:** Installs Postfix (the mail server software) and mailutils (command-line email tools).
+
+### During Installation — Important Screen
+
+You will see a blue configuration screen:
+
+1. **Select:** `Internet Site` → press Enter
+2. **System mail name:** type your domain (e.g. `yourdomain.com`) → press Enter
+
+---
+
+## Part 6 — Configure Gmail/Google Workspace Relay
+
+Since Oracle blocks outbound port 25, we tell Postfix to send all emails through Gmail's SMTP server.
+
+### Step 1: Create Gmail App Password
+
+> ⚠️ You CANNOT use your normal Gmail password. You must create an App Password.
+
+1. Go to: https://myaccount.google.com/security
+2. Enable **2-Step Verification** if not already on
+3. Go to: https://myaccount.google.com/apppasswords
+4. Create a new app password — name it `server`
+5. Copy the 16-character password (remove spaces): e.g. `abcdefghijklmnop`
+
+> If using Google Workspace: log in as your workspace account and follow the same steps. Your admin must allow App Passwords.
+
+### Step 2: Install SASL packages
+
+```bash
+sudo apt install libsasl2-modules ca-certificates -y
+```
+
+### Step 3: Configure Postfix main.cf
+
+```bash
+sudo nano /etc/postfix/main.cf
+```
+
+Scroll to the bottom and add these lines:
+
+```
+relayhost = [smtp.gmail.com]:587
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+smtp_sasl_security_options = noanonymous
+smtp_tls_security_level = encrypt
+smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt
+```
+
+Also make sure these lines exist:
+```
+myhostname = mail.yourdomain.com
+mydomain = yourdomain.com
+myorigin = yourdomain.com
+mydestination = $myhostname, mailserver, localhost.localdomain, localhost
+```
+
+> ⚠️ Do NOT add your company domain to `mydestination` — this would cause Postfix to try delivering mail locally instead of relaying it.
+
+Save: `Ctrl+X` → `Y` → `Enter`
+
+### Step 4: Add Gmail credentials
+
+```bash
+sudo nano /etc/postfix/sasl_passwd
+```
+
+Add this one line:
+```
+[smtp.gmail.com]:587 youremail@gmail.com:YOUR_APP_PASSWORD
+```
+
+Save: `Ctrl+X` → `Y` → `Enter`
+
+### Step 5: Secure and compile the credentials file
+
+```bash
+sudo chmod 600 /etc/postfix/sasl_passwd
+sudo postmap /etc/postfix/sasl_passwd
+```
+
+**What `chmod 600` does:** Makes the file only readable by root — like setting a file to private.
+
+**What `postmap` does:** Compiles the credentials file into a database format Postfix can read efficiently.
+
+### Step 6: Restart Postfix
+
+```bash
+sudo systemctl restart postfix
+```
+
+### Step 7: Test basic email sending
+
+```bash
+echo "Hello from my server" | mail -s "Test Email" youremail@gmail.com
+```
+
+Check your inbox. You should receive the email.
+
+---
+
+## Part 7 — Fix Sender Display Name
+
+By default, emails show `ubuntu` as the sender name. Fix this:
+
+```bash
+sudo chfn -f "Your Name" ubuntu
+```
+
+**What this does:** Changes the full name of the Linux `ubuntu` user. The `mail` command uses this name as the email display name.
+
+For more control, create a sender canonical map:
+
+```bash
+sudo nano /etc/postfix/sender_canonical
+```
+
+Add:
+```
+ubuntu    Your Name <you@yourdomain.com>
+```
+
+```bash
+sudo postmap /etc/postfix/sender_canonical
+```
+
+Add to `main.cf`:
+```bash
+echo "sender_canonical_maps = hash:/etc/postfix/sender_canonical" | sudo tee -a /etc/postfix/main.cf
+sudo systemctl restart postfix
+```
+
+---
+
+## Part 8 — Enable External SMTP Authentication (Port 587)
+
+This allows external apps (Supabase, Vercel, etc.) to connect to your server and send emails.
+
+### Step 1: Install SASL authentication
+
+```bash
+sudo apt install sasl2-bin libsasl2-modules -y
+```
+
+**What SASL is:** Simple Authentication and Security Layer. It lets external apps log in to your Postfix server with a username and password before sending emails.
+
+### Step 2: Create an SMTP user
+
+```bash
+sudo useradd -M -s /usr/sbin/nologin smtpuser
+echo "smtpuser:YourStrongPassword123!" | sudo chpasswd
+```
+
+**What this does:**
+- Creates a Linux user called `smtpuser`
+- `-M` = no home folder
+- `-s /usr/sbin/nologin` = cannot SSH into server, only used for SMTP auth
+- Sets the password your app will use to authenticate
+
+### Step 3: Configure SASL
+
+```bash
+sudo nano /etc/postfix/sasl/smtpd.conf
+```
+
+Add:
+```
+pwcheck_method: saslauthd
+mech_list: PLAIN LOGIN
+saslauthd_path: /var/run/saslauthd/mux
+```
+
+```bash
+sudo nano /etc/default/saslauthd
+```
+
+Set:
+```
+START=yes
+DESC="SASL Authentication Daemon"
+NAME="saslauthd"
+MECHANISMS="pam"
+MECH_OPTIONS=""
+THREADS=5
+OPTIONS="-c -m /run/saslauthd"
+```
+
+### Step 4: Start SASL daemon
+
+```bash
+sudo systemctl enable saslauthd
+sudo systemctl start saslauthd
+sudo adduser postfix sasl
+```
+
+**What saslauthd is:** A background service (daemon) that handles password verification. When your app sends a password, Postfix asks saslauthd "is this correct?" and saslauthd checks it.
+
+### Step 5: Fix chroot socket issue (CRITICAL)
+
+Postfix runs in a security "jail" (chroot) and cannot see the SASL socket by default. Fix this:
+
+```bash
+sudo mkdir -p /var/spool/postfix/var/run/saslauthd
+sudo mount --bind /run/saslauthd /var/spool/postfix/var/run/saslauthd
+```
+
+Make it permanent (survives reboots):
+
+```bash
+echo "/run/saslauthd /var/spool/postfix/var/run/saslauthd none bind 0 0" | sudo tee -a /etc/fstab
+```
+
+**What chroot is:** A restricted environment where Postfix runs for security. It can only see certain folders. We had to copy the SASL socket into that restricted folder so Postfix can reach it.
+
+Fix permissions:
+
+```bash
+sudo chmod 710 /run/saslauthd
+sudo chgrp sasl /run/saslauthd
+```
+
+### Step 6: Test SASL authentication
+
+```bash
+sudo testsaslauthd -u smtpuser -p YourStrongPassword123!
+```
+
+You should see: `0: OK "Success."`
+
+---
+
+## Part 9 — Configure Postfix master.cf for Port 587
+
+```bash
+sudo nano /etc/postfix/master.cf
+```
+
+Find the line that starts with `#submission` and replace the entire submission block with:
+
+```
+submission inet n       -       y       -       -       smtpd
+  -o syslog_name=postfix/submission
+  -o smtpd_tls_security_level=none
+  -o smtpd_sasl_auth_enable=yes
+  -o smtpd_sasl_type=cyrus
+  -o smtpd_reject_unlisted_recipient=no
+  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject
+  -o smtpd_relay_restrictions=permit_sasl_authenticated,reject
+  -o milter_macro_daemon_name=ORIGINATING
+```
+
+**What each line does:**
+
+| Line | Meaning |
+|---|---|
+| `submission inet n - y - - smtpd` | Listen on port 587 |
+| `smtpd_tls_security_level=none` | Don't require TLS from connecting client |
+| `smtpd_sasl_auth_enable=yes` | Require login |
+| `smtpd_sasl_type=cyrus` | Use Cyrus SASL for auth |
+| `smtpd_recipient_restrictions=permit_sasl_authenticated,reject` | Only logged-in users can send |
+| `smtpd_relay_restrictions=permit_sasl_authenticated,reject` | Only logged-in users can relay |
+
+### Also update main.cf restrictions
+
+```bash
+sudo nano /etc/postfix/main.cf
+```
+
+Make sure these lines exist:
+```
+smtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated permit
+smtpd_recipient_restrictions = permit_mynetworks permit_sasl_authenticated permit
+smtpd_client_restrictions = permit_sasl_authenticated, permit
+```
+
+### Restart everything
+
+```bash
+sudo systemctl restart saslauthd
+sudo systemctl restart postfix
+```
+
+---
+
+## Part 10 — Verify Everything Works
+
+### Check Postfix is running
+
+```bash
+sudo systemctl status postfix
+```
+
+Should show: `active (running)`
+
+### Check ports are listening
+
+```bash
+sudo netstat -tlnp | grep master
+```
+
+Should show ports 25 and 587 listening.
+
+### Test from external (Windows PowerShell)
+
+```powershell
+Test-NetConnection -ComputerName YOUR_SERVER_IP -Port 587
+```
+
+Should show: `TcpTestSucceeded: True`
+
+### Watch live mail logs
+
+```bash
+sudo tail -f /var/log/mail.log
+```
+
+### Send a test email
+
+```bash
+echo "Test" | mail -s "Test" youremail@gmail.com
+```
+
+Check logs for: `status=sent (250 2.0.0 OK`
+
+---
+
+## Part 11 — Connect Your App (Supabase / Node.js / Python)
+
+### Environment Variables to set in your app
+
+```
+SMTP_HOST     = YOUR_SERVER_IP
+SMTP_PORT     = 587
+SMTP_USER     = smtpuser
+SMTP_PASS     = YourStrongPassword123!
+SENDER_EMAIL  = you@yourdomain.com
+SENDER_NAME   = Your App Name
+```
+
+### Node.js / Nodemailer Example
+
+```javascript
+const nodemailer = require('nodemailer')
+
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+})
+
+await transporter.sendMail({
+  from: `Your App <${process.env.SENDER_EMAIL}>`,
+  to: 'recipient@example.com',
+  subject: 'Hello',
+  html: '<h1>Hello from my own mail server!</h1>',
+})
+```
+
+### Python Example
+
+```python
+import smtplib
+from email.message import EmailMessage
+
+msg = EmailMessage()
+msg["Subject"] = "Test"
+msg["From"] = "Your App <you@yourdomain.com>"
+msg["To"] = "recipient@example.com"
+msg.set_content("<h1>Hello!</h1>", subtype="html")
+
+with smtplib.SMTP("YOUR_SERVER_IP", 587) as smtp:
+    smtp.login("smtpuser", "YourStrongPassword123!")
+    smtp.send_message(msg)
+```
+
+### Deno / Supabase Edge Function (Raw SMTP)
+
+```typescript
+// Connect to your Oracle server
+const conn = await Deno.connect({ hostname: SMTP_HOST, port: SMTP_PORT })
+
+// SMTP handshake
+await readGreeting(conn)
+await sendCmd(conn, 'EHLO weekly-logger')
+
+// Authenticate
+await sendCmd(conn, 'AUTH LOGIN')
+await sendCmd(conn, btoa(SMTP_USER))   // base64 username
+await sendCmd(conn, btoa(SMTP_PASS))   // base64 password
+
+// Send email
+await sendCmd(conn, `MAIL FROM:<${SENDER_EMAIL}>`)
+await sendCmd(conn, `RCPT TO:<${recipient}>`)
+await sendCmd(conn, 'DATA')
+// ... write email headers and body ...
+await sendCmd(conn, '.')   // end of email
+await sendCmd(conn, 'QUIT')
+conn.close()
+```
+
+---
+
+## Part 12 — Limitations of This Setup
+
+| Limitation | Details |
+|---|---|
+| Email daily limit | 2,000/day (Google Workspace) or 500/day (free Gmail) |
+| Port 25 blocked | Oracle blocks direct SMTP — must use Gmail relay |
+| IP reputation | Fresh IP has low trust — first emails may go to spam |
+| No bounce handling | Failed emails queue up — no automatic management |
+| No email tracking | No open rates or click tracking |
+| Oracle free tier risk | Oracle can reclaim free instances; no SLA |
+| 1GB RAM (E2 Micro) | Tight — avoid running other heavy apps on same server |
+
+---
+
+## Quick Reference: All Commands
+
+```bash
+# Update server
+sudo apt update && sudo apt upgrade -y
+
+# Open firewall
+sudo ufw allow 22 && sudo ufw allow 25 && sudo ufw allow 587
+sudo ufw allow 80 && sudo ufw allow 443 && sudo ufw enable
+
+# Fix iptables
+sudo iptables -I INPUT -p tcp --dport 587 -j ACCEPT
+sudo netfilter-persistent save
+
+# Install Postfix
+sudo apt install postfix mailutils -y
+
+# Install SASL
+sudo apt install sasl2-bin libsasl2-modules -y
+
+# Create SMTP user
+sudo useradd -M -s /usr/sbin/nologin smtpuser
+echo "smtpuser:YourPassword" | sudo chpasswd
+
+# Fix chroot socket
+sudo mkdir -p /var/spool/postfix/var/run/saslauthd
+sudo mount --bind /run/saslauthd /var/spool/postfix/var/run/saslauthd
+echo "/run/saslauthd /var/spool/postfix/var/run/saslauthd none bind 0 0" | sudo tee -a /etc/fstab
+
+# Compile credential files
+sudo postmap /etc/postfix/sasl_passwd
+sudo postmap /etc/postfix/sender_canonical
+
+# Restart services
+sudo systemctl restart saslauthd
+sudo systemctl restart postfix
+
+# Test SASL
+sudo testsaslauthd -u smtpuser -p YourPassword
+
+# Watch logs
+sudo tail -f /var/log/mail.log
+
+# Send test email
+echo "Test" | mail -s "Test" youremail@gmail.com
+
+# Check sent emails
+sudo grep "status=sent" /var/log/mail.log
+
+# Check port listening
+sudo netstat -tlnp | grep master
+```
+
+---
+
+## Troubleshooting
+
+| Problem | Cause | Fix |
+|---|---|---|
+| `Connection timed out` on port 25 | Oracle blocks port 25 | Use Gmail relay on port 587 |
+| `530 Authentication Required` | SASL not configured | Check `sasl_passwd` and `main.cf` relay settings |
+| `454 Temporary authentication failure` | saslauthd not running or wrong socket path | Restart saslauthd, fix chroot socket mount |
+| `554 Client host rejected` | iptables blocking AWS/external IPs | Run `iptables -I INPUT -p tcp --dport 587 -j ACCEPT` |
+| `554 Recipient address rejected` | Auth failing before RCPT TO | Fix `smtpd_client_restrictions` in `master.cf` |
+| `InvalidData: invalid peer certificate` | Self-signed cert rejected by Deno | Set `smtpd_tls_security_level=none` in `master.cf` |
+| `cannot connect to saslauthd server` | Chroot jail blocking socket | Mount SASL socket inside `/var/spool/postfix/var/run/saslauthd/` |
+| Email goes to spam | New IP, no reputation | Warm up IP gradually; ensure SPF/DKIM configured |
+| Shows "Ubuntu" as sender | Linux username used | Run `sudo chfn -f "Your Name" ubuntu` |
+
+---
+
+*Guide created based on a real setup session — Oracle Cloud Free Tier, Ubuntu 20.04, Postfix 3.4, Google Workspace relay.*

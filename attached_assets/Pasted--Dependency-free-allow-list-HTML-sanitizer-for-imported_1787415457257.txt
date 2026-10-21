@@ -1,0 +1,54 @@
+// Dependency-free allow-list HTML sanitizer for imported article content.
+const ALLOWED_TAGS = new Set([
+  "p", "br", "h1", "h2", "h3", "h4", "strong", "b", "em", "i", "u",
+  "ul", "ol", "li", "blockquote", "a",
+]);
+const STRIP_WITH_CONTENT = [
+  "script", "style", "iframe", "form", "object", "embed", "noscript",
+  "svg", "math", "template", "head", "title", "select", "textarea", "button",
+  "link", "meta", "base",
+];
+function stripDangerousBlocks(html: string): string {
+  let out = html.replace(/<!--[\s\S]*?-->/g, "");
+  for (const tag of STRIP_WITH_CONTENT) {
+    out = out.replace(new RegExp(`<${tag}\\b[\\s\\S]*?</${tag}\\s*>`, "gi"), "");
+    out = out.replace(new RegExp(`</?${tag}\\b[^>]*>`, "gi"), "");
+  }
+  return out;
+}
+function isSafeHref(value: string): boolean {
+  const v = value.trim();
+  if (!v) return false;
+  if (/^(https?:|mailto:)/i.test(v)) return true;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(v)) return false;
+  return true;
+}
+function sanitizeAnchorAttributes(attrString: string): string {
+  const attrRe = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
+  let match: RegExpExecArray | null; let href = "";
+  while ((match = attrRe.exec(attrString)) !== null) {
+    const name = match[1].toLowerCase();
+    const value = match[3] ?? match[4] ?? match[5] ?? "";
+    if (name === "href" && isSafeHref(value)) href = value;
+  }
+  if (!href) return "";
+  return ` href="${href.replace(/"/g, "&quot;")}" target="_blank" rel="noopener noreferrer nofollow"`;
+}
+export function sanitizeArticleHtml(input: string): string {
+  if (!input) return "";
+  let html = stripDangerousBlocks(String(input));
+  html = html.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g, (fullMatch, rawName, attrs) => {
+    const name = String(rawName).toLowerCase();
+    if (!ALLOWED_TAGS.has(name)) return "";
+    if (fullMatch.startsWith("</")) return `</${name}>`;
+    if (name === "br") return "<br />";
+    const attrOut = name === "a" ? sanitizeAnchorAttributes(attrs || "") : "";
+    return `<${name}${attrOut}>`;
+  });
+  return html.replace(/[ \t]+\n/g, "\n").trim();
+}
+export function htmlToPlainText(html: string): string {
+  return String(html || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ").trim();
+}

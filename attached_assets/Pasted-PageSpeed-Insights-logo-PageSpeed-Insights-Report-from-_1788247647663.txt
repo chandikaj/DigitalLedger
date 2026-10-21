@@ -1,0 +1,177 @@
+PageSpeed Insights logo
+PageSpeed Insights
+Report from Sep 1, 2026, 12:55:59 PM
+https://thedigitalledger.org/
+Enter a valid URL
+
+
+smartphone
+Mobile
+
+computer
+Desktop
+
+Discover what your real users are experiencing
+No Data
+
+Diagnose performance issues
+66
+Performance
+96
+Accessibility
+96
+Best Practices
+100
+SEO
+2/2
+Agentic Browsing
+66
+FCP
++2
+LCP
++7
+TBT
++30
+CLS
++25
+SI
++3
+Performance
+Values are estimated and may vary. The performance score is calculated directly from these metrics.See calculator.
+0–49
+50–89
+90–100
+Final Screenshot
+
+Metrics
+Expand view
+First Contentful Paint
+2.4 s
+Largest Contentful Paint
+3.2 s
+Total Blocking Time
+70 ms
+Cumulative Layout Shift
+0.054
+Speed Index
+2.8 s
+Captured at Sep 1, 2026, 12:56 PM GMT+5:30
+Emulated Desktop with Lighthouse 13.4.1
+Single page session
+Initial page load
+Custom throttling
+Using HeadlessChromium 151.0.7922.71 with lr
+View Treemap
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Show audits relevant to:
+
+All
+
+FCP
+
+LCP
+
+TBT
+
+CLS
+Insights
+Improve image delivery Est savings of 8,244 KiB
+Use efficient cache lifetimes Est savings of 6,510 KiB
+Render-blocking requests Est savings of 200 ms
+LCP breakdown
+LCP request discovery
+Network dependency tree
+Document request latency Est savings of 2 KiB
+Layout shift culprits
+Optimize DOM size
+3rd parties
+These insights are also available in the Chrome DevTools Performance Panel - record a trace to view more detailed information.
+Diagnostics
+Reduce unused JavaScript Est savings of 1,214 KiB
+Reduce unused CSS Est savings of 194 KiB
+Avoid enormous network payloads Total size was 10,314 KiB
+Avoid long main-thread tasks 7 long tasks found
+More information about the performance of your application. These numbers don't directly affect the Performance score.
+Passed audits (13)
+Show
+96
+Accessibility
+These checks highlight opportunities to improve the accessibility of your web app. Automatic detection can only detect a subset of issues and does not guarantee the accessibility of your web app, so manual testing is also encouraged.
+Contrast
+Background and foreground colors do not have a sufficient contrast ratio.
+These are opportunities to improve the legibility of your content.
+Best practices
+Identical links have the same purpose.
+These items highlight common accessibility best practices.
+Additional items to manually check (10)
+Show
+These items address areas which an automated testing tool cannot cover. Learn more in our guide on conducting an accessibility review.
+Passed audits (23)
+Show
+Not applicable (38)
+Show
+96
+Best Practices
+General
+Browser errors were logged to the console
+Missing source maps for large first-party JavaScript
+Trust and Safety
+Ensure CSP is effective against XSS attacks
+Use a strong HSTS policy
+Ensure proper origin isolation with COOP
+Mitigate clickjacking with XFO or CSP
+Mitigate DOM-based XSS with Trusted Types
+The require-trusted-types-for directive in the Content-Security-Policy (CSP) header instructs user agents to control the data passed to DOM XSS sink functions. Learn more about mitigating DOM-based XSS with Trusted Types.Unscored
+Description
+Severity
+No `Content-Security-Policy` header with Trusted Types directive found
+High
+Browser Compatibility
+Baseline Features
+Passed audits (11)
+Show
+Not applicable (2)
+Show
+100
+SEO
+These checks ensure that your page is following basic search engine optimization advice. There are many additional factors Lighthouse does not score here that may affect your search ranking, including performance on Core Web Vitals. Learn more about Google Search Essentials.
+Additional items to manually check (1)
+Hide
+Structured data is valid
+Run these additional validators on your site to check additional SEO best practices.
+Passed audits (10)
+Show
+2/2
+Agentic Browsing
+These checks ensure high-quality, browsable websites for AI agents and validate the correctness of WebMCP integrations. This category is still under development and subject to change.
+Passed audits (2)
+Show
+Not applicable (4)
+Show
+More on PageSpeed Insights
+What's new
+Documentation
+Learn about Web Performance
+Ask questions on Stack Overflow
+Mailing list
+Related Content
+Updates
+Web Fundamentals
+Case Studies
+Podcasts
+Connect
+Twitter
+Youtube
+Google Developers Logo
+Chrome
+Firebase
+All products
+Terms and Privacy Policy
+For details, see the Google Developers Site Policies.

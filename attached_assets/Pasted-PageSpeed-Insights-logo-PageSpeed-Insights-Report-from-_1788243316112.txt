@@ -1,0 +1,400 @@
+PageSpeed Insights logo
+PageSpeed Insights
+Report from Sep 1, 2026, 11:35:09 AM
+https://thedigitalledger.org/
+Enter a valid URL
+
+
+smartphone
+Mobile
+
+computer
+Desktop
+
+Discover what your real users are experiencing
+No Data
+
+Diagnose performance issues
+66
+Performance
+81
+Accessibility
+96
+Best Practices
+100
+SEO
+1/2
+Agentic Browsing
+66
+FCP
++2
+LCP
++7
+TBT
++30
+CLS
++25
+SI
++3
+Performance
+Values are estimated and may vary. The performance score is calculated directly from these metrics.See calculator.
+0–49
+50–89
+90–100
+Final Screenshot
+
+Metrics
+Expand view
+First Contentful Paint
+2.4 s
+Largest Contentful Paint
+3.3 s
+Total Blocking Time
+30 ms
+Cumulative Layout Shift
+0.047
+Speed Index
+3.0 s
+Captured at Sep 1, 2026, 11:35 AM GMT+5:30
+Emulated Desktop with Lighthouse 13.4.1
+Single page session
+Initial page load
+Custom throttling
+Using HeadlessChromium 151.0.7922.71 with lr
+View Treemap
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Screenshot
+Show audits relevant to:
+
+All
+
+FCP
+
+LCP
+
+TBT
+
+CLS
+Insights
+Improve image delivery Est savings of 8,244 KiB
+Use efficient cache lifetimes Est savings of 6,510 KiB
+Render-blocking requests Est savings of 210 ms
+Requests are blocking the page's initial render, which may delay LCP. Deferring or inlining can move these network requests out of the critical path.LCPFCPUnscored
+URL
+Transfer Size
+Duration
+thedigitalledger.org 1st party
+204.6 KiB	960 ms
+/assets/index-oh9Mb2n-.css(thedigitalledger.org)
+204.6 KiB
+960 ms
+replit.com
+2.6 KiB	230 ms
+…js/replit-dev-banner.js(replit.com)
+2.6 KiB
+230 ms
+Document request latency Error!
+Your first network request is the most important. Reduce its latency by avoiding redirects, ensuring a fast server response, and enabling text compression.Unscored
+Forced reflow
+A forced reflow occurs when JavaScript queries geometric properties (such as offsetWidth) after styles have been invalidated by a change to the DOM state. This can result in poor performance. Learn more about forced reflows and possible mitigations.Unscored
+Source
+Total reflow time
+[unattributed]
+72 ms
+LCP breakdown
+Each subpart has specific improvement strategies. Ideally, most of the LCP time should be spent on loading the resources, not within delays.LCPUnscored
+Subpart
+Duration
+Time to first byte
+0 ms
+Resource load delay
+2,990 ms
+Resource load duration
+1,210 ms
+Element render delay
+40 ms
+Beyond the Core Ledger: U.S. GAAP Taxonomy Demands Extreme Revenue and Expense …
+<img src="/public-objects/objects/article-imports/b3178562-716a-40bd-a2f9-793ceea554…" alt="Beyond the Core Ledger: U.S. GAAP Taxonomy Demands Extreme Revenue and Exp…" class="w-full h-full object-cover hover:scale-105 transition-transform duration-3…" loading="lazy" decoding="async" width="800" height="450">
+LCP request discovery
+Optimize LCP by making the LCP image discoverable from the HTML immediately, and avoiding lazy-loadingLCPUnscored
+LCP resources should not use loading=lazy
+fetchpriority=high should be applied
+Request is discoverable in initial document
+Beyond the Core Ledger: U.S. GAAP Taxonomy Demands Extreme Revenue and Expense …
+<img src="/public-objects/objects/article-imports/b3178562-716a-40bd-a2f9-793ceea554…" alt="Beyond the Core Ledger: U.S. GAAP Taxonomy Demands Extreme Revenue and Exp…" class="w-full h-full object-cover hover:scale-105 transition-transform duration-3…" loading="lazy" decoding="async" width="800" height="450">
+Network dependency tree
+Avoid chaining critical requests by reducing the length of chains, reducing the download size of resources, or deferring the download of unnecessary resources to improve page load.LCPUnscored
+Maximum critical path latency: 2,947 ms
+Initial Navigation
+https://thedigitalledger.org - 508 ms, 3.84 KiB
+/assets/index-gKb325WM.js(thedigitalledger.org) - 2,199 ms, 1,493.70 KiB
+…auth/user(thedigitalledger.org) - 2,799 ms, 0.43 KiB
+/api/menu-settings(thedigitalledger.org) - 2,788 ms, 1.35 KiB
+/api/podcasts?limit=3(thedigitalledger.org) - 2,799 ms, 8.71 KiB
+/api/news?limit=3(thedigitalledger.org) - 2,947 ms, 48.82 KiB
+/assets/index-oh9Mb2n-.css(thedigitalledger.org) - 1,114 ms, 204.62 KiB
+…js/replit-dev-banner.js(replit.com) - 639 ms, 2.59 KiB
+Preconnected origins
+preconnect hints help the browser establish a connection earlier in the page load, saving time when the first request for that origin is made. The following are the origins that the page preconnected to.
+Origin
+Source
+https://fonts.googleapis.com/
+head > link
+<link rel="preconnect" href="https://fonts.googleapis.com">
+https://fonts.gstatic.com/
+head > link
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+Preconnect candidates
+Add preconnect hints to your most important origins, but try to use no more than 4.
+No additional origins are good candidates for preconnecting
+Layout shift culprits
+Layout shifts occur when elements move absent any user interaction. Investigate the causes of layout shifts, such as elements being added, removed, or their fonts changing as the page loads.CLSUnscored
+Element
+Layout shift score
+Total
+0.047
+Latest Podcast Episodes One podcast episode a week. Conversations on what's ac…
+<section class="py-16 bg-gray-50 dark:bg-gray-900" data-testid="podcast-section">
+0.045
+The Digital Ledger
+<img src="/assets/Logo_v2_1764111424626-DlZFRSC-.png" alt="The Digital Ledger" class="h-14 w-auto">
+Unsized image element
+Articles Podcasts Toolbox About
+<nav class="hidden md:flex items-center space-x-12">
+0.002
+The Digital Ledger
+<img src="/assets/Logo_v2_1764111424626-DlZFRSC-.png" alt="The Digital Ledger" class="h-14 w-auto">
+Unsized image element
+Articles Podcasts Toolbox About
+<nav class="hidden md:flex items-center space-x-12">
+0.000
+The Digital Ledger
+<img src="/assets/Logo_v2_1764111424626-DlZFRSC-.png" alt="The Digital Ledger" class="h-14 w-auto">
+Unsized image element
+Optimize DOM size
+A large DOM can increase the duration of style calculations and layout reflows, impacting page responsiveness. A large DOM will also increase memory usage. Learn how to avoid an excessive DOM size.Unscored
+Statistic
+Element
+Value
+Total elements
+203
+DOM depth
+div.flex > button.flex > svg.lucide > path
+<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-…">
+15
+Most children
+Regulatory Audit Advisory 8/29/2026 The Death of Q1 and Q3? Why Accounting Grou…
+<div class="p-6">
+5
+3rd parties
+3rd party code can significantly impact load performance. Reduce and defer loading of 3rd party code to prioritize your page's content.Unscored
+3rd party
+Transfer size
+Main thread time
+Google Tag Manager tag-manager 
+167 KiB	209 ms
+/gtag/js?id=G-4LKX5YM8KM(www.googletagmanager.com)
+167 KiB
+209 ms
+beehiiv.com
+4 KiB	2 ms
+/attribution.js(subscribe-forms.beehiiv.com)
+4 KiB
+2 ms
+replit.com
+3 KiB	1 ms
+…js/replit-dev-banner.js(replit.com)
+3 KiB
+1 ms
+Google Fonts cdn 
+50 KiB	0 ms
+…v20/UcC73FwrK….woff2(fonts.gstatic.com)
+48 KiB
+0 ms
+/css2?family=Inter:wght@400;500;600;700&display=swap(fonts.googleapis.com)
+1 KiB
+0 ms
+Google Analytics analytics 
+2 KiB	0 ms
+/g/collect?v=…(www.google-analytics.com)
+1 KiB
+0 ms
+/g/collect?v=…(www.google-analytics.com)
+1 KiB
+0 ms
+These insights are also available in the Chrome DevTools Performance Panel - record a trace to view more detailed information.
+Diagnostics
+Reduce unused JavaScript Est savings of 1,213 KiB
+Reduce unused CSS Est savings of 193 KiB
+Image elements do not have explicit width and height
+Avoid enormous network payloads Total size was 10,315 KiB
+Avoid long main-thread tasks 6 long tasks found
+More information about the performance of your application. These numbers don't directly affect the Performance score.
+Passed audits (11)
+Show
+81
+Accessibility
+These checks highlight opportunities to improve the accessibility of your web app. Automatic detection can only detect a subset of issues and does not guarantee the accessibility of your web app, so manual testing is also encouraged.
+Names and labels
+Buttons do not have an accessible name
+These are opportunities to improve the semantics of the controls in your application. This may enhance the experience for users of assistive technology, like a screen reader.
+Best practices
+[user-scalable="no"] is used in the <meta name="viewport"> element or the [maximum-scale] attribute is less than 5.
+Disabling zooming is problematic for users with low vision who rely on screen magnification to properly see the contents of a web page. Learn more about the viewport meta tag.
+Failing Elements
+head > meta
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+Touch targets do not have sufficient size or spacing.
+Touch targets with sufficient size and spacing help users who may have difficulty targeting small controls to activate the targets. Learn more about touch targets.
+Failing Elements
+0
+<button class="flex items-center space-x-1 transition-colors hover:text-red-500" data-testid="like-518698d9-9bd8-4409-88f0-e01b24b37b94">
+Regulatory Audit Advisory 8/29/2026 The Death of Q1 and Q3? Why Accounting Grou…
+<a href="/news/518698d9-9bd8-4409-88f0-e01b24b37b94">
+0
+<button class="flex items-center space-x-1 transition-colors hover:text-red-500" data-testid="like-85daf661-d017-4b93-8c5a-9e9683b32d4d">
+Regulatory Advisory Fraud Detection 8/28/2026 Why Standard Monthly Reporting Is…
+<a href="/news/85daf661-d017-4b93-8c5a-9e9683b32d4d">
+0
+<button class="flex items-center space-x-1 transition-colors hover:text-red-500" data-testid="like-74e965fb-7aeb-416e-8dd1-ac3ff95c9466">
+Regulatory Automation 8/24/2026 Beyond the Core Ledger: U.S. GAAP Taxonomy Dema…
+<a href="/news/74e965fb-7aeb-416e-8dd1-ac3ff95c9466">
+These items highlight common accessibility best practices.
+Contrast
+Background and foreground colors do not have a sufficient contrast ratio.
+Low-contrast text is difficult or impossible for many users to read. Learn how to provide sufficient color contrast.
+Failing Elements
+Login
+<button class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md…" data-testid="button-login">
+Regulatory
+<div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-se…" data-testid="category-518698d9-9bd8-4409-88f0-e01b24b37b94-regulatory" style="background-color: rgba(139, 92, 246, 0.125); color: rgb(139, 92, 246);">
+Regulatory Audit Advisory 8/29/2026 The Death of Q1 and Q3? Why Accounting Grou…
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-lg t…" data-testid="news-card-518698d9-9bd8-4409-88f0-e01b24b37b94">
+Audit
+<div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-se…" data-testid="category-518698d9-9bd8-4409-88f0-e01b24b37b94-Audit" style="background-color: rgba(194, 189, 30, 0.125); color: rgb(194, 189, 30);">
+Regulatory Audit Advisory 8/29/2026 The Death of Q1 and Q3? Why Accounting Grou…
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-lg t…" data-testid="news-card-518698d9-9bd8-4409-88f0-e01b24b37b94">
+Advisory
+<div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-se…" data-testid="category-518698d9-9bd8-4409-88f0-e01b24b37b94-advisory" style="color: purple;">
+Read More →
+<span class="text-sm font-medium text-primary dark:text-ai-teal cursor-pointer">
+Regulatory Audit Advisory 8/29/2026 The Death of Q1 and Q3? Why Accounting Grou…
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-lg t…" data-testid="news-card-518698d9-9bd8-4409-88f0-e01b24b37b94">
+Regulatory
+<div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-se…" data-testid="category-85daf661-d017-4b93-8c5a-9e9683b32d4d-regulatory" style="background-color: rgba(139, 92, 246, 0.125); color: rgb(139, 92, 246);">
+Regulatory Advisory Fraud Detection 8/28/2026 Why Standard Monthly Reporting Is…
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-lg t…" data-testid="news-card-85daf661-d017-4b93-8c5a-9e9683b32d4d">
+Advisory
+<div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-se…" data-testid="category-85daf661-d017-4b93-8c5a-9e9683b32d4d-advisory" style="color: purple;">
+Fraud Detection
+<div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-se…" data-testid="category-85daf661-d017-4b93-8c5a-9e9683b32d4d-fraud-detection" style="background-color: rgba(239, 68, 68, 0.125); color: rgb(239, 68, 68);">
+Regulatory Advisory Fraud Detection 8/28/2026 Why Standard Monthly Reporting Is…
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-lg t…" data-testid="news-card-85daf661-d017-4b93-8c5a-9e9683b32d4d">
+Read More →
+<span class="text-sm font-medium text-primary dark:text-ai-teal cursor-pointer">
+Regulatory Advisory Fraud Detection 8/28/2026 Why Standard Monthly Reporting Is…
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-lg t…" data-testid="news-card-85daf661-d017-4b93-8c5a-9e9683b32d4d">
+Regulatory
+<div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-se…" data-testid="category-74e965fb-7aeb-416e-8dd1-ac3ff95c9466-regulatory" style="background-color: rgba(139, 92, 246, 0.125); color: rgb(139, 92, 246);">
+Regulatory Automation 8/24/2026 Beyond the Core Ledger: U.S. GAAP Taxonomy Dema…
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-lg t…" data-testid="news-card-74e965fb-7aeb-416e-8dd1-ac3ff95c9466">
+Automation
+<div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-se…" data-testid="category-74e965fb-7aeb-416e-8dd1-ac3ff95c9466-automation" style="background-color: rgba(59, 130, 246, 0.125); color: rgb(59, 130, 246);">
+Regulatory Automation 8/24/2026 Beyond the Core Ledger: U.S. GAAP Taxonomy Dema…
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-lg t…" data-testid="news-card-74e965fb-7aeb-416e-8dd1-ac3ff95c9466">
+Read More →
+<span class="text-sm font-medium text-primary dark:text-ai-teal cursor-pointer">
+Regulatory Automation 8/24/2026 Beyond the Core Ledger: U.S. GAAP Taxonomy Dema…
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-lg t…" data-testid="news-card-74e965fb-7aeb-416e-8dd1-ac3ff95c9466">
+Load More Articles
+<button class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md…" data-testid="button-load-more-news">
+Episode 36
+<div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-se…" data-testid="episode-badge-0">
+Episode 35
+<div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-se…" data-testid="episode-badge-1">
+Episode 34
+<div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-se…" data-testid="episode-badge-2">
+View All Episodes
+<button class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md…" data-testid="button-view-all-podcasts">
+These are opportunities to improve the legibility of your content.
+Additional items to manually check (10)
+Show
+These items address areas which an automated testing tool cannot cover. Learn more in our guide on conducting an accessibility review.
+Passed audits (20)
+Show
+Not applicable (39)
+Show
+96
+Best Practices
+General
+Browser errors were logged to the console
+Missing source maps for large first-party JavaScript
+Trust and Safety
+Ensure CSP is effective against XSS attacks
+Use a strong HSTS policy
+Ensure proper origin isolation with COOP
+Mitigate clickjacking with XFO or CSP
+Mitigate DOM-based XSS with Trusted Types
+Browser Compatibility
+Baseline Features
+Passed audits (11)
+Show
+Not applicable (2)
+Show
+100
+SEO
+These checks ensure that your page is following basic search engine optimization advice. There are many additional factors Lighthouse does not score here that may affect your search ranking, including performance on Core Web Vitals. Learn more about Google Search Essentials.
+Additional items to manually check (1)
+Hide
+Structured data is valid
+Run these additional validators on your site to check additional SEO best practices.
+Passed audits (10)
+Show
+1/2
+Agentic Browsing
+These checks ensure high-quality, browsable websites for AI agents and validate the correctness of WebMCP integrations. This category is still under development and subject to change.
+Agent Accessibility
+Accessibility tree is not well-formed
+A well-formed accessibility tree helps AI agents to navigate and interact with the page.
+Failed Audits
+Description
+Failing Element
+Buttons must have discernible text
+div.max-w-7xl > div.flex > div.flex > button.inline-flex
+<button class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm fo…" data-testid="button-theme-toggle">
+These audits highlight best practices for improving the accessibility of the website for AI agents.
+Passed audits (1)
+Hide
+Cumulative Layout Shift 0.047
+Not applicable (4)
+Hide
+WebMCP form coverage
+WebMCP tools registered
+WebMCP schemas are valid
+llms.txt follows recommendations
+More on PageSpeed Insights
+What's new
+Documentation
+Learn about Web Performance
+Ask questions on Stack Overflow
+Mailing list
+Related Content
+Updates
+Web Fundamentals
+Case Studies
+Podcasts
+Connect
+Twitter
+Youtube
+Google Developers Logo
+Chrome
+Firebase
+All products
+Terms and Privacy Policy
+For details, see the Google Developers Site Policies.

@@ -1,0 +1,79 @@
+The Homepage in Air voice
+Here's how the whole page reads with the rewrites:
+Hero (locked):
+The Digital Ledger
+The finance industry is loud. It's also, quietly, changing shape.
+This is a weekly brief for the CFOs, controllers, FP&A leads, and accounting firm partners who can already feel it. Two articles and one podcast episode, every Wednesday morning.
+Thanks for being here.
+[Get it Wednesday]
+Articles (news)section:
+
+This “Latest Insights in Corporate Finance, FP&A, Accounting and AI-Driven Operations
+Stay up to date with concise, high-quality insights from trusted sources, academic research, and industry leaders. Perfect for busy finance professionals who want clarity without the noise.
+“ changes to 
+“This Week's Articles
+Two articles a week, on what's actually shifting underneath the headlines.”
+Podcast section:
+
+“The Digital Ledger Podcast Hub
+Listen to expert interviews, industry insights, and practical discussions about the future of Corporate Finance and Accounting
+“ this chnags to 
+“The Podcast
+One podcast episode a week. Conversations on what's actually moving in finance.”
+
+Footer close:
+
+“Ready to Level Up Your Finance Leadership?
+Join thousands of finance professionals using AI and modern tools to transform how finance operates.
+Get Started Today’ changes to
+“If you'd like to stay with us, our weekly brief lands every Wednesday morning.
+[Get it Wednesday]”
+
+---------------------------------------------------------------------------------------------------------------
+The color palette 
+The hero should use the same warm neutral palette as the rest of your brand. Here are the specific specs:
+Background options (pick one):
+•	Warm oat — #F1EDE4 — slightly deeper, more presence, matches the LinkedIn banner discussion
+My honest recommendation: #F1EDE4 (warm oat). It's warm and editorial, has enough presence to feel branded, and provides high contrast with dark text without being visually loud.
+Title color:
+•	Deep navy — #1F2A44 — warmer than charcoal, editorial, matches your podcast thumbnail typography
+My recommendation: deep navy — matches the article cover typography and gives just enough color variation to feel considered without being loud.
+Body text color:
+•	Deep charcoal or warm dark gray — #2A2A2A or #3D3D3D
+•	Same warm dark register as the title, slightly lighter weight
+Typography:
+•	Title: bold editorial slab serif, same family as your article covers
+•	Body: regular weight, same family or a paired sans-serif in warm dark tone
+•	No yellow. No bright blue. Nothing that reads as promotional color.
+NOTES:
+What the hero should look like
+Imagine the current hero, but instead of royal blue + yellow + white, it's:
+•	Background: soft warm oat (#F1EDE4)
+•	"The Digital Ledger" title: deep navy, bold editorial slab serif, large
+•	Body paragraphs: deep charcoal, warm and readable
+•	"Get it Wednesday" button: deep navy background with cream text, matching every other button on the site
+Same copy, same layout, radically different feeling. The visitor lands on the site and immediately experiences the editorial calm that the copy is describing. Design and message align. That's when the positioning actually lands.
+
+ —-------------------------------------------------------------------------------------------------------------------------
+The full About Us Page  
+About
+The Digital Ledger is a weekly editorial brief for CFOs, controllers, FP&A leads, and accounting firm partners.
+Two articles and one podcast, every Wednesday morning. On what's actually shifting underneath the headlines, in corporate finance, accounting, and the work of the profession.
+Who we are
+A small editorial team. Finance and accounting people, mostly. We read a lot. We think about what's changing before it's named. We write for readers who do the same.
+What we're doing
+Reading the industry closely. Filtering the noise. Publishing the signal. Twice a week in article form, once a week in conversation. Delivered as one weekly brief on Wednesday mornings.
+Not a roundup. Not hot takes. Not more headlines. The work underneath them.
+Why
+Finance is louder than it's ever been. Most of what gets published about it is repackaged noise. The same three ideas rewritten every week by newsletters that don't have a point of view.
+We think there's room for a different kind of publication. Quieter. More considered. Written for the people who see the shifts first and don't need them explained back at them.
+Who it's for
+CFOs, controllers, FP&A leads, and accounting firm partners. Senior finance and accounting readers who want to understand what's changing without the performance.
+Editorial standards
+We care about the work. Every piece is read, questioned, and edited before it goes out. Sources are credited. Quotes are honored. Ideas that aren't ours are treated as belonging to the people who had them first.
+We think publishing is a small act of trust between us and the reader. We try to be worth that trust every Wednesday.
+________________________________________
+Footer:
+If any of this sounds like the read you're looking for, the weekly brief lands every Wednesday morning.
+[Get it Wednesday]
+
