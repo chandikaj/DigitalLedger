@@ -1,38 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import DOMPurify from "dompurify";
+import { useMutation } from "@tanstack/react-query";
+import { CheckCircle2, Loader2, Mail } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { getUtmSearch } from "@/lib/utm";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { apiRequest } from "@/lib/queryClient";
 import { trackPopupOpen, trackPopupUpdate, type PopupTrigger } from "@/lib/tracking";
 
-const BEEHIIV_FORM_ID = import.meta.env.VITE_BEEHIIV_FORM_ID;
-const BEEHIIV_ORIGIN = "https://subscribe-forms.beehiiv.com";
-const FALLBACK_HEIGHT = 360;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function showBeehiivToast(payload: { templateString?: string } | undefined) {
-  if (!payload?.templateString) return;
-  try {
-    const clean = DOMPurify.sanitize(payload.templateString, {
-      ADD_TAGS: ["style"],
-      ADD_ATTR: ["id", "style", "class"],
-    });
-    const doc = new DOMParser().parseFromString(clean, "text/html");
-    const frag = document.createDocumentFragment();
-    Array.from(doc.body.childNodes).forEach((n) => frag.appendChild(n.cloneNode(true)));
-    const toast = frag.querySelector<HTMLElement>("#beehiiv-toast");
-    if (toast) toast.style.zIndex = "2147483647";
-    document.body.appendChild(frag);
-    setTimeout(() => {
-      document.querySelector("#beehiiv-toast")?.remove();
-    }, 5000);
-  } catch {
-    // noop
-  }
-}
+type Milestones = { emailEntered?: boolean; subscribed?: boolean; details?: Record<string, unknown> };
 
 export function SubscribeDialog({
   open,
@@ -44,32 +26,28 @@ export function SubscribeDialog({
   /** How this popup was opened, for analytics */
   trigger?: PopupTrigger;
 }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [done, setDone] = useState<{ alreadySubscribed: boolean } | null>(null);
+
   const popupEventIdRef = useRef<string | null>(null);
   const emailEnteredSentRef = useRef(false);
   // Milestones observed before the popup event ID arrives are queued here
-  const pendingUpdatesRef = useRef<{ emailEntered?: boolean; subscribed?: boolean; details?: Record<string, unknown> } | null>(null);
+  const pendingUpdatesRef = useRef<Milestones | null>(null);
 
-  const recordPopupMilestone = (updates: { emailEntered?: boolean; subscribed?: boolean; details?: Record<string, unknown> }) => {
+  const recordPopupMilestone = (updates: Milestones) => {
     if (popupEventIdRef.current) {
       trackPopupUpdate(popupEventIdRef.current, updates);
     } else {
       pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...updates };
     }
   };
-  const [height, setHeight] = useState<string | number>(FALLBACK_HEIGHT);
-  const [width, setWidth] = useState<string | number | undefined>(undefined);
-  const [radius, setRadius] = useState<string | undefined>(undefined);
-  const [sized, setSized] = useState(false);
-  const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
     if (!open) {
-      setHeight(FALLBACK_HEIGHT);
-      setWidth(undefined);
-      setRadius(undefined);
-      setSized(false);
-      setRevealed(false);
+      setEmail("");
+      setError("");
+      setDone(null);
       return;
     }
 
@@ -85,123 +63,122 @@ export function SubscribeDialog({
         pendingUpdatesRef.current = null;
       }
     });
+  }, [open]);
 
-    const revealTimer = setTimeout(() => setRevealed(true), 6000);
-
-    const onMessage = (e: MessageEvent) => {
-      const iframe = iframeRef.current;
-      if (!iframe || e.source !== iframe.contentWindow) return;
-      if (e.origin !== BEEHIIV_ORIGIN) return;
-      const msg = e.data;
-      if (!msg || typeof msg !== "object") return;
-
-      if (msg.type === "beehiiv:child-loaded") {
-        iframe.contentWindow?.postMessage({ type: "beehiiv:parent-loaded" }, BEEHIIV_ORIGIN);
-      } else if (msg.type === "beehiiv:styles" || msg.type === "beehiiv:challenge") {
-        if (msg.payload?.height) {
-          setHeight(msg.payload.height);
-          setSized(true);
-          requestAnimationFrame(() => setRevealed(true));
-        }
-        if (msg.payload?.width) setWidth(msg.payload.width);
-        if (msg.type === "beehiiv:styles" && msg.payload?.borderRadius) {
-          setRadius(msg.payload.borderRadius);
-        }
-        // A challenge appears when the visitor submits the form — the best
-        // observable signal that an email was entered (iframe is cross-origin)
-        if (msg.type === "beehiiv:challenge" && !emailEnteredSentRef.current) {
-          emailEnteredSentRef.current = true;
-          recordPopupMilestone({ emailEntered: true });
-        }
-      } else if (msg.type === "beehiiv:challenge-resolved") {
-        iframe.contentWindow?.postMessage({ type: "beehiiv:resize" }, BEEHIIV_ORIGIN);
-      } else if (msg.type === "beehiiv:success-toast") {
-        recordPopupMilestone({
-          emailEntered: true,
-          subscribed: true,
-          details: { successMessage: msg.type },
-        });
-        showBeehiivToast(msg.payload);
-        onOpenChange(false);
-      } else if (msg.type === "beehiiv:redirect" && typeof msg.url === "string") {
-        window.location.href = msg.url;
+  const subscribeMutation = useMutation({
+    mutationFn: async (value: string): Promise<{ alreadySubscribed?: boolean }> =>
+      apiRequest("/api/subscribers", "POST", { email: value }),
+    onSuccess: (res) => {
+      recordPopupMilestone({ emailEntered: true, subscribed: true });
+      setDone({ alreadySubscribed: !!res?.alreadySubscribed });
+    },
+    onError: (err: Error) => {
+      // apiRequest errors look like `400: {"message":"..."}`
+      let message = "Something went wrong. Please try again.";
+      try {
+        const body = JSON.parse(err.message.replace(/^\d+:\s*/, ""));
+        if (typeof body?.message === "string") message = body.message;
+      } catch {
+        // keep the generic message
       }
-    };
+      setError(message);
+    },
+  });
 
-    // The beehiiv form is a cross-origin iframe, so we can't see typing
-    // directly. When our window loses focus while the iframe is the active
-    // element, the visitor clicked into the form — the earliest observable
-    // signal that they're entering their email.
-    const onBlur = () => {
-      if (emailEnteredSentRef.current) return;
-      if (document.activeElement === iframeRef.current) {
-        emailEnteredSentRef.current = true;
-        recordPopupMilestone({ emailEntered: true });
-      }
-    };
+  const handleChange = (value: string) => {
+    setEmail(value);
+    if (error) setError("");
+    if (!emailEnteredSentRef.current && value.trim()) {
+      emailEnteredSentRef.current = true;
+      recordPopupMilestone({ emailEntered: true });
+    }
+  };
 
-    window.addEventListener("message", onMessage);
-    window.addEventListener("blur", onBlur);
-    return () => {
-      clearTimeout(revealTimer);
-      window.removeEventListener("message", onMessage);
-      window.removeEventListener("blur", onBlur);
-    };
-  }, [open, onOpenChange]);
-
-  const formSrc = `${BEEHIIV_ORIGIN}/${BEEHIIV_FORM_ID}${getUtmSearch()}`;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const value = email.trim();
+    if (!EMAIL_RE.test(value)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+    subscribeMutation.mutate(value);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="w-auto max-w-[95vw] p-0 overflow-hidden bg-white dark:bg-white border-white dark:border-white [&>button]:text-neutral-700 [&>button]:dark:text-neutral-700 [&>button]:opacity-100 [&>button]:bg-white/90 [&>button]:rounded-full [&>button]:p-1 [&>button:hover]:bg-neutral-100"
-        style={radius ? { borderRadius: radius } : undefined}
-      >
-        <DialogTitle className="sr-only">Subscribe to The Digital Ledger Newsletter</DialogTitle>
-        <DialogDescription className="sr-only">
-          Newsletter signup form
-        </DialogDescription>
-        {open && !BEEHIIV_FORM_ID && (
-          <p className="text-center text-sm text-muted-foreground py-8 px-12">
-            The signup form isn't configured yet. Please try again later.
-          </p>
-        )}
-        {open && BEEHIIV_FORM_ID && (
-          <div className="relative">
-            {!revealed && (
-              <div
-                className="flex items-center justify-center"
-                style={{ width: "min(24rem, 90vw)", height: 180 }}
-                data-testid="beehiiv-form-loading"
-              >
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-700" />
-              </div>
-            )}
-            <iframe
-              ref={iframeRef}
-              src={formSrc}
-              title="The Digital Ledger Newsletter"
-              className="beehiiv-embed border-0 block mx-auto"
-              style={{
-                height,
-                width: width ?? "min(36rem, 95vw)",
-                maxWidth: "95vw",
-                maxHeight: "80vh",
-                overflow: "auto",
-                ...(revealed
-                  ? { opacity: 1, transition: "opacity 200ms ease" }
-                  : {
-                      position: "absolute" as const,
-                      top: 0,
-                      left: 0,
-                      opacity: 0,
-                      pointerEvents: "none" as const,
-                    }),
-              }}
-              scrolling={sized ? "no" : "auto"}
-              data-testid="beehiiv-form-iframe"
-            />
+      <DialogContent className="w-[95vw] max-w-md p-0 overflow-hidden" data-testid="subscribe-dialog">
+        <div className="h-1.5 w-full bg-gradient-to-r from-blue-600 to-teal-500" />
+
+        {done ? (
+          <div className="px-6 pb-8 pt-6 text-center sm:px-8">
+            <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-green-500" />
+            <DialogTitle className="text-xl font-semibold">
+              {done.alreadySubscribed ? "You're already on the list" : "You're in!"}
+            </DialogTitle>
+            <DialogDescription className="mt-3 text-sm leading-relaxed">
+              {done.alreadySubscribed ? (
+                <>The next issue goes to <span className="font-medium text-foreground">{email.trim()}</span> on Wednesday morning.</>
+              ) : (
+                <>
+                  A welcome email is on its way to{" "}
+                  <span className="font-medium text-foreground">{email.trim()}</span>. If you don't see it,
+                  check your spam or promotions folder.
+                </>
+              )}
+            </DialogDescription>
+            <Button className="mt-6 w-full" onClick={() => onOpenChange(false)} data-testid="button-subscribe-done">
+              Done
+            </Button>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="px-6 pb-8 pt-6 sm:px-8" noValidate>
+            <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Mail className="h-5 w-5" />
+            </div>
+            <DialogTitle className="text-xl font-semibold">Get The Digital Ledger</DialogTitle>
+            <DialogDescription className="mt-2 text-sm leading-relaxed">
+              Two articles and one podcast on AI in finance &amp; accounting, every Wednesday morning. Free.
+            </DialogDescription>
+
+            <div className="mt-6 space-y-2">
+              <Input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoFocus
+                placeholder="you@company.com"
+                aria-label="Email address"
+                aria-invalid={!!error}
+                value={email}
+                onChange={(e) => handleChange(e.target.value)}
+                className={error ? "border-red-500 focus-visible:ring-red-500" : ""}
+                data-testid="input-subscribe-email"
+              />
+              {error && (
+                <p className="text-sm text-red-500" role="alert" data-testid="text-subscribe-error">
+                  {error}
+                </p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              className="mt-4 w-full"
+              disabled={subscribeMutation.isPending}
+              data-testid="button-subscribe-submit"
+            >
+              {subscribeMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Subscribing…
+                </>
+              ) : (
+                "Subscribe free"
+              )}
+            </Button>
+            <p className="mt-3 text-center text-xs text-muted-foreground">
+              No spam. Unsubscribe anytime with one click.
+            </p>
+          </form>
         )}
       </DialogContent>
     </Dialog>

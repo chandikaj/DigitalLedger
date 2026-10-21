@@ -12,6 +12,7 @@ import {
 import {
   sendArticleNotification,
   sendPodcastNotification,
+  sendWelcomeEmail,
 } from "./emailService";
 import { getSession } from "./replitAuth"; // Keep session config
 import passport from "passport";
@@ -2573,27 +2574,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Subscriber signup endpoint (public)
+  // Per-IP limit on signups so the public form can't be used to spam the list
+  const signupBuckets = new Map<string, { windowStart: number; count: number }>();
+  const SIGNUP_LIMIT = 10;
+  const signupRateLimited = (bucket: string): boolean => {
+    const now = Date.now();
+    const entry = signupBuckets.get(bucket);
+    if (!entry || now - entry.windowStart >= 60_000) {
+      if (signupBuckets.size > 1000) {
+        for (const [k, v] of Array.from(signupBuckets.entries())) {
+          if (now - v.windowStart >= 60_000) signupBuckets.delete(k);
+        }
+      }
+      signupBuckets.set(bucket, { windowStart: now, count: 1 });
+      return false;
+    }
+    if (entry.count >= SIGNUP_LIMIT) return true;
+    entry.count++;
+    return false;
+  };
+
+  const SUBSCRIBER_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const SUBSCRIBER_FREQUENCIES = ["daily", "weekly", "bi-weekly", "monthly"];
+
+  // Subscriber signup endpoint (public). Used by the subscribe popup (email
+  // only) and by the signup wizard / settings page (with preferences).
   app.post("/api/subscribers", async (req, res) => {
     try {
-      const { email, categories, frequency } = req.body;
+      if (signupRateLimited(req.ip || "unknown")) {
+        return res
+          .status(429)
+          .json({ message: "Too many attempts. Please try again in a minute." });
+      }
 
-      if (!email || !frequency) {
+      const { categories, frequency } = req.body;
+      const email =
+        typeof req.body.email === "string"
+          ? req.body.email.trim().toLowerCase()
+          : "";
+
+      if (!email || email.length > 254 || !SUBSCRIBER_EMAIL_RE.test(email)) {
         return res
           .status(400)
-          .json({ message: "Email and frequency are required" });
+          .json({ message: "Please enter a valid email address" });
+      }
+      if (frequency !== undefined && !SUBSCRIBER_FREQUENCIES.includes(frequency)) {
+        return res.status(400).json({ message: "Invalid frequency" });
+      }
+      if (
+        categories !== undefined &&
+        (!Array.isArray(categories) || !categories.every((c: unknown) => typeof c === "string"))
+      ) {
+        return res.status(400).json({ message: "Invalid categories" });
       }
 
       // Check if already subscribed
       const existing = await storage.getSubscriberByEmail(email);
       if (existing) {
+        // Only overwrite preferences the caller actually sent, so the
+        // email-only popup never resets someone's chosen frequency/categories.
+        const updateData: any = { isActive: true };
+        if (categories !== undefined) updateData.categories = categories;
+        if (frequency !== undefined) updateData.frequency = frequency;
         // Reactivate if previously unsubscribed; set confirmedAt to track when reactivation occurred
-        const updateData: any = { categories, frequency, isActive: true };
         if (!existing.isActive) updateData.confirmedAt = new Date();
-        const updated = await storage.updateSubscriber(existing.id, updateData);
+        await storage.updateSubscriber(existing.id, updateData);
+        if (!existing.isActive) {
+          sendWelcomeEmail(email, "there", existing.id).catch(() => {});
+        }
+        // The subscriber id doubles as the unsubscribe token, so never return it
         return res.json({
-          message: "Subscription updated",
-          subscriber: updated,
+          message: existing.isActive ? "Already subscribed" : "Subscription reactivated",
+          alreadySubscribed: existing.isActive,
         });
       }
 
@@ -2601,9 +2653,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const subscriber = await storage.createSubscriber({
         email,
         categories,
-        frequency,
+        frequency: frequency ?? "weekly",
       });
-      res.status(201).json({ message: "Successfully subscribed", subscriber });
+      sendWelcomeEmail(email, "there", subscriber.id).catch(() => {});
+      res.status(201).json({ message: "Successfully subscribed", alreadySubscribed: false });
     } catch (error) {
       console.error("Error creating subscriber:", error);
       res.status(500).json({ message: "Failed to subscribe" });

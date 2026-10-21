@@ -585,7 +585,7 @@ export default function Article() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white dark:from-gray-900 dark:to-gray-800">
 
-      {/* Subscribe popup with beehiiv form */}
+      {/* Subscribe popup */}
       <SubscribeDialog open={showSubscribe} onOpenChange={setShowSubscribe} trigger={subscribeTrigger} />
 
       {/* Floating subscribe button – only for guests */}

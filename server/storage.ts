@@ -1782,7 +1782,7 @@ export class DatabaseStorage implements IStorage {
     const [subscriber] = await db
       .select()
       .from(subscribers)
-      .where(eq(subscribers.email, email));
+      .where(sql`lower(${subscribers.email}) = lower(${email})`);
     return subscriber;
   }
 
