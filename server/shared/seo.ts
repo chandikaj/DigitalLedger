@@ -14,8 +14,13 @@ const CRAWLER_TOKENS = [
   "perplexity",
   "perplexitybot",
   "google-extended",
+  "google-inspectiontool",
+  "googleother",
   "bard",
   "googlebot",
+  "meta-externalagent",
+  "mistralai-user",
+  "cohere-ai",
   "bingbot",
   "yandexbot",
   "baiduspider",
@@ -84,6 +89,38 @@ export function isRecognizedCrawler(
     CRAWLER_TOKENS.some((token) => ua.includes(token)) ||
     signature.includes("chatgpt.com")
   );
+}
+
+/**
+ * Converts stored episode durations ("45", "42:18", "1:02:03", "45 min") to
+ * the ISO 8601 form schema.org requires ("PT45M", "PT42M18S", ...).
+ * Returns undefined for anything it cannot read rather than guessing.
+ */
+export function toIsoDuration(value: string | null | undefined): string | undefined {
+  const text = (value || "").trim().toLowerCase();
+  if (!text) return undefined;
+  if (/^pt(?:\d+h)?(?:\d+m)?(?:\d+s)?$/.test(text) && text !== "pt") {
+    return text.toUpperCase();
+  }
+
+  let hours = 0;
+  let minutes = 0;
+  let seconds = 0;
+  const clock = text.match(/^(?:(\d+):)?(\d{1,3}):(\d{2})$/);
+  const minutesOnly = text.match(/^(\d+)\s*(?:m|min|mins|minutes?)?$/);
+  if (clock) {
+    hours = Number(clock[1] || 0);
+    minutes = Number(clock[2]);
+    seconds = Number(clock[3]);
+    if (seconds > 59 || (clock[1] && minutes > 59)) return undefined;
+  } else if (minutesOnly) {
+    minutes = Number(minutesOnly[1]);
+  } else {
+    return undefined;
+  }
+  if (hours + minutes + seconds === 0) return undefined;
+
+  return `PT${hours ? `${hours}H` : ""}${minutes ? `${minutes}M` : ""}${seconds ? `${seconds}S` : ""}`;
 }
 
 export type PublicContentStatus = {
