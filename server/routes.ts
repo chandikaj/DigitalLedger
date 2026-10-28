@@ -14,6 +14,7 @@ import {
   sendPodcastNotification,
   sendWelcomeEmail,
 } from "./emailService";
+import { notifyContentChanged } from "./indexNow";
 import { getSession } from "./replitAuth"; // Keep session config
 import passport from "passport";
 import { setupGoogleAuth } from "./googleAuth";
@@ -1144,6 +1145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         articleData,
         categoryIdsArray,
       );
+      notifyContentChanged("news", article);
       res.json(article);
     } catch (error: any) {
       console.error("Error creating news article:", error);
@@ -1188,6 +1190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedArticle) {
         return res.status(404).json({ message: "Article not found" });
       }
+      notifyContentChanged("news", updatedArticle);
       res.json(updatedArticle);
     } catch (error: any) {
       console.error("Error updating news article:", error);
@@ -1232,6 +1235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedArticle) {
         return res.status(404).json({ message: "Article not found" });
       }
+      notifyContentChanged("news", updatedArticle);
       res.json(updatedArticle);
     } catch (error: any) {
       console.error("Error updating news article:", error);
@@ -1397,6 +1401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!archivedArticle) {
         return res.status(404).json({ message: "Article not found" });
       }
+      notifyContentChanged("news", archivedArticle, true);
       res.json(archivedArticle);
     } catch (error) {
       console.error("Error archiving news article:", error);
@@ -1420,6 +1425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedArticle) {
         return res.status(404).json({ message: "Article not found" });
       }
+      notifyContentChanged("news", updatedArticle, true);
       res.json(updatedArticle);
     } catch (error) {
       console.error("Error toggling news article status:", error);
@@ -1881,6 +1887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           episodeData,
           categoryIdsArray,
         );
+        notifyContentChanged("podcasts", episode);
         res.json(episode);
       } catch (error: any) {
         console.error("Error creating podcast episode:", error);
@@ -1927,6 +1934,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!episode) {
           return res.status(404).json({ message: "Podcast episode not found" });
         }
+        notifyContentChanged("podcasts", episode);
         res.json(episode);
       } catch (error: any) {
         console.error("Error updating podcast episode:", error);
@@ -1968,6 +1976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!archivedEpisode) {
           return res.status(404).json({ message: "Podcast episode not found" });
         }
+        notifyContentChanged("podcasts", archivedEpisode, true);
         res.json(archivedEpisode);
       } catch (error) {
         console.error("Error archiving podcast episode:", error);
@@ -1997,6 +2006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!updatedEpisode) {
           return res.status(404).json({ message: "Podcast episode not found" });
         }
+        notifyContentChanged("podcasts", updatedEpisode, true);
         res.json(updatedEpisode);
       } catch (error) {
         console.error("Error toggling podcast episode status:", error);

@@ -13,7 +13,9 @@ import {
   isPublicContent,
   isRecognizedCrawler,
   renderLlmsTxt,
+  toIsoDuration,
 } from "./shared/seo";
+import { getIndexNowKey } from "./indexNow";
 
 // ============================================
 // SEO & Bot Detection Utilities
@@ -76,6 +78,49 @@ function resolveSafeHttpUrl(value: string | null | undefined, baseUrl: string): 
   } catch {
     return null;
   }
+}
+
+// One Organization node for crawler structured data, so search and answer
+// engines resolve the publisher to a single entity with a working logo.
+function organizationJsonLd(baseUrl: string) {
+  return {
+    "@type": "Organization",
+    "@id": `${baseUrl}/#organization`,
+    "name": "The Digital Ledger",
+    "url": baseUrl,
+    "logo": {
+      "@type": "ImageObject",
+      "url": `${baseUrl}/logo-210.webp`,
+      "width": 210,
+      "height": 112,
+    },
+    "publishingPrinciples": `${baseUrl}/editorial-policy`,
+  };
+}
+
+function breadcrumbJsonLd(items: Array<{ name: string; url: string }>) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": items.map((item, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "name": item.name,
+      "item": item.url,
+    })),
+  };
+}
+
+// Search engines treat dateModified earlier than datePublished as invalid,
+// which happens when a row is saved moments before it is published.
+function modifiedNotBeforePublished(
+  published: Date | null,
+  updated: Date | string | null | undefined,
+): Date | null {
+  if (!updated) return null;
+  const modified = new Date(updated);
+  if (Number.isNaN(modified.getTime())) return null;
+  return published && modified < published ? published : modified;
 }
 
 const ARTICLE_CONTENT_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
@@ -148,6 +193,7 @@ function extractKeywords(title: string, content: string, categories: string[] = 
   
   // Add words from title
   const titleWords = title.toLowerCase().split(/\s+/)
+    .map(word => word.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, ''))
     .filter(word => word.length > 4 && !['about', 'their', 'these', 'those', 'which', 'would', 'could', 'should'].includes(word));
   titleWords.forEach(word => keywords.add(word));
   
@@ -255,6 +301,14 @@ Sitemap: ${baseUrl}/sitemap.xml
 `);
 });
 
+// IndexNow ownership file: engines fetch /<key>.txt and expect the key back.
+app.get(/^\/([a-zA-Z0-9-]{8,128})\.txt$/, (req, res, next) => {
+  const key = getIndexNowKey();
+  if (!key || req.params[0] !== key) return next();
+  res.type('text/plain');
+  res.send(key);
+});
+
 // A concise, bounded discovery document for answer engines. It deliberately
 // lists only public records and is uncached so unpublishing takes effect at once.
 app.get('/llms.txt', async (req, res) => {
@@ -340,10 +394,13 @@ app.get('/sitemap.xml', async (req, res) => {
 `;
 
     // Add news articles
+    // Google News only reads news entries for articles from the last two days
+    const newsWindowStart = Date.now() - 2 * 24 * 60 * 60 * 1000;
     for (const article of filterPublicContent(articles)) {
-      const lastMod = article.updatedAt
-        ? new Date(article.updatedAt).toISOString()
-        : null;
+      const publishedDate = article.publishedAt ? new Date(article.publishedAt) : null;
+      const isRecentNews = !!publishedDate && publishedDate.getTime() >= newsWindowStart;
+      const lastMod =
+        modifiedNotBeforePublished(publishedDate, article.updatedAt)?.toISOString() ?? null;
       const imageUrl = resolveSafeHttpUrl(article.imageUrl, baseUrl);
       const articleLoc = `${baseUrl}/news/${encodeURIComponent(article.id)}`;
       
@@ -353,13 +410,13 @@ app.get('/sitemap.xml', async (req, res) => {
     ${lastMod ? `<lastmod>${escapeXml(lastMod)}</lastmod>` : ""}
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    ${article.publishedAt ? `<news:news>
+    ${isRecentNews && publishedDate ? `<news:news>
       <news:publication>
         <news:name>The Digital Ledger</news:name>
         <news:language>en</news:language>
       </news:publication>
-      <news:publication_date>${escapeXml(new Date(article.publishedAt).toISOString())}</news:publication_date>
-      <news:title>${escapeXml(article.title)}</news:title>
+      <news:publication_date>${escapeXml(publishedDate.toISOString())}</news:publication_date>
+      <news:title>${escapeXml(article.title.trim())}</news:title>
     </news:news>` : ""}
     ${imageUrl ? `<image:image><image:loc>${escapeXml(imageUrl)}</image:loc><image:title>${escapeXml(article.title)}</image:title></image:image>` : ''}
   </url>`;
@@ -510,9 +567,13 @@ app.use(async (req, res, next) => {
     
     log(`Serving SEO-optimized HTML for article ${articleId} to crawler`);
     
-    // Get article categories for keywords (optional)
-    const categoryNames: string[] = [];
-    
+    // Trimmed title for metadata; imported titles can carry stray whitespace
+    const metaTitle = article.title.trim();
+    // Categories feed metadata only (section, tags, keywords)
+    const categoryNames = (article.categories || [])
+      .map((category: { name?: string | null }) => category.name?.trim())
+      .filter((name): name is string => !!name);
+
     // Get author info
     let authorName: string | null = null;
     if (article.authorId) {
@@ -547,7 +608,7 @@ app.use(async (req, res, next) => {
       `${baseUrl}/og-default.png`;
     
     // Generate keywords
-    const keywords = extractKeywords(article.title, article.content || '', categoryNames);
+    const keywords = extractKeywords(metaTitle, article.content || '', categoryNames);
     
     // Calculate reading time
     const readingTime = calculateReadingTime(article.content || '');
@@ -559,9 +620,8 @@ app.use(async (req, res, next) => {
         ? new Date(article.createdAt)
         : null;
     const publishedAtISO = publishedAt?.toISOString() || null;
-    const updatedAtISO = article.updatedAt
-      ? new Date(article.updatedAt).toISOString()
-      : null;
+    const updatedAtISO =
+      modifiedNotBeforePublished(publishedAt, article.updatedAt)?.toISOString() || null;
     const publishDateFormatted = publishedAt
       ? publishedAt.toLocaleDateString('en-US', {
           year: 'numeric',
@@ -569,42 +629,41 @@ app.use(async (req, res, next) => {
           day: 'numeric'
         })
       : null;
-    
+
     // JSON-LD Structured Data for Google Rich Snippets
-    const jsonLd = {
-      "@context": "https://schema.org",
-      "@type": "NewsArticle",
-      "headline": article.title,
-      "description": description,
-      "image": [imageUrl],
-      ...(publishedAtISO ? { "datePublished": publishedAtISO } : {}),
-      ...(updatedAtISO ? { "dateModified": updatedAtISO } : {}),
-      ...(authorName ? {
-        "author": {
-          "@type": "Person",
-          "name": authorName
-        }
-      } : {}),
-      "publisher": {
-        "@type": "Organization",
-        "name": "The Digital Ledger",
-        "url": baseUrl,
-        "logo": {
-          "@type": "ImageObject",
-          "url": `${baseUrl}/logo.png`
-        }
+    const jsonLd = [
+      {
+        "@context": "https://schema.org",
+        "@type": "NewsArticle",
+        "headline": metaTitle,
+        "description": description,
+        "image": [imageUrl],
+        ...(publishedAtISO ? { "datePublished": publishedAtISO } : {}),
+        ...(updatedAtISO ? { "dateModified": updatedAtISO } : {}),
+        // Without a named author the publication is responsible for the
+        // piece (see the editorial policy); no individual is invented.
+        "author": authorName
+          ? { "@type": "Person", "name": authorName }
+          : { "@type": "Organization", "name": "The Digital Ledger", "url": baseUrl },
+        "publisher": organizationJsonLd(baseUrl),
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": articleUrl
+        },
+        "url": articleUrl,
+        "articleSection": categoryNames.length > 0 ? categoryNames[0] : "Finance & Accounting",
+        "keywords": keywords.join(', '),
+        "wordCount": stripHtml(article.content || '').split(/\s+/).length,
+        "timeRequired": `PT${readingTime}M`,
+        "isAccessibleForFree": true,
+        "inLanguage": "en-US"
       },
-      "mainEntityOfPage": {
-        "@type": "WebPage",
-        "@id": articleUrl
-      },
-      "articleSection": categoryNames.length > 0 ? categoryNames[0] : "Finance & Accounting",
-      "keywords": keywords.join(', '),
-      "wordCount": stripHtml(article.content || '').split(/\s+/).length,
-      "timeRequired": `PT${readingTime}M`,
-      "isAccessibleForFree": true,
-      "inLanguage": "en-US"
-    };
+      breadcrumbJsonLd([
+        { name: "Home", url: baseUrl },
+        { name: "Articles", url: `${baseUrl}/news` },
+        { name: metaTitle, url: articleUrl },
+      ]),
+    ];
     
     // Clean article content - keep HTML structure for readability
     const articleContent = sanitizeHtml(
@@ -625,8 +684,8 @@ app.use(async (req, res, next) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <!-- Primary Meta Tags -->
-  <title>${escapeHtml(article.title)} | The Digital Ledger</title>
-  <meta name="title" content="${escapeHtml(article.title)} | The Digital Ledger">
+  <title>${escapeHtml(metaTitle)} | The Digital Ledger</title>
+  <meta name="title" content="${escapeHtml(metaTitle)} | The Digital Ledger">
   <meta name="description" content="${escapeHtml(description)}">
   <meta name="keywords" content="${escapedKeywords}">
   ${authorName ? `<meta name="author" content="${escapeHtml(authorName)}">` : ""}
@@ -637,12 +696,12 @@ app.use(async (req, res, next) => {
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="article">
   <meta property="og:url" content="${escapedArticleUrl}">
-  <meta property="og:title" content="${escapeHtml(article.title)}">
+  <meta property="og:title" content="${escapeHtml(metaTitle)}">
   <meta property="og:description" content="${escapeHtml(ogDescription)}">
   <meta property="og:image" content="${escapedImageUrl}">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="${escapeHtml(article.title)}">
+  ${storedImageUrl ? "" : `<meta property="og:image:width" content="1408">
+  <meta property="og:image:height" content="768">`}
+  <meta property="og:image:alt" content="${escapeHtml(metaTitle)}">
   <meta property="og:site_name" content="The Digital Ledger">
   <meta property="og:locale" content="en_US">
   
@@ -651,17 +710,17 @@ app.use(async (req, res, next) => {
   ${updatedAtISO ? `<meta property="article:modified_time" content="${escapeHtml(updatedAtISO)}">` : ""}
   ${authorName ? `<meta property="article:author" content="${escapeHtml(authorName)}">` : ""}
   <meta property="article:section" content="${categoryNames.length > 0 ? escapeHtml(categoryNames[0]) : 'Finance'}">
-  ${categoryNames.map(cat => `<meta property="article:tag" content="${escapeHtml(cat)}">`).join('\n  ')}
+  ${categoryNames.map((cat: string) => `<meta property="article:tag" content="${escapeHtml(cat)}">`).join('\n  ')}
   
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="${escapedArticleUrl}">
-  <meta name="twitter:title" content="${escapeHtml(article.title)}">
+  <meta name="twitter:title" content="${escapeHtml(metaTitle)}">
   <meta name="twitter:description" content="${escapeHtml(ogDescription)}">
   <meta name="twitter:image" content="${escapedImageUrl}">
-  <meta name="twitter:image:alt" content="${escapeHtml(article.title)}">
+  <meta name="twitter:image:alt" content="${escapeHtml(metaTitle)}">
   <meta name="twitter:site" content="@thedigitalledger">
-  
+
   <!-- LinkedIn specific -->
   <meta property="og:image:secure_url" content="${escapedImageUrl}">
   
@@ -699,7 +758,6 @@ ${serializeJsonForHtml(jsonLd)}
         ${updatedAtISO ? `&bull; Updated <time itemprop="dateModified" datetime="${escapeHtml(updatedAtISO)}">${escapeHtml(new Date(updatedAtISO).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }))}</time>` : ""}
         &bull; 
         ${readingTime} min read
-        ${categoryNames.length > 0 ? `&bull; ${categoryNames.map(c => escapeHtml(c)).join(', ')}` : ''}
       </div>
     </header>
     
@@ -807,38 +865,43 @@ app.use(async (req, res, next) => {
         ? new Date(podcast.createdAt)
         : null;
     const publishedAtISO = publishedAt?.toISOString() || null;
-    const updatedAtISO = podcast.updatedAt
-      ? new Date(podcast.updatedAt).toISOString()
-      : null;
+    const updatedAtISO =
+      modifiedNotBeforePublished(publishedAt, podcast.updatedAt)?.toISOString() || null;
     const publishDateFormatted = publishedAt
       ? publishedAt.toLocaleDateString('en-US', {
           year: 'numeric', month: 'long', day: 'numeric'
         })
       : null;
-    
-    const jsonLd = {
-      "@context": "https://schema.org",
-      "@type": "PodcastEpisode",
-      "name": podcast.title,
-      "description": description,
-      "image": imageUrl,
-      ...(publishedAtISO ? { "datePublished": publishedAtISO } : {}),
-      ...(updatedAtISO ? { "dateModified": updatedAtISO } : {}),
-      "url": podcastUrl,
-      "duration": podcast.duration || undefined,
-      ...(episodeNotes ? { "abstract": episodeNotes } : {}),
-      ...(transcript ? { "transcript": transcript } : {}),
-      "partOfSeries": {
-        "@type": "PodcastSeries",
-        "name": "The Digital Ledger Podcast",
-        "url": `${baseUrl}/podcasts`
+    // Stored as "42:18" or "45"; schema.org needs ISO 8601 ("PT42M18S")
+    const isoDuration = toIsoDuration(podcast.duration);
+
+    const jsonLd = [
+      {
+        "@context": "https://schema.org",
+        "@type": "PodcastEpisode",
+        "name": podcast.title.trim(),
+        "description": description,
+        "image": imageUrl,
+        ...(publishedAtISO ? { "datePublished": publishedAtISO } : {}),
+        ...(updatedAtISO ? { "dateModified": updatedAtISO } : {}),
+        "url": podcastUrl,
+        ...(isoDuration ? { "duration": isoDuration } : {}),
+        ...(audioUrl ? { "associatedMedia": { "@type": "MediaObject", "contentUrl": audioUrl } } : {}),
+        ...(episodeNotes ? { "abstract": episodeNotes } : {}),
+        ...(transcript ? { "transcript": transcript } : {}),
+        "partOfSeries": {
+          "@type": "PodcastSeries",
+          "name": "The Digital Ledger Podcast",
+          "url": `${baseUrl}/podcasts`
+        },
+        "publisher": organizationJsonLd(baseUrl)
       },
-      "publisher": {
-        "@type": "Organization",
-        "name": "The Digital Ledger",
-        "url": baseUrl
-      }
-    };
+      breadcrumbJsonLd([
+        { name: "Home", url: baseUrl },
+        { name: "Podcasts", url: `${baseUrl}/podcasts` },
+        { name: podcast.title.trim(), url: podcastUrl },
+      ]),
+    ];
     
     const html = `<!DOCTYPE html>
 <html lang="en" prefix="og: https://ogp.me/ns#">
@@ -852,7 +915,7 @@ app.use(async (req, res, next) => {
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="${escapedPodcastUrl}">
   
-  <meta property="og:type" content="music.song">
+  <meta property="og:type" content="article">
   <meta property="og:url" content="${escapedPodcastUrl}">
   <meta property="og:title" content="${escapeHtml(podcast.title)}">
   <meta property="og:description" content="${escapeHtml(ogDescription)}">
@@ -953,11 +1016,12 @@ app.use(async (req, res, next) => {
     const authorName =
       `${discussion.author?.firstName || ""} ${discussion.author?.lastName || ""}`.trim() ||
       "The Digital Ledger Community";
-    const publishedAt = discussion.createdAt ? new Date(discussion.createdAt) : new Date();
-    const publishedAtIso = publishedAt.toISOString();
-    const publishedDate = publishedAt.toLocaleDateString("en-US", {
+    // A missing date stays missing rather than being reported as today
+    const publishedAt = discussion.createdAt ? new Date(discussion.createdAt) : null;
+    const publishedAtIso = publishedAt?.toISOString() || null;
+    const publishedDate = publishedAt?.toLocaleDateString("en-US", {
       year: "numeric", month: "long", day: "numeric",
-    });
+    }) || null;
     const categoryName = discussion.category?.name || "Community";
     const jsonLd = [
       {
@@ -967,13 +1031,9 @@ app.use(async (req, res, next) => {
         "text": stripHtml(discussion.content || ""),
         "description": description,
         "url": discussionUrl,
-        "datePublished": publishedAtIso,
+        ...(publishedAtIso ? { "datePublished": publishedAtIso } : {}),
         "author": { "@type": "Person", "name": authorName },
-        "publisher": {
-          "@type": "Organization",
-          "name": "The Digital Ledger",
-          "url": baseUrl,
-        },
+        "publisher": organizationJsonLd(baseUrl),
       },
       {
         "@context": "https://schema.org",
@@ -1025,7 +1085,7 @@ app.use(async (req, res, next) => {
 </head>
 <body>
   <nav aria-label="Breadcrumb"><a href="${escapedBaseUrl}">Home</a> / <a href="${escapedBaseUrl}/forums">Forums</a> / ${escapeHtml(discussion.title)}</nav>
-  <main><article><h1>${escapeHtml(discussion.title)}</h1><p class="meta">Posted by ${escapeHtml(authorName)} in ${escapeHtml(categoryName)} · <time datetime="${escapeHtml(publishedAtIso)}">${escapeHtml(publishedDate)}</time></p><div>${discussionContent}</div></article>
+  <main><article><h1>${escapeHtml(discussion.title)}</h1><p class="meta">Posted by ${escapeHtml(authorName)} in ${escapeHtml(categoryName)}${publishedAtIso && publishedDate ? ` · <time datetime="${escapeHtml(publishedAtIso)}">${escapeHtml(publishedDate)}</time>` : ""}</p><div>${discussionContent}</div></article>
   <section><h2>Replies</h2>${repliesHtml || "<p>No replies yet.</p>"}</section></main>
 </body>
 </html>`;
@@ -1194,14 +1254,18 @@ app.use(async (req, res, next) => {
     
     const jsonLd = {
       "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "The Digital Ledger",
-      "description": "Where CFOs, Controllers, FP&A leaders, and senior finance professionals come to stay sharp and stay ahead.",
-      "url": baseUrl,
-      "publisher": {
-        "@type": "Organization",
-        "name": "The Digital Ledger"
-      }
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": `${baseUrl}/#website`,
+          "name": "The Digital Ledger",
+          "description": "Where CFOs, Controllers, FP&A leaders, and senior finance professionals come to stay sharp and stay ahead.",
+          "url": baseUrl,
+          "inLanguage": "en-US",
+          "publisher": { "@id": `${baseUrl}/#organization` }
+        },
+        organizationJsonLd(baseUrl),
+      ]
     };
     
     const articlesHtml = recentArticles.map(a => `<li><a href="${escapedBaseUrl}/news/${encodeURIComponent(a.id)}">${escapeHtml(a.title)}</a></li>`).join('\n');
@@ -1542,13 +1606,24 @@ app.use(async (req, res, next) => {
     const escapedBaseUrl = escapeHtml(baseUrl);
     const defaultImageUrl = escapeHtml(`${baseUrl}/og-default.png`);
     
+    // A listing of discussions, not a single post: DiscussionForumPosting
+    // here made Google expect an author, text, and date for the page itself.
     const jsonLd = {
       "@context": "https://schema.org",
-      "@type": "DiscussionForumPosting",
+      "@type": "CollectionPage",
       "name": "Community Forums | The Digital Ledger",
       "description": "Engage with fellow finance professionals, share insights, and discuss AI in accounting.",
       "url": `${baseUrl}/forums`,
-      "publisher": { "@type": "Organization", "name": "The Digital Ledger", "url": baseUrl }
+      "mainEntity": {
+        "@type": "ItemList",
+        "itemListElement": recentDiscussions.map((d, index) => ({
+          "@type": "ListItem",
+          "position": index + 1,
+          "name": d.title,
+          "url": `${baseUrl}/forums/${encodeURIComponent(d.id)}`,
+        })),
+      },
+      "publisher": organizationJsonLd(baseUrl)
     };
     
     const discussionsHtml = recentDiscussions.map(d => `
